@@ -124,7 +124,9 @@ describe('Inventory', () => {
 
   it('an empty project says who can start it', async () => {
     const page = await open('VIEWER');
-    http.expectOne(INVENTORY_URL).flush(makeInventory({ analyzed: false, programs: [], summary: {} }));
+    http
+      .expectOne(INVENTORY_URL)
+      .flush(makeInventory({ analyzed: false, programs: [], summary: {} }));
     await settle();
     expect(page.textContent).toContain('has not been analyzed yet');
     expect(page.textContent).toContain('An engineer or architect can run');
@@ -132,9 +134,13 @@ describe('Inventory', () => {
 
   it('an engineer runs the analysis and the page reloads when it finishes', async () => {
     const page = await open('ENGINEER');
-    http.expectOne(INVENTORY_URL).flush(makeInventory({ analyzed: false, programs: [], summary: {} }));
+    http
+      .expectOne(INVENTORY_URL)
+      .flush(makeInventory({ analyzed: false, programs: [], summary: {} }));
     await settle();
-    const run = [...page.querySelectorAll('button')].find((button) => button.textContent?.includes('Run analysis'))!;
+    const run = [...page.querySelectorAll('button')].find((button) =>
+      button.textContent?.includes('Run analysis'),
+    )!;
     run.click();
     http.expectOne('/api/v1/projects/p1/analyze').flush(makeJob());
     await settle();
@@ -150,16 +156,26 @@ describe('Inventory', () => {
   it('shows the server message when starting is refused', async () => {
     const page = await open('ENGINEER');
     await loadReady();
-    const run = [...page.querySelectorAll('button')].find((button) => button.textContent?.includes('Run analysis'))!;
+    const run = [...page.querySelectorAll('button')].find((button) =>
+      button.textContent?.includes('Run analysis'),
+    )!;
     run.click();
     http
       .expectOne('/api/v1/projects/p1/analyze')
       .flush(
-        { error: { code: 'FORBIDDEN', message: 'You do not have permission to do this.', request_id: 'r' } },
+        {
+          error: {
+            code: 'FORBIDDEN',
+            message: 'You do not have permission to do this.',
+            request_id: 'r',
+          },
+        },
         { status: 403, statusText: 'Forbidden' },
       );
     await settle();
-    expect(page.querySelector('[role="alert"]')?.textContent).toContain('You do not have permission');
+    expect(page.querySelector('[role="alert"]')?.textContent).toContain(
+      'You do not have permission',
+    );
   });
 
   it('shows an error with a working retry', async () => {
@@ -195,11 +211,17 @@ describe('Inventory', () => {
     http.expectOne(LAYOUTS_URL).flush({ ...LAYOUTS, total: 2 });
     http.expectOne(GRAPH_URL).flush(OVERVIEW_GRAPH);
     await settle();
-    const more = [...page.querySelectorAll('button')].find((button) => button.textContent?.includes('Show more'))!;
+    const more = [...page.querySelectorAll('button')].find((button) =>
+      button.textContent?.includes('Show more'),
+    )!;
     more.click();
     http
       .expectOne('/api/v1/projects/p1/inventory/layouts?limit=50&offset=1')
-      .flush({ ...LAYOUTS, items: [{ ...LAYOUTS.items[0], id: 'l2', name: 'READ-RECORD' }], total: 2 });
+      .flush({
+        ...LAYOUTS,
+        items: [{ ...LAYOUTS.items[0], id: 'l2', name: 'READ-RECORD' }],
+        total: 2,
+      });
     await settle();
     expect(page.textContent).toContain('READ-RECORD');
     expect(page.textContent).toContain('CUSTOMER-RECORD');

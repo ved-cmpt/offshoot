@@ -11,12 +11,20 @@ import {
 } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { ActivatedRoute, RouterLink } from '@angular/router';
-import { combineLatest } from 'rxjs';
+import { Subscription, combineLatest } from 'rxjs';
 
 import { describeError } from '../../core/api/api-error';
-import { RuleSpanHit, SourceDetail, SourceSummary, WorkbenchService } from '../workbench/workbench.service';
+import {
+  RuleSpanHit,
+  SourceDetail,
+  SourceSummary,
+  WorkbenchService,
+} from '../workbench/workbench.service';
 
-type ViewState = { kind: 'loading' } | { kind: 'error'; message: string } | { kind: 'ready'; source: SourceDetail };
+type ViewState =
+  | { kind: 'loading' }
+  | { kind: 'error'; message: string }
+  | { kind: 'ready'; source: SourceDetail };
 
 interface Row {
   number: number;
@@ -40,6 +48,7 @@ export class SourceViewer implements OnInit {
   private readonly route = inject(ActivatedRoute);
   private readonly destroyRef = inject(DestroyRef);
   private readonly injector = inject(Injector);
+  private loading: Subscription | null = null;
 
   protected readonly projectId = signal('');
   protected readonly fileId = signal('');
@@ -60,7 +69,9 @@ export class SourceViewer implements OnInit {
       return {
         number,
         text,
-        cited: state.source.rule_spans.filter((span) => span.start_line <= number && number <= span.end_line).length,
+        cited: state.source.rule_spans.filter(
+          (span) => span.start_line <= number && number <= span.end_line,
+        ).length,
         selected: range !== null && range.start <= number && number <= range.end,
         copyName: link?.name ?? null,
         copyFile: link?.file_id ?? null,
@@ -91,13 +102,18 @@ export class SourceViewer implements OnInit {
 
   protected load(): void {
     this.state.set({ kind: 'loading' });
-    this.workbench.source(this.projectId(), this.fileId()).subscribe({
-      next: (source) => {
-        this.state.set({ kind: 'ready', source });
-        this.scrollToRange();
-      },
-      error: (error: unknown) => this.state.set({ kind: 'error', message: describeError(error) }),
-    });
+    // Only the latest request counts, and a reply after leaving the page must not touch it.
+    this.loading?.unsubscribe();
+    this.loading = this.workbench
+      .source(this.projectId(), this.fileId())
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe({
+        next: (source) => {
+          this.state.set({ kind: 'ready', source });
+          this.scrollToRange();
+        },
+        error: (error: unknown) => this.state.set({ kind: 'error', message: describeError(error) }),
+      });
   }
 
   protected spanQuery(span: RuleSpanHit): Record<string, number> {
@@ -105,11 +121,14 @@ export class SourceViewer implements OnInit {
   }
 
   private loadFiles(): void {
-    this.workbench.sources(this.projectId()).subscribe({
-      next: (page) => this.files.set(page.items),
-      // The file list is a convenience. The source itself still shows without it.
-      error: () => this.files.set([]),
-    });
+    this.workbench
+      .sources(this.projectId())
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe({
+        next: (page) => this.files.set(page.items),
+        // The file list is a convenience. The source itself still shows without it.
+        error: () => this.files.set([]),
+      });
   }
 
   private scrollToRange(): void {

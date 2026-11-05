@@ -49,7 +49,10 @@ import { map } from 'rxjs';
 export class ProjectLayout {
   private readonly route = inject(ActivatedRoute);
 
-  protected readonly projectId = toSignal(this.route.paramMap.pipe(map((params) => params.get('id') ?? '')), {
-    initialValue: '',
-  });
+  protected readonly projectId = toSignal(
+    this.route.paramMap.pipe(map((params) => params.get('id') ?? '')),
+    {
+      initialValue: '',
+    },
+  );
 }

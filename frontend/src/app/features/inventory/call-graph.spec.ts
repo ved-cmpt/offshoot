@@ -1,5 +1,9 @@
 import { provideHttpClient } from '@angular/common/http';
-import { HttpTestingController, TestRequest, provideHttpClientTesting } from '@angular/common/http/testing';
+import {
+  HttpTestingController,
+  TestRequest,
+  provideHttpClientTesting,
+} from '@angular/common/http/testing';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { provideRouter } from '@angular/router';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
@@ -140,9 +144,13 @@ describe('CallGraph', () => {
     main.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter' }));
     await settle();
     const details = page.querySelector('.details')!;
-    expect(details.textContent).toContain('performs 3300-SELECT-SEASON (reached through a THRU range)');
+    expect(details.textContent).toContain(
+      'performs 3300-SELECT-SEASON (reached through a THRU range)',
+    );
     expect(details.textContent).toContain('line 60');
-    expect(details.querySelector('a')?.getAttribute('href')).toBe('/projects/p1/sources/f1?line=56&end=66');
+    expect(details.querySelector('a')?.getAttribute('href')).toBe(
+      '/projects/p1/sources/f1?line=56&end=66',
+    );
     expect(main.getAttribute('aria-pressed')).toBe('true');
     expect(page.querySelectorAll('.edge--active').length).toBeGreaterThan(0);
 

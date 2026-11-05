@@ -12,8 +12,18 @@ const CONFIG: PublicConfig = {
   ai_mode: 'mock',
   demo_accounts: [
     { email: 'viewer@demo.dev', password: 'v-pass', display_name: 'Vera Viewer', role: 'VIEWER' },
-    { email: 'engineer@demo.dev', password: 'e-pass', display_name: 'Eli Engineer', role: 'ENGINEER' },
-    { email: 'architect@demo.dev', password: 'a-pass', display_name: 'Ari Architect', role: 'ARCHITECT' },
+    {
+      email: 'engineer@demo.dev',
+      password: 'e-pass',
+      display_name: 'Eli Engineer',
+      role: 'ENGINEER',
+    },
+    {
+      email: 'architect@demo.dev',
+      password: 'a-pass',
+      display_name: 'Ari Architect',
+      role: 'ARCHITECT',
+    },
     { email: 'admin@demo.dev', password: 'd-pass', display_name: 'Ada Admin', role: 'ADMIN' },
   ],
 };

@@ -2,6 +2,7 @@ import { HttpErrorResponse } from '@angular/common/http';
 import {
   ChangeDetectionStrategy,
   Component,
+  DestroyRef,
   ElementRef,
   Injector,
   afterNextRender,
@@ -12,11 +13,18 @@ import {
   signal,
   viewChild,
 } from '@angular/core';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { RouterLink } from '@angular/router';
 
 import { describeError } from '../../core/api/api-error';
 import { AuthService } from '../../core/auth/auth.service';
-import { Rule, RuleEdit, RuleExample, RuleSpan, WorkbenchService } from '../workbench/workbench.service';
+import {
+  Rule,
+  RuleEdit,
+  RuleExample,
+  RuleSpan,
+  WorkbenchService,
+} from '../workbench/workbench.service';
 
 type Mode = 'view' | 'edit' | 'reject';
 
@@ -61,7 +69,11 @@ export function parseSpans(text: string): RuleEdit['source_spans'] | null {
       return null;
     }
     const start = Number(match[2]);
-    spans.push({ file: match[1], start_line: start, end_line: match[3] ? Number(match[3]) : start });
+    spans.push({
+      file: match[1],
+      start_line: start,
+      end_line: match[3] ? Number(match[3]) : start,
+    });
   }
   return spans;
 }
@@ -78,6 +90,7 @@ export class RuleCard {
   private readonly workbench = inject(WorkbenchService);
   private readonly auth = inject(AuthService);
   private readonly injector = inject(Injector);
+  private readonly destroyRef = inject(DestroyRef);
 
   readonly rule = input.required<Rule>();
   readonly changed = output<Rule>();
@@ -209,34 +222,39 @@ export class RuleCard {
   private run(action: () => ReturnType<WorkbenchService['editRule']>, success: string): void {
     this.busy.set(true);
     this.error.set(null);
-    action().subscribe({
-      next: (updated) => {
-        this.busy.set(false);
-        this.mode.set('view');
-        this.notice.set(success);
-        this.changed.emit(updated);
-      },
-      error: (error: unknown) => {
-        this.busy.set(false);
-        this.error.set(describeError(error));
-        // Someone else changed it: bring in the latest version, and leave any open form.
-        if (error instanceof HttpErrorResponse && error.status === 409) {
-          this.refresh();
-        }
-      },
-    });
+    action()
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe({
+        next: (updated) => {
+          this.busy.set(false);
+          this.mode.set('view');
+          this.notice.set(success);
+          this.changed.emit(updated);
+        },
+        error: (error: unknown) => {
+          this.busy.set(false);
+          this.error.set(describeError(error));
+          // Someone else changed it: bring in the latest version, and leave any open form.
+          if (error instanceof HttpErrorResponse && error.status === 409) {
+            this.refresh();
+          }
+        },
+      });
   }
 
   private refresh(): void {
-    this.workbench.rule(this.rule().id).subscribe({
-      next: (latest) => {
-        if (latest.version !== this.rule().version) {
-          this.notice.set('The latest version is shown below. Review it before deciding.');
-          this.mode.set('view');
-        }
-        this.changed.emit(latest);
-      },
-      error: () => undefined,
-    });
+    this.workbench
+      .rule(this.rule().id)
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe({
+        next: (latest) => {
+          if (latest.version !== this.rule().version) {
+            this.notice.set('The latest version is shown below. Review it before deciding.');
+            this.mode.set('view');
+          }
+          this.changed.emit(latest);
+        },
+        error: () => undefined,
+      });
   }
 }

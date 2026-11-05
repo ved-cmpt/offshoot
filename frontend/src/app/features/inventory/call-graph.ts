@@ -1,4 +1,15 @@
-import { ChangeDetectionStrategy, Component, computed, effect, inject, input, signal, untracked } from '@angular/core';
+import {
+  ChangeDetectionStrategy,
+  Component,
+  DestroyRef,
+  computed,
+  effect,
+  inject,
+  input,
+  signal,
+  untracked,
+} from '@angular/core';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { RouterLink } from '@angular/router';
 import { Subscription } from 'rxjs';
 
@@ -6,7 +17,8 @@ import { describeError } from '../../core/api/api-error';
 import { Graph, GraphEdge, GraphNode, WorkbenchService } from '../workbench/workbench.service';
 import { NODE_HEIGHT, NODE_WIDTH, layoutGraph } from './graph-layout';
 
-type GraphState = { kind: 'loading' } | { kind: 'error'; message: string } | { kind: 'ready'; graph: Graph };
+type GraphState =
+  { kind: 'loading' } | { kind: 'error'; message: string } | { kind: 'ready'; graph: Graph };
 
 const EDGE_LABELS: Record<GraphEdge['kind'], string> = {
   PERFORMS: 'performs',
@@ -27,6 +39,7 @@ const EDGE_LABELS: Record<GraphEdge['kind'], string> = {
 })
 export class CallGraph {
   private readonly workbench = inject(WorkbenchService);
+  private readonly destroyRef = inject(DestroyRef);
   private subscription: Subscription | null = null;
 
   readonly projectId = input.required<string>();
@@ -53,7 +66,9 @@ export class CallGraph {
     };
   });
 
-  protected readonly layout = computed(() => layoutGraph(this.visible().nodes, this.visible().edges));
+  protected readonly layout = computed(() =>
+    layoutGraph(this.visible().nodes, this.visible().edges),
+  );
 
   protected readonly selected = computed(() => {
     const id = this.selectedId();
@@ -133,9 +148,12 @@ export class CallGraph {
     this.subscription?.unsubscribe();
     this.selectedId.set(null);
     this.state.set({ kind: 'loading' });
-    this.subscription = this.workbench.graph(projectId, program).subscribe({
-      next: (graph) => this.state.set({ kind: 'ready', graph }),
-      error: (error: unknown) => this.state.set({ kind: 'error', message: describeError(error) }),
-    });
+    this.subscription = this.workbench
+      .graph(projectId, program)
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe({
+        next: (graph) => this.state.set({ kind: 'ready', graph }),
+        error: (error: unknown) => this.state.set({ kind: 'error', message: describeError(error) }),
+      });
   }
 }

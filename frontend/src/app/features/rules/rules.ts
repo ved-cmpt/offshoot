@@ -1,6 +1,15 @@
-import { ChangeDetectionStrategy, Component, DestroyRef, OnInit, computed, inject, signal } from '@angular/core';
+import {
+  ChangeDetectionStrategy,
+  Component,
+  DestroyRef,
+  OnInit,
+  computed,
+  inject,
+  signal,
+} from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { ActivatedRoute, RouterLink } from '@angular/router';
+import { Subscription } from 'rxjs';
 
 import { describeError } from '../../core/api/api-error';
 import { AuthService } from '../../core/auth/auth.service';
@@ -8,7 +17,8 @@ import { JobProgress } from '../workbench/job-progress';
 import { Job, Rule, RulePage, WorkbenchService } from '../workbench/workbench.service';
 import { RuleCard } from './rule-card';
 
-type ListState = { kind: 'loading' } | { kind: 'error'; message: string } | { kind: 'ready'; page: RulePage };
+type ListState =
+  { kind: 'loading' } | { kind: 'error'; message: string } | { kind: 'ready'; page: RulePage };
 
 const PAGE_SIZE = 50;
 
@@ -24,6 +34,7 @@ export class Rules implements OnInit {
   private readonly route = inject(ActivatedRoute);
   private readonly auth = inject(AuthService);
   private readonly destroyRef = inject(DestroyRef);
+  private loading: Subscription | null = null;
 
   protected readonly projectId = signal('');
   protected readonly state = signal<ListState>({ kind: 'loading' });
@@ -44,7 +55,9 @@ export class Rules implements OnInit {
     return role === 'ENGINEER' || role === 'ARCHITECT';
   });
   protected readonly isArchitect = computed(() => this.auth.user()?.role === 'ARCHITECT');
-  protected readonly hasFilters = computed(() => !!(this.program() || this.ruleState() || this.flag()));
+  protected readonly hasFilters = computed(
+    () => !!(this.program() || this.ruleState() || this.flag()),
+  );
   protected readonly countsText = computed(() => {
     const state = this.state();
     if (state.kind !== 'ready') {
@@ -67,13 +80,16 @@ export class Rules implements OnInit {
 
   protected load(): void {
     this.state.set({ kind: 'loading' });
-    this.workbench
+    // Only the latest request counts: a slow reply must not replace newer filters.
+    this.loading?.unsubscribe();
+    this.loading = this.workbench
       .rules(this.projectId(), {
         program: this.program(),
         state: this.ruleState(),
         flag: this.flag(),
         offset: this.offset(),
       })
+      .pipe(takeUntilDestroyed(this.destroyRef))
       .subscribe({
         next: (page) => this.state.set({ kind: 'ready', page }),
         error: (error: unknown) => this.state.set({ kind: 'error', message: describeError(error) }),
@@ -106,16 +122,19 @@ export class Rules implements OnInit {
     }
     this.starting.set(true);
     this.startError.set(null);
-    this.workbench.startExtraction(this.projectId(), program).subscribe({
-      next: (job) => {
-        this.starting.set(false);
-        this.job.set(job);
-      },
-      error: (error: unknown) => {
-        this.starting.set(false);
-        this.startError.set(describeError(error));
-      },
-    });
+    this.workbench
+      .startExtraction(this.projectId(), program)
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe({
+        next: (job) => {
+          this.starting.set(false);
+          this.job.set(job);
+        },
+        error: (error: unknown) => {
+          this.starting.set(false);
+          this.startError.set(describeError(error));
+        },
+      });
   }
 
   protected jobFinished(job: Job): void {
@@ -141,14 +160,17 @@ export class Rules implements OnInit {
   }
 
   private loadPrograms(): void {
-    this.workbench.inventory(this.projectId()).subscribe({
-      next: (inventory) => {
-        const names = inventory.programs.map((program) => program.name);
-        this.analyzedPrograms.set(names);
-        this.extractProgram.set(names[0] ?? '');
-      },
-      // The list still works without this. Extraction just stays unavailable.
-      error: () => this.analyzedPrograms.set([]),
-    });
+    this.workbench
+      .inventory(this.projectId())
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe({
+        next: (inventory) => {
+          const names = inventory.programs.map((program) => program.name);
+          this.analyzedPrograms.set(names);
+          this.extractProgram.set(names[0] ?? '');
+        },
+        // The list still works without this. Extraction just stays unavailable.
+        error: () => this.analyzedPrograms.set([]),
+      });
   }
 }

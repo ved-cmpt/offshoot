@@ -257,11 +257,12 @@ export const JOB_POLL_INTERVAL_MS = new InjectionToken<number>('JOB_POLL_INTERVA
 const JOB_ERROR_TEXT: Record<string, string> = {
   AI_TIMEOUT: 'The AI provider took too long to answer.',
   AI_RATE_LIMITED: 'The AI provider is rate limiting requests. Wait a little and try again.',
-  AI_INVALID_OUTPUT: 'The AI provider returned output that failed validation, so nothing was stored.',
+  AI_INVALID_OUTPUT:
+    'The AI provider returned output that failed validation, so nothing was stored.',
   AI_AUTH: 'The AI provider refused the configured key.',
   AI_UNAVAILABLE: 'The AI provider could not be reached.',
   AI_NOT_CONFIGURED: 'Live AI mode is selected, but no key or model is configured.',
-  AI_BUDGET_EXCEEDED: "This project has used its AI call budget.",
+  AI_BUDGET_EXCEEDED: 'This project has used its AI call budget.',
   NO_PROGRAMS: 'This project has no COBOL programs to analyze.',
   PROGRAM_NOT_FOUND: 'That program is not part of this project.',
   JOB_ABANDONED: 'The job stopped responding and was given up on.',
@@ -323,11 +324,15 @@ export class WorkbenchService {
   }
 
   sources(projectId: string): Observable<{ items: SourceSummary[]; total: number }> {
-    return this.http.get<{ items: SourceSummary[]; total: number }>(`${this.project(projectId)}/sources`);
+    return this.http.get<{ items: SourceSummary[]; total: number }>(
+      `${this.project(projectId)}/sources`,
+    );
   }
 
   source(projectId: string, fileId: string): Observable<SourceDetail> {
-    return this.http.get<SourceDetail>(`${this.project(projectId)}/sources/${encodeURIComponent(fileId)}`);
+    return this.http.get<SourceDetail>(
+      `${this.project(projectId)}/sources/${encodeURIComponent(fileId)}`,
+    );
   }
 
   rules(projectId: string, filters: RuleFilters): Observable<RulePage> {
@@ -351,7 +356,11 @@ export class WorkbenchService {
     });
   }
 
-  decideRule(rule: Rule, decision: 'VERIFIED' | 'REJECTED', reason: string | null): Observable<Rule> {
+  decideRule(
+    rule: Rule,
+    decision: 'VERIFIED' | 'REJECTED',
+    reason: string | null,
+  ): Observable<Rule> {
     return this.http.post<Rule>(`/api/v1/rules/${encodeURIComponent(rule.id)}/decision`, {
       decision,
       expected_version: rule.version,

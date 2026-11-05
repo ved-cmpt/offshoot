@@ -62,8 +62,14 @@ export function makeFlaggedRule(overrides: Partial<Rule> = {}): Rule {
     title: 'Senior discount on the energy charge',
     flags: ['SPAN_INVALID', 'NAMES_NOT_FOUND'],
     flag_details: [
-      { code: 'SPAN_INVALID', detail: 'RATECALC.cbl:240-252 is outside the file, which has 232 lines.' },
-      { code: 'NAMES_NOT_FOUND', detail: 'Not found in the cited lines or copybooks: RC-OUT-SENIOR-DISCOUNT.' },
+      {
+        code: 'SPAN_INVALID',
+        detail: 'RATECALC.cbl:240-252 is outside the file, which has 232 lines.',
+      },
+      {
+        code: 'NAMES_NOT_FOUND',
+        detail: 'Not found in the cited lines or copybooks: RC-OUT-SENIOR-DISCOUNT.',
+      },
     ],
     spans: [{ file: 'RATECALC.cbl', file_id: 'f1', start_line: 240, end_line: 252, valid: false }],
     verifiable: false,
@@ -174,7 +180,12 @@ export const OVERVIEW_GRAPH: Graph = {
 export const PARAGRAPH_GRAPH: Graph = {
   program: 'RATECALC',
   nodes: [
-    node('m', 'PARAGRAPH', '0000-MAIN-CONTROL', { program: 'RATECALC', file_id: 'f1', start_line: 56, end_line: 66 }),
+    node('m', 'PARAGRAPH', '0000-MAIN-CONTROL', {
+      program: 'RATECALC',
+      file_id: 'f1',
+      start_line: 56,
+      end_line: 66,
+    }),
     node('s', 'PARAGRAPH', '3300-SELECT-SEASON', { program: 'RATECALC' }),
     node('e', 'PARAGRAPH', '3400-TARIFF-EXIT', { program: 'RATECALC', is_exit_label: true }),
     node('w', 'PARAGRAPH', '8500-APPLY-WINTER-DISCOUNT', { program: 'RATECALC', dead: true }),
@@ -185,7 +196,12 @@ export const PARAGRAPH_GRAPH: Graph = {
   ],
 };
 
-function node(id: string, kind: Graph['nodes'][number]['kind'], name: string, extra: Partial<Graph['nodes'][number]> = {}) {
+function node(
+  id: string,
+  kind: Graph['nodes'][number]['kind'],
+  name: string,
+  extra: Partial<Graph['nodes'][number]> = {},
+) {
   return {
     id,
     kind,

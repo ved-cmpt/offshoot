@@ -12,8 +12,22 @@ const SOURCE_URL = '/api/v1/projects/p1/sources/f2';
 const LIST_URL = '/api/v1/projects/p1/sources';
 const FILES = {
   items: [
-    { id: 'f2', path: 'src/DEMO.cbl', name: 'DEMO.cbl', kind: 'PROGRAM', line_count: 5, sha256: 'a' },
-    { id: 'f4', path: 'copy/RATES.cpy', name: 'RATES.cpy', kind: 'COPYBOOK', line_count: 9, sha256: 'b' },
+    {
+      id: 'f2',
+      path: 'src/DEMO.cbl',
+      name: 'DEMO.cbl',
+      kind: 'PROGRAM',
+      line_count: 5,
+      sha256: 'a',
+    },
+    {
+      id: 'f4',
+      path: 'copy/RATES.cpy',
+      name: 'RATES.cpy',
+      kind: 'COPYBOOK',
+      line_count: 9,
+      sha256: 'b',
+    },
   ],
   total: 2,
 };
@@ -117,12 +131,37 @@ describe('SourceViewer', () => {
     const page = await open();
     await loadReady();
     await harness.navigateByUrl('/projects/p1/sources/f4');
-    http.expectOne('/api/v1/projects/p1/sources/f4').flush(makeSource({ id: 'f4', name: 'RATES.cpy', rule_spans: [] }));
+    http
+      .expectOne('/api/v1/projects/p1/sources/f4')
+      .flush(makeSource({ id: 'f4', name: 'RATES.cpy', rule_spans: [] }));
     http.expectOne(LIST_URL).flush(FILES);
     await settle();
     expect(page.querySelector('h1')?.textContent).toBe('RATES.cpy');
     expect(page.textContent).toContain('No rule cites this file yet');
     expect(page.querySelector('[aria-current="page"]')?.textContent).toContain('RATES.cpy');
+  });
+
+  it('a reply after leaving the page is dropped, not rendered', async () => {
+    await open();
+    const source = http.expectOne(SOURCE_URL);
+    const files = http.expectOne(LIST_URL);
+    harness.fixture.destroy();
+    expect(source.cancelled).toBe(true);
+    expect(files.cancelled).toBe(true);
+  });
+
+  it('only the latest file counts when files are switched quickly', async () => {
+    const page = await open();
+    const first = http.expectOne(SOURCE_URL);
+    http.expectOne(LIST_URL).flush(FILES);
+    await harness.navigateByUrl('/projects/p1/sources/f4');
+    expect(first.cancelled).toBe(true);
+    http
+      .expectOne('/api/v1/projects/p1/sources/f4')
+      .flush(makeSource({ id: 'f4', name: 'RATES.cpy' }));
+    http.expectOne(LIST_URL).flush(FILES);
+    await settle();
+    expect(page.querySelector('h1')?.textContent).toBe('RATES.cpy');
   });
 
   it('the code can be scrolled by keyboard', async () => {

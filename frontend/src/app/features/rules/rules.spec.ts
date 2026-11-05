@@ -39,7 +39,11 @@ describe('Rules', () => {
   let harness: RouterTestingHarness;
   let page: HTMLElement;
 
-  async function open(role: Role, rules: Rule[] = [makeRule()], overrides: Partial<RulePage> = {}): Promise<void> {
+  async function open(
+    role: Role,
+    rules: Rule[] = [makeRule()],
+    overrides: Partial<RulePage> = {},
+  ): Promise<void> {
     TestBed.configureTestingModule({
       providers: [
         provideHttpClient(),
@@ -73,7 +77,9 @@ describe('Rules', () => {
   }
 
   function fieldByLabel(label: string): HTMLInputElement | HTMLTextAreaElement {
-    const found = [...page.querySelectorAll('label')].find((item) => item.textContent?.includes(label))!;
+    const found = [...page.querySelectorAll('label')].find((item) =>
+      item.textContent?.includes(label),
+    )!;
     return found.querySelector('input, textarea')!;
   }
 
@@ -111,7 +117,12 @@ describe('Rules', () => {
 
   it('a decided rule offers no decision, and a rejected one no edit', async () => {
     await open('ARCHITECT', [
-      makeRule({ state: 'VERIFIED', verifiable: false, decided_by_name: 'Ari', decision_reason: 'Looks right.' }),
+      makeRule({
+        state: 'VERIFIED',
+        verifiable: false,
+        decided_by_name: 'Ari',
+        decision_reason: 'Looks right.',
+      }),
       makeRule({ id: 'r3', state: 'REJECTED', verifiable: false, decided_by_name: 'Ari' }),
     ]);
     const cards = page.querySelectorAll('.card');
@@ -156,8 +167,14 @@ describe('Rules', () => {
     await open('ARCHITECT', [makeRule({ version: 3 })]);
     button('Verify')!.click();
     const request = http.expectOne('/api/v1/rules/r1/decision');
-    expect(request.request.body).toEqual({ decision: 'VERIFIED', expected_version: 3, reason: null });
-    request.flush(makeRule({ state: 'VERIFIED', version: 4, verifiable: false, decided_by_name: 'Ari' }));
+    expect(request.request.body).toEqual({
+      decision: 'VERIFIED',
+      expected_version: 3,
+      reason: null,
+    });
+    request.flush(
+      makeRule({ state: 'VERIFIED', version: 4, verifiable: false, decided_by_name: 'Ari' }),
+    );
     await settle();
     expect(page.textContent).toContain('Verified.');
     expect(page.querySelector('.badge--ok')?.textContent).toContain('Verified');
@@ -208,7 +225,9 @@ describe('Rules', () => {
         status: 409,
         statusText: 'Conflict',
       });
-    http.expectOne('/api/v1/rules/r1').flush(makeRule({ version: 2, statement: 'Someone else reworded this rule.' }));
+    http
+      .expectOne('/api/v1/rules/r1')
+      .flush(makeRule({ version: 2, statement: 'Someone else reworded this rule.' }));
     await settle();
     expect(page.querySelector('[role="alert"]')?.textContent).toContain('This rule has changed');
     expect(page.textContent).toContain('Someone else reworded this rule.');
@@ -234,7 +253,9 @@ describe('Rules', () => {
       });
     http.expectOne('/api/v1/rules/r1').flush(makeFlaggedRule({ id: 'r1', version: 2 }));
     await settle();
-    expect(page.querySelector('[role="alert"]')?.textContent).toContain('cannot be verified until it is fixed');
+    expect(page.querySelector('[role="alert"]')?.textContent).toContain(
+      'cannot be verified until it is fixed',
+    );
     expect(button('Verify')?.disabled).toBe(true);
   });
 
@@ -243,9 +264,14 @@ describe('Rules', () => {
     button('Verify')!.click();
     http
       .expectOne('/api/v1/rules/r1/decision')
-      .flush(errorBody('FORBIDDEN', 'You do not have permission to do this.'), { status: 403, statusText: 'Forbidden' });
+      .flush(errorBody('FORBIDDEN', 'You do not have permission to do this.'), {
+        status: 403,
+        statusText: 'Forbidden',
+      });
     await settle();
-    expect(page.querySelector('[role="alert"]')?.textContent).toContain('You do not have permission');
+    expect(page.querySelector('[role="alert"]')?.textContent).toContain(
+      'You do not have permission',
+    );
     expect(page.querySelector('.badge--ok')).toBeNull();
   });
 
@@ -271,7 +297,15 @@ describe('Rules', () => {
       { file: 'RATES.cpy', start_line: 16, end_line: 16 },
     ]);
     expect(request.request.body.state).toBeUndefined();
-    request.flush(makeRule({ id: 'r2', state: 'EDITED', version: 2, flags: [], statement: 'A corrected statement of the rule.' }));
+    request.flush(
+      makeRule({
+        id: 'r2',
+        state: 'EDITED',
+        version: 2,
+        flags: [],
+        statement: 'A corrected statement of the rule.',
+      }),
+    );
     await settle();
     expect(page.textContent).toContain('The checks ran again');
     expect(page.textContent).toContain('Edited, awaiting a decision');
@@ -346,6 +380,20 @@ describe('Rules', () => {
     expect(page.querySelector('h3')?.textContent).toContain('Senior discount');
   });
 
+  it('a slow reply cannot replace newer filters', async () => {
+    await open('VIEWER');
+    const [program] = page.querySelectorAll<HTMLSelectElement>('.filters select');
+    program.value = 'BILLRUN';
+    program.dispatchEvent(new Event('change'));
+    const slow = http.expectOne(rulesUrl('program=BILLRUN'));
+    program.value = 'RATECALC';
+    program.dispatchEvent(new Event('change'));
+    expect(slow.cancelled).toBe(true);
+    http.expectOne(rulesUrl('program=RATECALC')).flush(pageOf([makeFlaggedRule()]));
+    await settle();
+    expect(page.querySelector('h3')?.textContent).toContain('Senior discount');
+  });
+
   it('with no rules and no filters, it says so', async () => {
     await open('VIEWER', []);
     expect(page.textContent).toContain('No rules have been extracted yet');
@@ -356,7 +404,9 @@ describe('Rules', () => {
     expect(page.textContent).toContain('1 to 1 of 60');
     expect(button('Previous')?.disabled).toBe(true);
     button('Next')!.click();
-    http.expectOne('/api/v1/projects/p1/rules?limit=50&offset=50').flush(pageOf([makeRule()], { total: 60, offset: 50 }));
+    http
+      .expectOne('/api/v1/projects/p1/rules?limit=50&offset=50')
+      .flush(pageOf([makeRule()], { total: 60, offset: 50 }));
     await settle();
     expect(page.textContent).toContain('51 to 51 of 60');
     expect(button('Next')?.disabled).toBe(true);
@@ -384,7 +434,9 @@ describe('Rules', () => {
     select.dispatchEvent(new Event('change'));
     await settle();
     button('Extract rules')!.click();
-    http.expectOne('/api/v1/projects/p1/programs/RATECALC/extract-rules').flush(makeJob({ kind: 'EXTRACT' }));
+    http
+      .expectOne('/api/v1/projects/p1/programs/RATECALC/extract-rules')
+      .flush(makeJob({ kind: 'EXTRACT' }));
     await settle();
     expect(page.textContent).toContain('Extraction:');
 
@@ -399,10 +451,14 @@ describe('Rules', () => {
   it('a failed extraction explains itself and keeps the list', async () => {
     await open('ENGINEER');
     button('Extract rules')!.click();
-    http.expectOne('/api/v1/projects/p1/programs/BILLRUN/extract-rules').flush(makeJob({ kind: 'EXTRACT' }));
+    http
+      .expectOne('/api/v1/projects/p1/programs/BILLRUN/extract-rules')
+      .flush(makeJob({ kind: 'EXTRACT' }));
     await settle();
     await new Promise((resolve) => setTimeout(resolve, 5));
-    http.expectOne('/api/v1/jobs/j1').flush(makeJob({ status: 'FAILED', error_code: 'AI_INVALID_OUTPUT' }));
+    http
+      .expectOne('/api/v1/jobs/j1')
+      .flush(makeJob({ status: 'FAILED', error_code: 'AI_INVALID_OUTPUT' }));
     await settle();
     expect(page.textContent).toContain('failed validation, so nothing was stored');
     expect(page.textContent).toContain('Minimum charge');

@@ -6,9 +6,7 @@ import { describeError } from '../../core/api/api-error';
 import { Project, ProjectsService } from './projects.service';
 
 type ListState =
-  | { kind: 'loading' }
-  | { kind: 'error'; message: string }
-  | { kind: 'ready'; projects: Project[] };
+  { kind: 'loading' } | { kind: 'error'; message: string } | { kind: 'ready'; projects: Project[] };
 
 const STATUS_LABELS: Record<Project['status'], string> = {
   IMPORTED: 'Imported, not analyzed yet',

@@ -89,10 +89,7 @@
       <div>
         <dt>Decision</dt>
         <dd>
-          By {{ item.decided_by_name }}
-          @if (item.decision_reason) {
-            : {{ item.decision_reason }}
-          }
+          By {{ item.decided_by_name }}{{ item.decision_reason ? ': ' + item.decision_reason : '' }}
         </dd>
       </div>
     }

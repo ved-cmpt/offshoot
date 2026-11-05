@@ -26,7 +26,11 @@ describe('JobProgress', () => {
     vi.useFakeTimers();
     TestBed.configureTestingModule({
       imports: [Host],
-      providers: [provideHttpClient(), provideHttpClientTesting(), { provide: JOB_POLL_INTERVAL_MS, useValue: 1000 }],
+      providers: [
+        provideHttpClient(),
+        provideHttpClientTesting(),
+        { provide: JOB_POLL_INTERVAL_MS, useValue: 1000 },
+      ],
     });
     http = TestBed.inject(HttpTestingController);
     fixture = TestBed.createComponent(Host);
@@ -48,7 +52,9 @@ describe('JobProgress', () => {
     tick(0);
     expect(page.textContent).toContain('Analysis:');
     expect(page.textContent).toContain('Waiting to start');
-    http.expectOne('/api/v1/jobs/j1').flush(makeJob({ status: 'RUNNING', metrics: { stage: 'parsing' } }));
+    http
+      .expectOne('/api/v1/jobs/j1')
+      .flush(makeJob({ status: 'RUNNING', metrics: { stage: 'parsing' } }));
     fixture.detectChanges();
     expect(page.textContent).toContain('Running');
     expect(page.textContent).toContain('parsing');
@@ -75,7 +81,9 @@ describe('JobProgress', () => {
   it('says what a failure means, in words and with its code', () => {
     fixture.detectChanges();
     tick(0);
-    http.expectOne('/api/v1/jobs/j1').flush(makeJob({ status: 'FAILED', error_code: 'AI_RATE_LIMITED' }));
+    http
+      .expectOne('/api/v1/jobs/j1')
+      .flush(makeJob({ status: 'FAILED', error_code: 'AI_RATE_LIMITED' }));
     fixture.detectChanges();
     expect(page.textContent).toContain('Failed');
     expect(page.textContent).toContain('rate limiting');

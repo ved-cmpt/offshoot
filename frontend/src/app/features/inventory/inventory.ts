@@ -1,12 +1,26 @@
 import { DecimalPipe } from '@angular/common';
-import { ChangeDetectionStrategy, Component, DestroyRef, OnInit, computed, inject, signal } from '@angular/core';
+import {
+  ChangeDetectionStrategy,
+  Component,
+  DestroyRef,
+  OnInit,
+  computed,
+  inject,
+  signal,
+} from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { ActivatedRoute, RouterLink } from '@angular/router';
+import { Subscription } from 'rxjs';
 
 import { describeError } from '../../core/api/api-error';
 import { AuthService } from '../../core/auth/auth.service';
 import { JobProgress } from '../workbench/job-progress';
-import { Inventory as InventoryData, Job, LayoutRecord, WorkbenchService } from '../workbench/workbench.service';
+import {
+  Inventory as InventoryData,
+  Job,
+  LayoutRecord,
+  WorkbenchService,
+} from '../workbench/workbench.service';
 import { CallGraph } from './call-graph';
 
 type LoadState =
@@ -23,7 +37,7 @@ type LayoutState =
 const SUMMARY_LABELS: [string, string][] = [
   ['programs', 'Programs'],
   ['copybooks', 'Copybooks'],
-  ['lines', 'Lines'],
+  ['lines', 'Program lines'],
   ['working_paragraphs', 'Working paragraphs'],
   ['exit_labels', '-EXIT labels'],
   ['performs', 'PERFORMs'],
@@ -47,6 +61,8 @@ export class Inventory implements OnInit {
   private readonly route = inject(ActivatedRoute);
   private readonly auth = inject(AuthService);
   private readonly destroyRef = inject(DestroyRef);
+  private loading: Subscription | null = null;
+  private loadingLayouts: Subscription | null = null;
 
   protected readonly projectId = signal('');
   protected readonly state = signal<LoadState>({ kind: 'loading' });
@@ -85,30 +101,37 @@ export class Inventory implements OnInit {
 
   protected load(): void {
     this.state.set({ kind: 'loading' });
-    this.workbench.inventory(this.projectId()).subscribe({
-      next: (inventory) => {
-        this.state.set({ kind: 'ready', inventory });
-        if (inventory.analyzed) {
-          this.loadLayouts();
-        }
-      },
-      error: (error: unknown) => this.state.set({ kind: 'error', message: describeError(error) }),
-    });
+    this.loading?.unsubscribe();
+    this.loading = this.workbench
+      .inventory(this.projectId())
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe({
+        next: (inventory) => {
+          this.state.set({ kind: 'ready', inventory });
+          if (inventory.analyzed) {
+            this.loadLayouts();
+          }
+        },
+        error: (error: unknown) => this.state.set({ kind: 'error', message: describeError(error) }),
+      });
   }
 
   protected analyze(): void {
     this.starting.set(true);
     this.startError.set(null);
-    this.workbench.startAnalysis(this.projectId()).subscribe({
-      next: (job) => {
-        this.starting.set(false);
-        this.job.set(job);
-      },
-      error: (error: unknown) => {
-        this.starting.set(false);
-        this.startError.set(describeError(error));
-      },
-    });
+    this.workbench
+      .startAnalysis(this.projectId())
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe({
+        next: (job) => {
+          this.starting.set(false);
+          this.job.set(job);
+        },
+        error: (error: unknown) => {
+          this.starting.set(false);
+          this.startError.set(describeError(error));
+        },
+      });
   }
 
   protected jobFinished(job: Job): void {
@@ -124,10 +147,15 @@ export class Inventory implements OnInit {
 
   protected loadLayouts(): void {
     this.layouts.set({ kind: 'loading' });
-    this.workbench.layouts(this.projectId(), this.layoutProgram()).subscribe({
-      next: (page) => this.layouts.set({ kind: 'ready', records: page.items, total: page.total }),
-      error: (error: unknown) => this.layouts.set({ kind: 'error', message: describeError(error) }),
-    });
+    this.loadingLayouts?.unsubscribe();
+    this.loadingLayouts = this.workbench
+      .layouts(this.projectId(), this.layoutProgram())
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe({
+        next: (page) => this.layouts.set({ kind: 'ready', records: page.items, total: page.total }),
+        error: (error: unknown) =>
+          this.layouts.set({ kind: 'error', message: describeError(error) }),
+      });
   }
 
   protected showMoreLayouts(): void {
@@ -135,11 +163,20 @@ export class Inventory implements OnInit {
     if (current.kind !== 'ready') {
       return;
     }
-    this.workbench.layouts(this.projectId(), this.layoutProgram(), current.records.length).subscribe({
-      next: (page) =>
-        this.layouts.set({ kind: 'ready', records: [...current.records, ...page.items], total: page.total }),
-      error: (error: unknown) => this.layouts.set({ kind: 'error', message: describeError(error) }),
-    });
+    this.loadingLayouts?.unsubscribe();
+    this.loadingLayouts = this.workbench
+      .layouts(this.projectId(), this.layoutProgram(), current.records.length)
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe({
+        next: (page) =>
+          this.layouts.set({
+            kind: 'ready',
+            records: [...current.records, ...page.items],
+            total: page.total,
+          }),
+        error: (error: unknown) =>
+          this.layouts.set({ kind: 'error', message: describeError(error) }),
+      });
   }
 
   protected query(start: number | null, end: number | null): Record<string, number> {
@@ -150,7 +187,10 @@ export class Inventory implements OnInit {
     return `${Math.max(0, Math.floor(level / 5)) * 0.75}rem`;
   }
 
-  protected operations(file: { read_in: { paragraph: string }[]; written_in: { paragraph: string }[] }): string {
+  protected operations(file: {
+    read_in: { paragraph: string }[];
+    written_in: { paragraph: string }[];
+  }): string {
     const reads = file.read_in.map((item) => `read in ${item.paragraph}`);
     const writes = file.written_in.map((item) => `written in ${item.paragraph}`);
     return [...reads, ...writes].join('; ') || 'not read or written';

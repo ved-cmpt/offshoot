@@ -1,4 +1,14 @@
-import { ChangeDetectionStrategy, Component, computed, effect, inject, input, output, signal, untracked } from '@angular/core';
+import {
+  ChangeDetectionStrategy,
+  Component,
+  computed,
+  effect,
+  inject,
+  input,
+  output,
+  signal,
+  untracked,
+} from '@angular/core';
 import { Subscription } from 'rxjs';
 
 import { describeError } from '../../core/api/api-error';
@@ -24,10 +34,14 @@ const STATUS_TEXT: Record<Job['status'], string> = {
           }
         </p>
         @if (job.deduplicated && job.status === 'SUCCEEDED') {
-          <p class="job__note">Nothing has changed since this last ran, so the earlier result still stands.</p>
+          <p class="job__note">
+            Nothing has changed since this last ran, so the earlier result still stands.
+          </p>
         }
         @if (job.status === 'FAILED') {
-          <p>{{ errorText() }} <span class="job__code">Code: {{ job.error_code }}</span></p>
+          <p>
+            {{ errorText() }} <span class="job__code">Code: {{ job.error_code }}</span>
+          </p>
         }
       </div>
     }
@@ -79,7 +93,9 @@ export class JobProgress {
     const stage = job?.metrics['stage'];
     return job?.status === 'RUNNING' && typeof stage === 'string' ? stage : null;
   });
-  protected readonly errorText = computed(() => describeJobError(this.current()?.error_code ?? null));
+  protected readonly errorText = computed(() =>
+    describeJobError(this.current()?.error_code ?? null),
+  );
 
   constructor() {
     effect((onCleanup) => {

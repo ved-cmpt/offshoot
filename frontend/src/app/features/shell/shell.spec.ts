@@ -32,7 +32,9 @@ describe('Shell', () => {
     fixture = TestBed.createComponent(Shell);
     page = fixture.nativeElement;
     fixture.detectChanges();
-    http.expectOne('/api/v1/config').flush({ demo_mode: demoMode, ai_mode: 'mock', demo_accounts: [] });
+    http
+      .expectOne('/api/v1/config')
+      .flush({ demo_mode: demoMode, ai_mode: 'mock', demo_accounts: [] });
     await settle();
   }
 
@@ -56,11 +58,14 @@ describe('Shell', () => {
     vi.unstubAllGlobals();
   });
 
-  it.each<Role>(['VIEWER', 'ENGINEER', 'ARCHITECT', 'ADMIN'])('shows the user and the %s role', async (role) => {
-    await render(role);
-    expect(page.querySelector('.identity__name')?.textContent).toBe('Ari Architect');
-    expect(page.querySelector('.role-badge')?.textContent).toContain(role);
-  });
+  it.each<Role>(['VIEWER', 'ENGINEER', 'ARCHITECT', 'ADMIN'])(
+    'shows the user and the %s role',
+    async (role) => {
+      await render(role);
+      expect(page.querySelector('.identity__name')?.textContent).toBe('Ari Architect');
+      expect(page.querySelector('.role-badge')?.textContent).toContain(role);
+    },
+  );
 
   it('shows the demo banner in demo mode only', async () => {
     await render('VIEWER', true);
