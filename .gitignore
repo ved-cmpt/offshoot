@@ -1,0 +1,44 @@
+# Secrets
+.env
+.env.*
+!.env.example
+
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+.pytest_cache/
+.ruff_cache/
+.mypy_cache/
+.hypothesis/
+.coverage
+htmlcov/
+
+# Node / Angular
+node_modules/
+dist/
+.angular/
+coverage/
+*.tsbuildinfo
+
+# .NET
+bin/
+obj/
+*.user
+TestResults/
+StrykerOutput/
+
+# COBOL build and batch outputs
+legacy/billrite/build/
+legacy/billrite/out/
+
+# E2E
+e2e/test-results/
+e2e/playwright-report/
+
+# OS / editors
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/
+*.swp

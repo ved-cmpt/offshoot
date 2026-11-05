@@ -1,0 +1,13 @@
+# LF everywhere: containers mount these files on Windows, and CRLF breaks
+# shell scripts, fixed-format COBOL and fixed-width data files.
+* text=auto eol=lf
+
+*.png binary
+*.jpg binary
+*.gif binary
+*.ico binary
+*.woff binary
+*.woff2 binary
+*.pdf binary
+*.zip binary
+*.mp4 binary
