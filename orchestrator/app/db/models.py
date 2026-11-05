@@ -32,7 +32,7 @@ ROLES = ("VIEWER", "ENGINEER", "ARCHITECT", "ADMIN")
 PROJECT_SOURCE_KINDS = ("BUNDLED", "UPLOAD")
 PROJECT_STATUSES = ("IMPORTED", "ANALYZING", "ANALYZED", "FAILED")
 SOURCE_FILE_KINDS = ("PROGRAM", "COPYBOOK", "DATA_LAYOUT")
-INVENTORY_ITEM_KINDS = ("PROGRAM", "PARAGRAPH", "SECTION", "FILE", "RECORD", "FIELD")
+INVENTORY_ITEM_KINDS = ("PROGRAM", "COPYBOOK", "PARAGRAPH", "SECTION", "FILE", "RECORD", "FIELD")
 INVENTORY_EDGE_KINDS = ("PERFORMS", "GOES_TO", "CALLS", "READS", "WRITES", "USES")
 RULE_KINDS = ("CALCULATION", "VALIDATION", "DECISION", "DATA", "PROCESS")
 RULE_STATES = ("PROPOSED", "VERIFIED", "REJECTED", "EDITED")
@@ -174,6 +174,7 @@ class InventoryEdge(Base):
     from_item: Mapped[uuid.UUID] = mapped_column(ForeignKey("inventory_items.id", ondelete="CASCADE"), nullable=False)
     to_item: Mapped[uuid.UUID] = mapped_column(ForeignKey("inventory_items.id", ondelete="CASCADE"), nullable=False)
     kind: Mapped[str] = mapped_column(String(16), nullable=False)
+    attrs: Mapped[dict[str, Any]] = mapped_column(JSONB, nullable=False, server_default=text("'{}'::jsonb"))
 
 
 class Rule(Base):
@@ -184,6 +185,8 @@ class Rule(Base):
         CheckConstraint("confidence IS NULL OR (confidence >= 0 AND confidence <= 1)", name="confidence_range"),
         Index("ix_rules_project_id_kind", "project_id", "kind"),
         Index("ix_rules_project_id_program_state", "project_id", "program", "state"),
+        # Re-extraction must not bring back a rule that a person has already decided on.
+        UniqueConstraint("project_id", "program", "fingerprint", name="uq_rules_project_id_program_fingerprint"),
     )
 
     id: Mapped[uuid.UUID] = uuid_pk()
@@ -203,6 +206,15 @@ class Rule(Base):
     version: Mapped[int] = mapped_column(Integer, nullable=False, server_default=text("1"))
     decided_by: Mapped[uuid.UUID | None] = mapped_column(ForeignKey("users.id", ondelete="SET NULL"))
     decided_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    flag_details: Mapped[list[Any]] = mapped_column(JSONB, nullable=False, server_default=text("'[]'::jsonb"))
+    fingerprint: Mapped[str] = mapped_column(String(64), nullable=False)
+    job_id: Mapped[uuid.UUID | None] = mapped_column(ForeignKey("jobs.id", ondelete="SET NULL"))
+    prompt_version: Mapped[str] = mapped_column(String(32), nullable=False)
+    model_id: Mapped[str | None] = mapped_column(String(120))
+    # What the model proposed, untouched by later edits (Blueprint Section 11).
+    model_output: Mapped[dict[str, Any]] = mapped_column(JSONB, nullable=False, server_default=text("'{}'::jsonb"))
+    edited_by: Mapped[uuid.UUID | None] = mapped_column(ForeignKey("users.id", ondelete="SET NULL"))
+    edited_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
     created_at: Mapped[datetime] = created_at_column()
 
 
@@ -255,6 +267,15 @@ class Job(Base):
         Index("ix_jobs_project_id_kind", "project_id", "kind"),
         Index("ix_jobs_status_created_at", "status", "created_at"),
         Index("ix_jobs_project_id_input_hash", "project_id", "kind", "input_hash"),
+        # One live job per input: two identical requests racing cannot both queue.
+        Index(
+            "uq_jobs_active_input",
+            "project_id",
+            "kind",
+            "input_hash",
+            unique=True,
+            postgresql_where=text("status IN ('QUEUED', 'RUNNING')"),
+        ),
     )
 
     id: Mapped[uuid.UUID] = uuid_pk()
@@ -262,6 +283,8 @@ class Job(Base):
     kind: Mapped[str] = mapped_column(String(16), nullable=False)
     status: Mapped[str] = mapped_column(String(16), nullable=False, server_default=text("'QUEUED'"))
     input_hash: Mapped[str | None] = mapped_column(String(64))
+    payload: Mapped[dict[str, Any]] = mapped_column(JSONB, nullable=False, server_default=text("'{}'::jsonb"))
+    requested_by: Mapped[uuid.UUID | None] = mapped_column(ForeignKey("users.id", ondelete="SET NULL"))
     attempts: Mapped[int] = mapped_column(Integer, nullable=False, server_default=text("0"))
     started_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
     ended_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))

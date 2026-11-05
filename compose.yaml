@@ -45,6 +45,8 @@ services:
       AI_MODE: ${AI_MODE:-mock}
       GEMINI_API_KEY: ${GEMINI_API_KEY:-}
       GEMINI_MODEL: ${GEMINI_MODEL:-}
+      AI_TIMEOUT_SECONDS: ${AI_TIMEOUT_SECONDS:-60}
+      AI_PROJECT_CALL_BUDGET: ${AI_PROJECT_CALL_BUDGET:-50}
       DATABASE_URL: postgresql+psycopg://legacylens_app:${APP_DB_PASSWORD}@postgres:5432/legacylens
       MIGRATION_DATABASE_URL: postgresql+psycopg://legacylens:${POSTGRES_PASSWORD}@postgres:5432/legacylens
       JWT_SECRET: ${JWT_SECRET:?copy .env.example to .env}
