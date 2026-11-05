@@ -1,0 +1,38 @@
+.extract__row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  gap: var(--space-3);
+}
+
+.filters {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-3) var(--space-4);
+  margin-block: var(--space-4);
+}
+
+label {
+  display: inline-grid;
+  gap: var(--space-1);
+  font-size: var(--text-sm);
+}
+
+.counts {
+  margin-bottom: var(--space-3);
+  color: var(--color-text-muted);
+}
+
+.list {
+  display: grid;
+  gap: var(--space-3);
+}
+
+.pager {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+  margin-top: var(--space-4);
+}

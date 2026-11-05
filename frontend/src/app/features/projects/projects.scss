@@ -44,6 +44,12 @@
   color: var(--color-text-muted);
 }
 
+.project__links {
+  display: flex;
+  gap: var(--space-4);
+  margin-top: var(--space-3);
+}
+
 .project__facts {
   display: grid;
   gap: var(--space-3) var(--space-5);

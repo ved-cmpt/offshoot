@@ -1,0 +1,275 @@
+<div class="page-head">
+  <h1 class="page-title">Inventory</h1>
+  @if (canRun()) {
+    <button class="button" type="button" [disabled]="starting()" (click)="analyze()">
+      {{ starting() ? 'Starting…' : 'Run analysis' }}
+    </button>
+  }
+</div>
+<p class="muted">Computed by static analysis of the COBOL. No AI is involved in this page.</p>
+
+@if (startError(); as message) {
+  <div class="state state--error" role="alert"><p>The analysis could not be started. {{ message }}</p></div>
+}
+@if (job(); as running) {
+  <app-job-progress label="Analysis" [start]="running" (finished)="jobFinished($event)" />
+}
+
+@let current = state();
+@switch (current.kind) {
+  @case ('loading') {
+    <p class="state" role="status">Loading the inventory…</p>
+  }
+  @case ('error') {
+    <div class="state state--error" role="alert">
+      <p>The inventory could not be loaded. {{ current.message }}</p>
+      <button class="button button--quiet" type="button" (click)="load()">Try again</button>
+    </div>
+  }
+  @case ('ready') {
+    @if (!current.inventory.analyzed) {
+      <p class="state">
+        This project has not been analyzed yet.
+        @if (canRun()) {
+          Use Run analysis to build the inventory.
+        } @else {
+          An engineer or architect can run the analysis.
+        }
+      </p>
+    } @else {
+      <dl class="summary">
+        @for (item of summary(); track item.label) {
+          <div>
+            <dt>{{ item.label }}</dt>
+            <dd>{{ item.value | number }}</dd>
+          </div>
+        }
+      </dl>
+
+      @if (current.inventory.diagnostics.length) {
+        <section class="panel" aria-labelledby="diagnostics-title">
+          <h2 id="diagnostics-title">Parser diagnostics</h2>
+          <ul>
+            @for (message of current.inventory.diagnostics; track message) {
+              <li>{{ message }}</li>
+            }
+          </ul>
+        </section>
+      }
+
+      <section class="panel" aria-labelledby="programs-title">
+        <h2 id="programs-title">Programs</h2>
+        <div class="table-scroll" tabindex="0" role="region" aria-labelledby="programs-title">
+          <table class="data-table">
+            <thead>
+              <tr>
+                <th scope="col">Program</th>
+                <th scope="col" class="num">Lines</th>
+                <th scope="col" class="num">Paragraphs</th>
+                <th scope="col" class="num">PERFORM</th>
+                <th scope="col" class="num">GO TO</th>
+                <th scope="col">Calls</th>
+                <th scope="col">Copybooks</th>
+              </tr>
+            </thead>
+            <tbody>
+              @for (program of current.inventory.programs; track program.id) {
+                <tr>
+                  <th scope="row">
+                    @if (program.file_id) {
+                      <a [routerLink]="['/projects', projectId(), 'sources', program.file_id]">{{ program.name }}</a>
+                    } @else {
+                      {{ program.name }}
+                    }
+                    @if (program.is_entry) {
+                      <span class="badge">entry</span>
+                    }
+                  </th>
+                  <td class="num">{{ program.metrics['lines'] }}</td>
+                  <td class="num">{{ program.metrics['working_paragraphs'] }}</td>
+                  <td class="num">{{ program.metrics['performs'] }}</td>
+                  <td class="num">{{ program.metrics['go_tos'] }}</td>
+                  <td>{{ program.calls.join(', ') || 'none' }}</td>
+                  <td class="links">
+                    @for (copybook of program.copybooks; track copybook.name) {
+                      @if (copybook.file_id) {
+                        <a [routerLink]="['/projects', projectId(), 'sources', copybook.file_id]">{{ copybook.name }}</a>
+                      }
+                    }
+                  </td>
+                </tr>
+              }
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      <section class="panel" aria-labelledby="graph-title">
+        <h2 id="graph-title">Call graph</h2>
+        <app-call-graph [projectId]="projectId()" [programs]="programNames()" />
+      </section>
+
+      <section class="panel" aria-labelledby="dead-title">
+        <h2 id="dead-title">Dead code</h2>
+        <p class="muted">
+          Reachability follows PERFORM, THRU ranges, GO TO and fall-through from each program's first paragraph.
+        </p>
+        <h3>Paragraphs nothing can reach</h3>
+        @if (current.inventory.dead_code.paragraphs.length) {
+          <ul class="plain">
+            @for (item of current.inventory.dead_code.paragraphs; track item.id) {
+              <li>
+                <code>{{ item.name }}</code> in {{ item.program }}
+                @if (item.file_id) {
+                  (<a
+                    [routerLink]="['/projects', projectId(), 'sources', item.file_id]"
+                    [queryParams]="query(item.start_line, item.end_line)"
+                    >lines {{ item.start_line }}-{{ item.end_line }}</a
+                  >)
+                }
+              </li>
+            }
+          </ul>
+        } @else {
+          <p>None found.</p>
+        }
+        <h3>Obsolete tables, read only by dead code</h3>
+        @if (current.inventory.dead_code.records.length) {
+          <ul class="plain">
+            @for (item of current.inventory.dead_code.records; track item.id) {
+              <li>
+                <code>{{ item.name }}</code>, {{ item.length }} bytes
+                @if (item.file_id) {
+                  (<a
+                    [routerLink]="['/projects', projectId(), 'sources', item.file_id]"
+                    [queryParams]="query(item.start_line, item.end_line)"
+                    >lines {{ item.start_line }}-{{ item.end_line }}</a
+                  >)
+                }
+              </li>
+            }
+          </ul>
+        } @else {
+          <p>None found.</p>
+        }
+      </section>
+
+      <section class="panel" aria-labelledby="files-title">
+        <h2 id="files-title">File I/O</h2>
+        @if (current.inventory.files.length) {
+          <div class="table-scroll" tabindex="0" role="region" aria-labelledby="files-title">
+            <table class="data-table">
+              <thead>
+                <tr>
+                  <th scope="col">File</th>
+                  <th scope="col">Program</th>
+                  <th scope="col">Opened for</th>
+                  <th scope="col">Record</th>
+                  <th scope="col">Used</th>
+                </tr>
+              </thead>
+              <tbody>
+                @for (file of current.inventory.files; track file.id) {
+                  <tr>
+                    <th scope="row">{{ file.name }}</th>
+                    <td>{{ file.program }}</td>
+                    <td>{{ file.mode ?? 'not opened' }}</td>
+                    <td>{{ file.record ?? 'unknown' }}</td>
+                    <td>{{ operations(file) }}</td>
+                  </tr>
+                }
+              </tbody>
+            </table>
+          </div>
+        } @else {
+          <p>No files are declared.</p>
+        }
+      </section>
+
+      <section class="panel" aria-labelledby="layouts-title">
+        <h2 id="layouts-title">Data layouts</h2>
+        <label class="field-inline">
+          Used by
+          <select (change)="chooseLayoutProgram($any($event.target).value)">
+            <option value="">Any program</option>
+            @for (name of programNames(); track name) {
+              <option [value]="name">{{ name }}</option>
+            }
+          </select>
+        </label>
+        @let layoutState = layouts();
+        @switch (layoutState.kind) {
+          @case ('loading') {
+            <p class="state" role="status">Loading the layouts…</p>
+          }
+          @case ('error') {
+            <div class="state state--error" role="alert">
+              <p>The layouts could not be loaded. {{ layoutState.message }}</p>
+              <button class="button button--quiet" type="button" (click)="loadLayouts()">Try again</button>
+            </div>
+          }
+          @case ('ready') {
+            @if (layoutState.records.length === 0) {
+              <p class="state">No records for this program.</p>
+            }
+            @for (record of layoutState.records; track record.id) {
+              <details class="record">
+                <summary>
+                  <code>{{ record.name }}</code>, {{ record.length }} bytes, in {{ record.file }}
+                  @if (record.obsolete) {
+                    <span class="badge badge--danger">obsolete</span>
+                  }
+                </summary>
+                <div class="table-scroll" tabindex="0" role="region" [attr.aria-label]="record.name + ' fields'">
+                  <table class="data-table data-table--tight">
+                    <thead>
+                      <tr>
+                        <th scope="col">Field</th>
+                        <th scope="col">Picture</th>
+                        <th scope="col" class="num">Offset</th>
+                        <th scope="col" class="num">Length</th>
+                        <th scope="col" class="num">Decimals</th>
+                        <th scope="col">Notes</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      @for (field of record.fields; track field.order) {
+                        <tr>
+                          <th scope="row" [style.padding-left]="indent(field.level)">
+                            <code>{{ field.level }} {{ field.name }}</code>
+                          </th>
+                          <td>
+                            <code>{{ field.picture ?? 'group' }}</code>
+                          </td>
+                          <td class="num">{{ field.offset }}</td>
+                          <td class="num">{{ field.total_length }}</td>
+                          <td class="num">{{ field.scale || '' }}</td>
+                          <td>
+                            @if (field.signed) {
+                              signed
+                            }
+                            @if (field.occurs) {
+                              occurs {{ field.occurs }}
+                            }
+                            @if (field.redefines) {
+                              redefines {{ field.redefines }}
+                            }
+                          </td>
+                        </tr>
+                      }
+                    </tbody>
+                  </table>
+                </div>
+              </details>
+            }
+            @if (layoutState.records.length < layoutState.total) {
+              <button class="button button--quiet" type="button" (click)="showMoreLayouts()">
+                Show more ({{ layoutState.total - layoutState.records.length }} left)
+              </button>
+            }
+          }
+        }
+      </section>
+    }
+  }
+}

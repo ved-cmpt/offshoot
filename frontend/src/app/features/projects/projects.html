@@ -20,7 +20,9 @@
       <ul class="project-list">
         @for (project of current.projects; track project.id) {
           <li class="project">
-            <h2 class="project__name">{{ project.name }}</h2>
+            <h2 class="project__name">
+              <a [routerLink]="['/projects', project.id, 'inventory']">{{ project.name }}</a>
+            </h2>
             @if (project.description) {
               <p class="project__description">{{ project.description }}</p>
             }
@@ -46,6 +48,10 @@
                 <dd>{{ project.created_at | date: 'mediumDate' : 'UTC' }}</dd>
               </div>
             </dl>
+            <p class="project__links">
+              <a [routerLink]="['/projects', project.id, 'inventory']">Inventory</a>
+              <a [routerLink]="['/projects', project.id, 'rules']">Rules</a>
+            </p>
           </li>
         }
       </ul>

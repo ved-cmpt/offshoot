@@ -20,6 +20,28 @@ export const routes: Routes = [
         title: 'Projects - LegacyLens',
         loadComponent: () => import('./features/projects/projects').then((m) => m.Projects),
       },
+      {
+        path: 'projects/:id',
+        loadComponent: () => import('./features/workbench/project-layout').then((m) => m.ProjectLayout),
+        children: [
+          { path: '', pathMatch: 'full', redirectTo: 'inventory' },
+          {
+            path: 'inventory',
+            title: 'Inventory - LegacyLens',
+            loadComponent: () => import('./features/inventory/inventory').then((m) => m.Inventory),
+          },
+          {
+            path: 'sources/:file',
+            title: 'Source - LegacyLens',
+            loadComponent: () => import('./features/sources/source-viewer').then((m) => m.SourceViewer),
+          },
+          {
+            path: 'rules',
+            title: 'Rules - LegacyLens',
+            loadComponent: () => import('./features/rules/rules').then((m) => m.Rules),
+          },
+        ],
+      },
     ],
   },
   { path: '**', redirectTo: '' },

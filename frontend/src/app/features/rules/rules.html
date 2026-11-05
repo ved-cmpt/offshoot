@@ -1,0 +1,123 @@
+<div class="page-head">
+  <h1 class="page-title">Business rules</h1>
+</div>
+<p class="muted">
+  The agent proposes rules. The server checks every citation, and only an architect can verify or reject.
+  @if (canExtract() && !isArchitect()) {
+    Your role can run extraction and edit rules.
+  } @else if (!canExtract()) {
+    Your role can read these rules.
+  }
+</p>
+
+@if (canExtract()) {
+  <section class="panel extract" aria-labelledby="extract-title">
+    <h2 id="extract-title">Extract rules</h2>
+    @if (analyzedPrograms(); as programs) {
+      @if (programs.length) {
+        <div class="extract__row">
+          <label>
+            Program
+            <select (change)="extractProgram.set($any($event.target).value)">
+              @for (name of programs; track name) {
+                <option [value]="name" [selected]="name === extractProgram()">{{ name }}</option>
+              }
+            </select>
+          </label>
+          <button class="button" type="button" [disabled]="starting() || !extractProgram()" (click)="extract()">
+            {{ starting() ? 'Starting…' : 'Extract rules' }}
+          </button>
+        </div>
+      } @else {
+        <p>Analyze the project first: <a [routerLink]="['/projects', projectId(), 'inventory']">go to the inventory</a>.</p>
+      }
+    } @else {
+      <p role="status">Loading programs…</p>
+    }
+    @if (startError(); as message) {
+      <div class="state state--error" role="alert"><p>Extraction could not be started. {{ message }}</p></div>
+    }
+    @if (job(); as running) {
+      <app-job-progress label="Extraction" [start]="running" (finished)="jobFinished($event)" />
+    }
+  </section>
+}
+
+<section class="filters" aria-label="Filter rules">
+  <label>
+    Program
+    <select (change)="setFilter('program', $any($event.target).value)">
+      <option value="" [selected]="program() === ''">All</option>
+      @for (name of analyzedPrograms() ?? []; track name) {
+        <option [value]="name" [selected]="program() === name">{{ name }}</option>
+      }
+    </select>
+  </label>
+  <label>
+    State
+    <select (change)="setFilter('ruleState', $any($event.target).value)">
+      <option value="" [selected]="ruleState() === ''">All</option>
+      <option value="PROPOSED" [selected]="ruleState() === 'PROPOSED'">Proposed</option>
+      <option value="EDITED" [selected]="ruleState() === 'EDITED'">Edited</option>
+      <option value="VERIFIED" [selected]="ruleState() === 'VERIFIED'">Verified</option>
+      <option value="REJECTED" [selected]="ruleState() === 'REJECTED'">Rejected</option>
+    </select>
+  </label>
+  <label>
+    Flag
+    <select (change)="setFilter('flag', $any($event.target).value)">
+      <option value="" [selected]="flag() === ''">Any</option>
+      <option value="SPAN_INVALID" [selected]="flag() === 'SPAN_INVALID'">Source lines invalid</option>
+      <option value="NAMES_NOT_FOUND" [selected]="flag() === 'NAMES_NOT_FOUND'">Data names not found</option>
+      <option value="LOW_CONFIDENCE" [selected]="flag() === 'LOW_CONFIDENCE'">Low confidence</option>
+    </select>
+  </label>
+</section>
+
+@let current = state();
+@switch (current.kind) {
+  @case ('loading') {
+    <p class="state" role="status">Loading rules…</p>
+  }
+  @case ('error') {
+    <div class="state state--error" role="alert">
+      <p>The rules could not be loaded. {{ current.message }}</p>
+      <button class="button button--quiet" type="button" (click)="load()">Try again</button>
+    </div>
+  }
+  @case ('ready') {
+    @if (current.page.total === 0) {
+      <div class="state">
+        @if (hasFilters()) {
+          <p>No rules match these filters.</p>
+          <button class="button button--quiet" type="button" (click)="clearFilters()">Clear filters</button>
+        } @else {
+          <p>No rules have been extracted yet.</p>
+        }
+      </div>
+    } @else {
+      <p class="counts" role="status">{{ current.page.total }} in this selection. For the chosen program: {{ countsText() }}.</p>
+      <div class="list">
+        @for (rule of current.page.items; track rule.id) {
+          <app-rule-card [rule]="rule" (changed)="updateRule($event)" />
+        }
+      </div>
+      @if (current.page.total > pageSize) {
+        <nav class="pager" aria-label="Rule pages">
+          <button class="button button--quiet" type="button" [disabled]="offset() === 0" (click)="goTo(offset() - pageSize)">
+            Previous
+          </button>
+          <span>{{ offset() + 1 }} to {{ offset() + current.page.items.length }} of {{ current.page.total }}</span>
+          <button
+            class="button button--quiet"
+            type="button"
+            [disabled]="offset() + pageSize >= current.page.total"
+            (click)="goTo(offset() + pageSize)"
+          >
+            Next
+          </button>
+        </nav>
+      }
+    }
+  }
+}

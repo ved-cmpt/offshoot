@@ -1,0 +1,117 @@
+<div class="controls">
+  <label>
+    Show
+    <select (change)="chooseProgram($any($event.target).value)">
+      <option value="">All programs, files and copybooks</option>
+      @for (name of programs(); track name) {
+        <option [value]="name">Paragraphs of {{ name }}</option>
+      }
+    </select>
+  </label>
+  @if (program()) {
+    <label class="controls__check">
+      <input type="checkbox" [checked]="showExitLabels()" (change)="toggleExitLabels($any($event.target).checked)" />
+      Show -EXIT labels
+    </label>
+  }
+</div>
+
+@let current = state();
+@switch (current.kind) {
+  @case ('loading') {
+    <p class="state" role="status">Loading the graph…</p>
+  }
+  @case ('error') {
+    <div class="state state--error" role="alert">
+      <p>The graph could not be loaded. {{ current.message }}</p>
+      <button class="button button--quiet" type="button" (click)="reload()">Try again</button>
+    </div>
+  }
+  @case ('ready') {
+    @if (layout().nodes.length === 0) {
+      <p class="state">The graph is empty. Run the analysis first.</p>
+    } @else {
+      <p class="hint">
+        Select a node to list its links. Solid lines perform or call, dashed lines are a GO TO, and a thin line is
+        reached only through a THRU range.
+      </p>
+      <div class="scroll" tabindex="0" role="region" aria-label="Call graph, scrolls sideways">
+        <svg
+          class="graph"
+          role="group"
+          aria-label="Call graph"
+          [attr.width]="layout().width"
+          [attr.height]="layout().height"
+          [attr.viewBox]="'0 0 ' + layout().width + ' ' + layout().height"
+        >
+          <defs>
+            <marker id="graph-arrow" viewBox="0 0 8 8" refX="7" refY="4" markerWidth="7" markerHeight="7" orient="auto">
+              <path class="graph__arrow" d="M0,0 L8,4 L0,8 z" />
+            </marker>
+          </defs>
+          @for (item of layout().edges; track $index) {
+            <path
+              class="edge"
+              [class.edge--goto]="item.edge.kind === 'GOES_TO'"
+              [class.edge--range]="item.edge.thru && !item.edge.by_name"
+              [class.edge--active]="isConnected(item.edge)"
+              [attr.d]="item.path"
+              marker-end="url(#graph-arrow)"
+            />
+          }
+          @for (item of layout().nodes; track item.node.id) {
+            <g
+              class="node"
+              role="button"
+              tabindex="0"
+              [class.node--dead]="item.node.dead"
+              [class.node--selected]="selectedId() === item.node.id"
+              [class.node--other]="item.node.kind !== 'PARAGRAPH' && item.node.kind !== 'PROGRAM'"
+              [attr.transform]="'translate(' + item.x + ',' + item.y + ')'"
+              [attr.aria-label]="nodeLabel(item.node)"
+              [attr.aria-pressed]="selectedId() === item.node.id"
+              (click)="select(item.node)"
+              (keydown.enter)="select(item.node)"
+              (keydown.space)="$event.preventDefault(); select(item.node)"
+            >
+              <rect [attr.width]="nodeWidth" [attr.height]="nodeHeight" rx="6" />
+              <text x="10" y="22">{{ displayName(item.node) }}{{ item.node.dead ? ' (dead)' : '' }}</text>
+            </g>
+          }
+        </svg>
+      </div>
+
+      @if (selected(); as node) {
+        <section class="details" aria-label="Selected node">
+          <h4>{{ node.name }}</h4>
+          <p>
+            {{ node.kind.toLowerCase() }}
+            @if (node.dead) {
+              · <strong>dead code: nothing can reach it</strong>
+            }
+            @if (node.file_id) {
+              ·
+              <a [routerLink]="['/projects', projectId(), 'sources', node.file_id]" [queryParams]="sourceQuery(node)"
+                >Open source</a
+              >
+            }
+          </p>
+          @if (connections().length) {
+            <ul>
+              @for (link of connections(); track link.key) {
+                <li>
+                  {{ link.text }}
+                  @if (link.lines.length) {
+                    <span class="details__lines">(line {{ link.lines.join(', ') }})</span>
+                  }
+                </li>
+              }
+            </ul>
+          } @else {
+            <p>No links to or from this node in this view.</p>
+          }
+        </section>
+      }
+    }
+  }
+}

@@ -62,6 +62,7 @@ class Extracted:
     spans: tuple[tuple[str, int, int], ...]
     flags: tuple[str, ...]
     state: str
+    spans_cited: int = 0
 
 
 @dataclass
@@ -81,6 +82,7 @@ class Evaluation:
     unflagged_unmatched: list[str] = field(default_factory=list)
     flagged_but_matched: list[str] = field(default_factory=list)
     missed_keys: list[str] = field(default_factory=list)
+    pairs: list[tuple[str, str]] = field(default_factory=list)
     hallucinated_titles: list[str] = field(default_factory=list)
     by_program: dict[str, dict[str, int]] = field(default_factory=dict)
     precision_after_flags: float = 0.0
@@ -108,6 +110,7 @@ class Evaluation:
             "unflagged_unmatched": self.unflagged_unmatched,
             "flagged_but_matched": self.flagged_but_matched,
             "missed_keys": self.missed_keys,
+            "one_to_one_pairs": [{"key": key, "rule": rule} for key, rule in self.pairs],
             "by_program": self.by_program,
         }
 
@@ -168,8 +171,11 @@ def is_match(rule: Extracted, key: KeyRule, threshold: float) -> bool:
     )
 
 
-def maximum_matching(edges: dict[str, list[str]]) -> int:
-    """Kuhn's algorithm: the largest set of pairs that use each rule and key row at most once."""
+def maximum_matching(edges: dict[str, list[str]]) -> dict[str, str]:
+    """Kuhn's algorithm: the largest set of pairs using each rule and key row at most once.
+
+    Returns key row -> rule.
+    """
     owner: dict[str, str] = {}
 
     def assign(rule: str, seen: set[str]) -> bool:
@@ -182,7 +188,9 @@ def maximum_matching(edges: dict[str, list[str]]) -> int:
                 return True
         return False
 
-    return sum(1 for rule in edges if assign(rule, set()))
+    for rule in edges:
+        assign(rule, set())
+    return owner
 
 
 def evaluate(rules: list[Extracted], key: list[KeyRule], threshold: float = DEFAULT_THRESHOLD) -> Evaluation:
@@ -191,7 +199,10 @@ def evaluate(rules: list[Extracted], key: list[KeyRule], threshold: float = DEFA
     matched_keys = {row for targets in edges.values() for row in targets}
     result.matched_rules = sum(1 for targets in edges.values() if targets)
     result.matched_keys = len(matched_keys)
-    result.one_to_one = maximum_matching(edges)
+    pairs = maximum_matching(edges)
+    titles = {rule.id: rule.title for rule in rules}
+    result.one_to_one = len(pairs)
+    result.pairs = sorted((row, titles[rule]) for row, rule in pairs.items())
     result.missed_keys = sorted(row.id for row in key if row.id not in matched_keys)
     survivors = 0
     survivors_matched = 0
@@ -201,6 +212,8 @@ def evaluate(rules: list[Extracted], key: list[KeyRule], threshold: float = DEFA
         result.flagged += bool(rule.flags)
         result.hard_flagged += hard
         result.span_valid_rules += "SPAN_INVALID" not in rule.flags
+        result.spans_total += rule.spans_cited
+        result.spans_valid += len(rule.spans)
         if hard and not matched:
             result.hard_flagged_unmatched += 1
             result.hallucinated_titles.append(rule.title)
@@ -293,6 +306,7 @@ def to_extracted(raw: dict[str, Any]) -> Extracted:
         spans=tuple((span["file"], span["start_line"], span["end_line"]) for span in raw["spans"] if span["valid"]),
         flags=tuple(raw["flags"]),
         state=raw["state"],
+        spans_cited=len(raw["spans"]),
     )
 
 

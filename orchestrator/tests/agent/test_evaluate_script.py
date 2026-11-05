@@ -94,9 +94,17 @@ def test_one_to_one_is_stricter_than_any_match() -> None:
 
 
 def test_maximum_matching_finds_the_better_assignment() -> None:
-    assert er.maximum_matching({"a": ["1", "2"], "b": ["1"]}) == 2
-    assert er.maximum_matching({"a": ["1"], "b": ["1"]}) == 1
-    assert er.maximum_matching({"a": []}) == 0
+    assert er.maximum_matching({"a": ["1", "2"], "b": ["1"]}) == {"1": "b", "2": "a"}
+    assert len(er.maximum_matching({"a": ["1"], "b": ["1"]})) == 1
+    assert er.maximum_matching({"a": []}) == {}
+
+
+def test_span_validity_counts_each_cited_span() -> None:
+    good = er.Extracted("a", "MTRVAL", "t", "x", (("M", 1, 2),), (), "PROPOSED", 1)
+    half = er.Extracted("b", "MTRVAL", "t", "x", (("M", 1, 2),), ("SPAN_INVALID",), "PROPOSED", 2)
+    report = er.evaluate([good, half], [], 0.3).as_dict()
+    assert report["span_validity_spans"] == round(2 / 3, 4)
+    assert report["span_validity_rules"] == 0.5
 
 
 def test_empty_input_gives_zero_not_an_error() -> None:

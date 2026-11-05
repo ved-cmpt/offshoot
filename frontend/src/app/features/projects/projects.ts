@@ -1,5 +1,6 @@
 import { DatePipe, DecimalPipe } from '@angular/common';
 import { ChangeDetectionStrategy, Component, OnInit, inject, signal } from '@angular/core';
+import { RouterLink } from '@angular/router';
 
 import { describeError } from '../../core/api/api-error';
 import { Project, ProjectsService } from './projects.service';
@@ -23,7 +24,7 @@ const SOURCE_LABELS: Record<Project['source_kind'], string> = {
 
 @Component({
   selector: 'app-projects',
-  imports: [DatePipe, DecimalPipe],
+  imports: [DatePipe, DecimalPipe, RouterLink],
   templateUrl: './projects.html',
   styleUrl: './projects.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,

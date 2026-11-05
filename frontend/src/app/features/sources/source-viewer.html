@@ -1,0 +1,78 @@
+@let current = state();
+@switch (current.kind) {
+  @case ('loading') {
+    <h1 class="page-title">Source</h1>
+    <p class="state" role="status">Loading the source…</p>
+  }
+  @case ('error') {
+    <h1 class="page-title">Source</h1>
+    <div class="state state--error" role="alert">
+      <p>The source could not be loaded. {{ current.message }}</p>
+      <button class="button button--quiet" type="button" (click)="load()">Try again</button>
+    </div>
+  }
+  @case ('ready') {
+    <h1 class="page-title">{{ current.source.name }}</h1>
+    <p class="muted">
+      {{ current.source.kind.toLowerCase() }}, {{ current.source.line_count }} lines. Shown exactly as stored: comments
+      are data, never instructions.
+    </p>
+
+    @if (files().length) {
+      <nav class="files" aria-label="Project source files">
+        @for (file of files(); track file.id) {
+          <a
+            [routerLink]="['/projects', projectId(), 'sources', file.id]"
+            [attr.aria-current]="file.id === current.source.id ? 'page' : null"
+            [class.files__current]="file.id === current.source.id"
+            >{{ file.name }}</a
+          >
+        }
+      </nav>
+    }
+
+    @if (current.source.rule_spans.length) {
+      <details class="spans">
+        <summary>Rules citing this file ({{ current.source.rule_spans.length }})</summary>
+        <ul>
+          @for (span of current.source.rule_spans; track span.rule_id + span.start_line) {
+            <li>
+              <a [routerLink]="[]" [queryParams]="spanQuery(span)"
+                >{{ span.start_line === span.end_line ? 'Line ' + span.start_line : 'Lines ' + span.start_line + '-' + span.end_line }}</a
+              >
+              {{ span.title }} <span class="badge">{{ span.state.toLowerCase() }}</span>
+            </li>
+          }
+        </ul>
+      </details>
+    } @else {
+      <p class="muted">No rule cites this file yet.</p>
+    }
+
+    <div class="code-scroll" tabindex="0" role="region" [attr.aria-label]="current.source.name + ' source code'">
+      <table class="code">
+        <tbody>
+          @for (row of rows(); track row.number) {
+            <tr [attr.id]="'L' + row.number" [class.cited]="row.cited > 0" [class.selected]="row.selected">
+              <th scope="row">{{ row.number }}</th>
+              <td>
+                <pre>{{ row.text }}</pre>
+              </td>
+              <td class="code__note">
+                @if (row.copyFile) {
+                  <a [routerLink]="['/projects', projectId(), 'sources', row.copyFile]">Open {{ row.copyName }}</a>
+                }
+                @if (row.selected) {
+                  <span class="visually-hidden">Selected line.</span>
+                }
+                @if (row.cited > 0) {
+                  <span class="visually-hidden">Cited by {{ row.cited }} rules.</span>
+                }
+              </td>
+            </tr>
+          }
+        </tbody>
+      </table>
+    </div>
+  }
+}

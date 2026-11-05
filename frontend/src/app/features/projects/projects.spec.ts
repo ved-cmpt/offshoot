@@ -1,6 +1,7 @@
 import { provideHttpClient } from '@angular/common/http';
 import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
+import { provideRouter } from '@angular/router';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 
 import { Projects } from './projects';
@@ -37,7 +38,7 @@ describe('Projects', () => {
   beforeEach(() => {
     TestBed.configureTestingModule({
       imports: [Projects],
-      providers: [provideHttpClient(), provideHttpClientTesting()],
+      providers: [provideHttpClient(), provideHttpClientTesting(), provideRouter([])],
     });
     http = TestBed.inject(HttpTestingController);
     fixture = TestBed.createComponent(Projects);
@@ -56,7 +57,8 @@ describe('Projects', () => {
     http.expectOne('/api/v1/projects').flush(PAGE);
     await settle();
     const project = page.querySelector('.project')!;
-    expect(project.querySelector('h2')?.textContent).toBe('BillRite');
+    expect(project.querySelector('h2')?.textContent?.trim()).toBe('BillRite');
+    expect(project.querySelector('h2 a')?.getAttribute('href')).toBe('/projects/p1/inventory');
     expect(project.textContent).toContain('Synthetic billing system.');
     expect(project.textContent).toContain('Imported, not analyzed yet');
     expect(project.textContent).toContain('Bundled sample');
@@ -89,7 +91,7 @@ describe('Projects', () => {
     expect(page.querySelector('[role="status"]')).not.toBeNull();
     http.expectOne('/api/v1/projects').flush(PAGE);
     await settle();
-    expect(page.querySelector('.project h2')?.textContent).toBe('BillRite');
+    expect(page.querySelector('.project h2')?.textContent?.trim()).toBe('BillRite');
     expect(page.querySelector('[role="alert"]')).toBeNull();
   });
 });
