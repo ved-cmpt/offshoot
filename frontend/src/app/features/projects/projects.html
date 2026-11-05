@@ -1,0 +1,54 @@
+<h1 class="page-title">Projects</h1>
+
+@let current = state();
+@switch (current.kind) {
+  @case ('loading') {
+    <p class="state" role="status">Loading projects…</p>
+  }
+  @case ('error') {
+    <div class="state state--error" role="alert">
+      <p>Projects could not be loaded. {{ current.message }}</p>
+      <button class="button button--quiet" type="button" (click)="load()">Try again</button>
+    </div>
+  }
+  @case ('ready') {
+    @if (current.projects.length === 0) {
+      <p class="state">
+        There are no projects yet. Run the demo seed to add the BillRite sample.
+      </p>
+    } @else {
+      <ul class="project-list">
+        @for (project of current.projects; track project.id) {
+          <li class="project">
+            <h2 class="project__name">{{ project.name }}</h2>
+            @if (project.description) {
+              <p class="project__description">{{ project.description }}</p>
+            }
+            <dl class="project__facts">
+              <div>
+                <dt>Status</dt>
+                <dd>{{ statusLabels[project.status] }}</dd>
+              </div>
+              <div>
+                <dt>Source</dt>
+                <dd>{{ sourceLabels[project.source_kind] }}</dd>
+              </div>
+              <div>
+                <dt>Files</dt>
+                <dd>{{ project.source_file_count | number }}</dd>
+              </div>
+              <div>
+                <dt>Lines</dt>
+                <dd>{{ project.source_line_count | number }}</dd>
+              </div>
+              <div>
+                <dt>Created</dt>
+                <dd>{{ project.created_at | date: 'mediumDate' : 'UTC' }}</dd>
+              </div>
+            </dl>
+          </li>
+        }
+      </ul>
+    }
+  }
+}

@@ -1,0 +1,105 @@
+@if (demoMode()) {
+  <header>
+    <p class="demo-banner" role="note">Demo: synthetic COBOL application and simulated AI responses. All accounts are public.</p>
+  </header>
+}
+
+<main class="login">
+  <header class="login__header">
+    <h1>LegacyLens</h1>
+    <p>Legacy modernization with proof. Sign in to continue.</p>
+  </header>
+
+  <div class="login__panels">
+    <section class="panel" aria-labelledby="sign-in-heading">
+      <h2 id="sign-in-heading">Sign in</h2>
+
+      @if (errorMessage(); as message) {
+        <p class="form-error" role="alert">{{ message }}</p>
+      }
+
+      <form [formGroup]="form" (ngSubmit)="submit()" novalidate>
+        <div class="field">
+          <label for="email">Email</label>
+          <input
+            id="email"
+            type="email"
+            formControlName="email"
+            autocomplete="username"
+            [attr.aria-invalid]="form.controls.email.touched && form.controls.email.invalid"
+            [attr.aria-describedby]="form.controls.email.touched && form.controls.email.invalid ? 'email-error' : null"
+          />
+          @if (form.controls.email.touched && form.controls.email.invalid) {
+            <p id="email-error" class="field__error">Enter your email address.</p>
+          }
+        </div>
+
+        <div class="field">
+          <label for="password">Password</label>
+          <input
+            id="password"
+            type="password"
+            formControlName="password"
+            autocomplete="current-password"
+            [attr.aria-invalid]="form.controls.password.touched && form.controls.password.invalid"
+            [attr.aria-describedby]="form.controls.password.touched && form.controls.password.invalid ? 'password-error' : null"
+          />
+          @if (form.controls.password.touched && form.controls.password.invalid) {
+            <p id="password-error" class="field__error">Enter your password.</p>
+          }
+        </div>
+
+        <button class="button" type="submit" [disabled]="isSubmitting()">
+          {{ isSubmitting() ? 'Signing in…' : 'Sign in' }}
+        </button>
+      </form>
+    </section>
+
+    <section class="panel" aria-labelledby="demo-heading">
+      <h2 id="demo-heading">Demo accounts</h2>
+
+      @switch (configState().kind) {
+        @case ('loading') {
+          <p role="status">Loading demo accounts…</p>
+        }
+        @case ('error') {
+          <div role="alert">
+            <p>Demo accounts could not be loaded. You can still sign in with the form.</p>
+            <button class="button button--quiet" type="button" (click)="loadConfig()">Try again</button>
+          </div>
+        }
+      }
+
+      @let state = configState();
+      @if (state.kind === 'ready') {
+        @if (state.config.demo_accounts.length === 0) {
+          <p>No demo accounts are available on this server.</p>
+        } @else {
+          <p class="panel__hint">Each account shows a different level of access.</p>
+          <ul class="accounts">
+            @for (account of state.config.demo_accounts; track account.email) {
+              <li class="account">
+                <h3 class="account__role">{{ account.role }}</h3>
+                <p>{{ roleSummaries[account.role] }}</p>
+                <dl class="account__credentials">
+                  <dt>Email</dt>
+                  <dd>{{ account.email }}</dd>
+                  <dt>Password</dt>
+                  <dd>{{ account.password }}</dd>
+                </dl>
+                <button
+                  class="button button--quiet"
+                  type="button"
+                  [disabled]="isSubmitting()"
+                  (click)="useAccount(account)"
+                >
+                  Sign in as {{ account.display_name }}
+                </button>
+              </li>
+            }
+          </ul>
+        }
+      }
+    </section>
+  </div>
+</main>

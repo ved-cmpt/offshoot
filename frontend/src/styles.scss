@@ -1,1 +1,157 @@
-/* You can add global styles to this file, and also import other style files */
+// Design tokens. Components use only these custom properties, so both themes follow.
+// Fonts are system stacks: nothing is loaded from outside this origin.
+:root {
+  color-scheme: light;
+
+  --font-sans: system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+  --font-mono: ui-monospace, 'Cascadia Code', 'SF Mono', Menlo, Consolas, monospace;
+
+  --space-1: 0.25rem;
+  --space-2: 0.5rem;
+  --space-3: 0.75rem;
+  --space-4: 1rem;
+  --space-5: 1.5rem;
+  --space-6: 2rem;
+  --space-7: 3rem;
+
+  --text-sm: 0.875rem;
+  --text-md: 1rem;
+  --text-lg: 1.25rem;
+  --text-xl: 1.75rem;
+
+  --radius: 0.5rem;
+  --content-width: 64rem;
+
+  --color-bg: #f6f7f9;
+  --color-surface: #ffffff;
+  --color-surface-raised: #eef0f4;
+  --color-text: #1a2230;
+  --color-text-muted: #515c6d;
+  --color-border: #cbd2dc;
+  --color-accent: #1b5fa8;
+  --color-accent-hover: #164d89;
+  --color-on-accent: #ffffff;
+  --color-focus: #b4530a;
+  --color-danger: #a4261f;
+  --color-danger-bg: #fbeceb;
+  --color-banner: #fdf3d7;
+  --color-on-banner: #553c00;
+  --color-ok: #17663a;
+  --color-ok-bg: #e4f4ea;
+}
+
+:root[data-theme='dark'] {
+  color-scheme: dark;
+
+  --color-bg: #12161d;
+  --color-surface: #1b212b;
+  --color-surface-raised: #262e3a;
+  --color-text: #e8ecf2;
+  --color-text-muted: #a7b1c0;
+  --color-border: #3b4656;
+  --color-accent: #7db4f0;
+  --color-accent-hover: #a2caf5;
+  --color-on-accent: #0c1420;
+  --color-focus: #ffb46b;
+  --color-danger: #ffa8a1;
+  --color-danger-bg: #3a1c1a;
+  --color-banner: #3a2f10;
+  --color-on-banner: #f6e3ab;
+  --color-ok: #8bdcaa;
+  --color-ok-bg: #183325;
+}
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+html {
+  font-size: 100%;
+}
+
+body {
+  margin: 0;
+  background: var(--color-bg);
+  color: var(--color-text);
+  font-family: var(--font-sans);
+  font-size: var(--text-md);
+  line-height: 1.5;
+}
+
+h1,
+h2,
+h3,
+p {
+  margin: 0;
+}
+
+a {
+  color: var(--color-accent);
+}
+
+:focus-visible {
+  outline: 3px solid var(--color-focus);
+  outline-offset: 2px;
+}
+
+// Shared controls.
+.button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 2.75rem;
+  padding: var(--space-2) var(--space-4);
+  border: 1px solid var(--color-accent);
+  border-radius: var(--radius);
+  background: var(--color-accent);
+  color: var(--color-on-accent);
+  font: inherit;
+  font-weight: 600;
+  cursor: pointer;
+
+  &:hover:not(:disabled) {
+    background: var(--color-accent-hover);
+    border-color: var(--color-accent-hover);
+  }
+
+  &:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+  }
+}
+
+.button--quiet {
+  background: transparent;
+  border-color: var(--color-border);
+  color: var(--color-text);
+
+  &:hover:not(:disabled) {
+    background: var(--color-surface-raised);
+    border-color: var(--color-border);
+  }
+}
+
+.demo-banner {
+  padding: var(--space-2) var(--space-4);
+  background: var(--color-banner);
+  color: var(--color-on-banner);
+  font-size: var(--text-sm);
+  text-align: center;
+}
+
+.visually-hidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .button {
+    transition: background-color 120ms ease;
+  }
+}

@@ -9,7 +9,7 @@ RUN chown node:node /app
 USER node
 COPY --chown=node:node package.json package-lock.json ./
 RUN npm ci --no-audit --no-fund \
-    && mkdir -p .angular
+    && mkdir -p .angular dist
 COPY --chown=node:node . .
 
 EXPOSE 4200

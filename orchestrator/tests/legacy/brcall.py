@@ -22,13 +22,15 @@ def call_module(module: str, records: list[str]) -> list[str]:
     lines = result["stdout"].split("\n")
     assert lines[-1] == ""
     assert len(lines) - 1 == len(records), "BRCALL must write one output record per input record"
-    return lines[:-1]
+    outputs: list[str] = lines[:-1]
+    return outputs
 
 
 def run_batch() -> dict[str, Any]:
     response = httpx.post(f"{RUNNER_URL}/v1/billrun", timeout=120)
     response.raise_for_status()
-    return response.json()
+    result: dict[str, Any] = response.json()
+    return result
 
 
 def money(digits: str, scale: int = 2) -> str:

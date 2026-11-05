@@ -30,7 +30,8 @@ StrykerOutput/
 
 # COBOL build and batch outputs
 legacy/billrite/build/
-legacy/billrite/out/
+legacy/billrite/out/*
+!legacy/billrite/out/.gitkeep
 
 # E2E
 e2e/test-results/

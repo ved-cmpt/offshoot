@@ -1,0 +1,31 @@
+<a class="skip-link" href="#main">Skip to main content</a>
+
+<header class="shell-header">
+  @if (demoMode()) {
+    <p class="demo-banner" role="note">Demo: synthetic COBOL application and simulated AI responses.</p>
+  }
+  <div class="shell-header__inner">
+    <a class="brand" routerLink="/projects">LegacyLens</a>
+
+    <nav aria-label="Main">
+      <a class="nav-link" routerLink="/projects" routerLinkActive="nav-link--active" ariaCurrentWhenActive="page">Projects</a>
+    </nav>
+
+    <div class="shell-header__actions">
+      @if (user(); as signedIn) {
+        <p class="identity">
+          <span class="identity__name">{{ signedIn.display_name }}</span>
+          <span class="role-badge"><span class="visually-hidden">Role: </span>{{ signedIn.role }}</span>
+        </p>
+      }
+      <button class="button button--quiet" type="button" (click)="toggleTheme()">{{ themeToggleLabel() }}</button>
+      <button class="button button--quiet" type="button" [disabled]="isSigningOut()" (click)="signOut()">
+        {{ isSigningOut() ? 'Signing out…' : 'Sign out' }}
+      </button>
+    </div>
+  </div>
+</header>
+
+<main id="main" class="shell-main" tabindex="-1">
+  <router-outlet />
+</main>

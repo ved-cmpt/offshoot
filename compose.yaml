@@ -93,6 +93,7 @@ services:
       - ./frontend:/app
       - /app/node_modules
       - /app/.angular
+      - /app/dist
     depends_on:
       orchestrator:
         condition: service_healthy
