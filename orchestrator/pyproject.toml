@@ -7,3 +7,27 @@ dependencies = ["fastapi==0.162.0", "uvicorn[standard]==0.54.0", "sqlalchemy==2.
 
 [dependency-groups]
 dev = ["pytest==9.2.0", "ruff==0.17.3", "mypy==2.4.1", "hypothesis==6.170.14"]
+
+[tool.uv]
+package = false
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+addopts = "-q --strict-markers"
+
+[tool.ruff]
+line-length = 120
+target-version = "py312"
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "B", "UP", "S", "C4", "SIM", "RET", "PL"]
+ignore = ["PLR0913", "PLR2004"]
+
+[tool.ruff.lint.per-file-ignores]
+"tests/**" = ["S101", "S105", "S106", "PLC0415"]
+"app/scripts/**" = ["T201"]
+
+[tool.mypy]
+python_version = "3.12"
+strict = true
+files = ["app", "tests"]

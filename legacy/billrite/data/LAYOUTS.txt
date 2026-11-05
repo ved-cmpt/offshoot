@@ -1,0 +1,27 @@
+BILLRITE DATA FILE LAYOUTS
+
+All files are fixed width with one record per line, ASCII, LF line endings.
+PIC 9 fields are zero-filled digits with no decimal point; V marks the implied point.
+S9(5) fields carry a leading separate sign (+ or -).
+
+CUSTFILE.dat  (100 bytes, copybook CUSTREC, sorted on CUST-ID)
+  pos  len  field             picture
+    1    8  CUST-ID           X(8)
+    9   30  CUST-NAME         X(30)
+   39   30  CUST-ADDRESS      X(30)
+   69    1  CUST-CLASS        X(1)
+   70    1  CUST-SENIOR-FLAG  X(1)
+   71    9  CUST-OVERDUE-BAL  9(7)V99
+   80    6  CUST-DUE-DATE     9(6)  YYMMDD
+   86    7  CUST-CREDIT       9(5)V99
+   93    8  FILLER            X(8)
+
+READFILE.dat  (40 bytes, copybook READREC, sorted on RD-CUST-ID, then billing period)
+  pos  len  field             picture
+    1    8  RD-CUST-ID        X(8)
+    9    8  RD-METER-ID       X(8)
+   17    6  RD-READ-DATE      9(6)  YYMMDD
+   23    6  RD-PREV-READ      S9(5) leading separate sign
+   29    6  RD-CURR-READ      S9(5) leading separate sign
+   35    1  RD-READ-TYPE      X(1)
+   36    5  FILLER            X(5)
