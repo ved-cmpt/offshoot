@@ -3,7 +3,8 @@
 # Compiling and running both happen under nonet: networking is disabled (ADR-009).
 
 COBC      ?= cobc
-NONET     ?= nonet
+# A time limit too, because the compiler and the program must not run forever.
+NONET     ?= timeout 120 nonet
 BUILD_DIR ?= /work/build
 OUT_DIR   ?= /out
 DATA_DIR  ?= data
