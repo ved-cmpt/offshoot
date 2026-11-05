@@ -212,6 +212,17 @@ def test_filters_and_paging(
     assert client.get(f"/api/v1/projects/{project.id}/rules?limit=51", headers=engineer).status_code == 422
 
 
+def test_the_rule_order_is_stable_and_follows_the_source(
+    client: TestClient, ratecalc: Project, engineer: dict[str, str]
+) -> None:
+    first = rules_of(client, engineer, ratecalc)["items"]
+    assert [item["id"] for item in first] == [item["id"] for item in rules_of(client, engineer, ratecalc)["items"]]
+    clean = [item for item in first if not item["flags"]]
+    lines = [item["spans"][0]["start_line"] for item in clean]
+    assert lines == sorted(lines)
+    assert clean[0]["title"] == "Customer class check"
+
+
 def test_flagged_rules_sort_first_within_a_program(
     client: TestClient, ratecalc: Project, engineer: dict[str, str]
 ) -> None:

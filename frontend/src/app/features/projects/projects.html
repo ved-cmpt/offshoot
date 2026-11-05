@@ -13,9 +13,7 @@
   }
   @case ('ready') {
     @if (current.projects.length === 0) {
-      <p class="state">
-        There are no projects yet. Run the demo seed to add the BillRite sample.
-      </p>
+      <p class="state">There are no projects yet. Run the demo seed to add the BillRite sample.</p>
     } @else {
       <ul class="project-list">
         @for (project of current.projects; track project.id) {

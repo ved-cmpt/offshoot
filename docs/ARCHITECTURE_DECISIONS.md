@@ -106,6 +106,8 @@ The seed loads `src/*.cbl`, `copy/*.cpy` and `data/LAYOUTS.txt`. It does not loa
 
 The permanent rule says that no tracked file may contain the scan's search terms, yet line 13 of the blueprint quoted two of them while stating the rule. Line 13 now says "co-author trailers, session links, tool-credit footers". The meaning is unchanged, and it is the only edit to the blueprint. The literal terms live in the local-only `docs/prompts/attribution_scan.sh`, and `AGENTS.md` and the handoff prompt refer to that file rather than repeating them.
 
+**Owner review (Run 02):** approved.
+
 ## ADR-020 Data model additions beyond Section 8.1
 
 Fields that later contract rules need, or that the listed indexes assume: `jobs.created_at` and `jobs.input_hash` (the `(status, created_at)` index and idempotent jobs); `modules.version` (`expected_version` on decisions); `created_at` on most tables; `projects.description`; `ai_calls.redacted_input` and `ai_calls.created_at`. Also a partial unique index on bundled project names, for an idempotent seed, and `uq_modules_project_id_program`. Enum sets not spelled out in Section 8.1 were chosen here: project status, job status, plan state, rule kinds and approval decisions. Later runs may extend them by migration.
@@ -117,3 +119,64 @@ Fields that later contract rules need, or that the listed indexes assume: `jobs.
 - `/healthz`, `/readyz` and `/config` are also served without the `/api/v1` prefix, for platform health checks.
 - Inline critical CSS is off in production builds, because it adds an inline `onload` handler that a strict CSP would block.
 - All published host ports bind to `127.0.0.1`.
+
+## ADR-022 Data model additions in Run 02 (migration 0002)
+
+No new tables, so the table-level grants from migration 0001 still apply (ADR-014).
+
+- `inventory_items.kind` gains `COPYBOOK`, so that a program can have a `USES` edge to one. Section 8.1 has no such kind.
+- `inventory_edges.attrs` holds the line, THRU details and whether a target was performed by name. A PERFORM THRU writes one edge per paragraph it reaches, and only one of them has `by_name`.
+- `jobs.payload` holds what a job works on (the program) and `jobs.requested_by` who asked. A partial unique index, `uq_jobs_active_input`, allows one live job per input, so racing requests cannot both queue.
+- `rules` gains `fingerprint`, `job_id`, `prompt_version`, `model_id`, `model_output`, `flag_details`, `edited_by` and `edited_at`. `model_output` keeps what the model said, untouched by edits (Section 11). The unique `(project, program, fingerprint)` stops a re-extraction bringing back a rule someone already decided on.
+
+The parser is purpose-built for the BillRite subset (Section 4.3). No third-party parser was adopted. Outside the subset it reports diagnostics instead of guessing: `COPY ... REPLACING`, `USAGE COMP`, dynamic `CALL`, and unknown PERFORM or GO TO targets.
+
+## ADR-023 The job worker runs in the API process
+
+One daemon thread polls the table with `FOR UPDATE SKIP LOCKED` (ADR-006) and is started by the app's lifespan. A separate Compose service would need a second copy of the settings and adds nothing at this scale. Consequences: an extraction that waits on a live model occupies the single worker for up to two timeouts, and jobs run one at a time. Several workers can already run safely, because the claim is `SKIP LOCKED`. A job left `RUNNING` by a dead process is requeued after a 300-second lease and fails with `JOB_ABANDONED` after 3 attempts. Run 05 should reconsider this for the single production image.
+
+Tests set `JOB_WORKER_ENABLED=false` and run jobs themselves. One test drives the real worker thread.
+
+## ADR-024 What the seed covers in Run 02 (extends ADR-017)
+
+Section 8.2 asks for a seed with rules that are "mostly verified, a few pending, one rejected hallucination". Those decisions would be made by a person in real use, so a seeded one is a demo fixture and is labelled as such. Its `approvals.reason` says "Demo seed decision, not a human review", and its audit entry has `seeded: true`. Dashboards in Run 04 must not count them as human review without saying so.
+
+The seed runs the same jobs a user would. In live mode it stops after the inventory, because a seed must not spend an AI budget. In mock mode it verifies the unflagged rules of BILLRUN, LATEFEE, MTRVAL and STMTGEN, rejects the hallucinated rule, and leaves RATECALC undecided so that a visitor can do a real review. Decisions are only seeded in the run that created the rules, so a later seed cannot override a person's review. A second run changes nothing but one `seed.run` audit entry.
+
+## ADR-025 How the answer key stays out, and how extraction is measured
+
+**The evaluator runs on the host.** `scripts/evaluate_rules.py` reads `docs/BILLRITE_RULES.md`, which is not mounted in any container, and reads the stored rules through the public API as the demo viewer. Nothing flows back, so the product's agent cannot reach the key or its results. Inside the container the script exits with code 2, which a test asserts.
+
+**Proving exclusion needs the key's content, which the container must not hold.** `tests/agent/answer_key_shingles.json` holds truncated SHA-256 hashes of every 8-word run in the key. Every prompt for every program is compared against them. A test plants key text to prove the check detects it, and `--check-fingerprints` on the host proves that the file is current. Runs that the key quotes from the COBOL comments, such as ticket 96-233, are left out, because they are legitimately in the prompt and say nothing about a leak. One short phrase of the key is in the test as its positive control.
+
+**Defence in depth.** The only route to a prompt is `services/agent/context.py`, which reads `source_files` only, drops forbidden paths when loading, and checks again just before rendering.
+
+**Limit.** Mock fixtures were written by hand by an agent that had read the key, so mock numbers measure the pipeline, not a model. They must never be presented as extraction quality. `docs/EVALUATION.md` says so next to the numbers. Run 05 records a capped live sample.
+
+## ADR-026 Rule checks and lifecycle details Section 6.2 leaves open
+
+- **Comment-only spans are `SPAN_INVALID`.** The lines exist, but a comment cannot support a rule. This is what catches a rule citing the injection comment at `RATECALC.cbl:135`.
+- **Names are checked against code, never comments.** A name counts if it appears in the code of the cited lines or anywhere in a copybook the program copies, as Section 6.2 says. So a rule can cite an irrelevant copybook field and pass. Span checks cannot prove that a claim is true, which is why a person still reviews every rule.
+- **Examples** naming anything not declared in the rule's inputs or outputs get `NAMES_NOT_FOUND`. Section 6.2 lists no separate flag.
+- **Edits run the checks again.** New wording alone leaves `SPAN_INVALID` in place. `LOW_CONFIDENCE` is dropped once a person edits a rule, because the model's doubt no longer describes the text.
+- **States.** `PROPOSED` and `EDITED` can be decided. Editing a verified rule returns it to `EDITED` and clears the decision. `REJECTED` is final. A flagged rule can always be rejected.
+- **A rejection needs a reason; a verification does not.** Section 9 says "with reason" for both, and Section 3.1 shows verification as routine. The audit entry is written either way.
+- **`expected_version` applies to edits too,** not only decisions (Section 9 names only decisions), so that an edit cannot silently overwrite another.
+- **Re-extraction** replaces only rules nobody has touched.
+- **Self-approval** is allowed and flagged in the audit (Section 3.4). `ALLOW_SELF_APPROVAL=false` refuses it when a second active architect exists.
+- **Extra sanitized codes:** `AI_NOT_CONFIGURED`, `AI_BUDGET_EXCEEDED` and `AGENT_CONTEXT_FORBIDDEN`.
+- **`ai_calls.redacted_input`** holds a summary (program, files, size), not prompt text. Sources are synthetic today, but uploads will not be.
+- **Each attempt is one `ai_calls` row,** and live attempts count against the project budget (`AI_PROJECT_CALL_BUDGET`, default 50). Mock calls cost nothing and do not count.
+- **Extra read endpoints** beyond Section 9: `GET /projects/{id}/inventory/layouts` (so that layouts can be paged), `GET /projects/{id}/sources`, `GET /projects/{id}/jobs` and `GET /rules/{id}`. `/graph` is not paged, because it is bounded by the size of the project.
+
+## ADR-027 Gemini adapter
+
+`google-genai` 2.34.0, through `client.models.generate_content` with `response_mime_type` and `response_json_schema`. The current documentation also shows a newer `client.interactions` API, and both exist in the SDK. The established call was chosen, and the adapter hides the choice. `gemini-3.5-flash-lite` was listed as a stable free-tier model on 2026-11-04. It is suggested in `.env.example` but not defaulted: `GEMINI_MODEL` must be set, or the job fails with `AI_NOT_CONFIGURED`.
+
+Bounded time has two layers: the SDK's HTTP timeout, and a wall-clock limit on the whole call. At most 2 attempts, for timeouts, rate limits, server errors and invalid output. Authentication failures are not retried. Exception text never leaves the module, because SDK errors can quote requests and responses.
+
+**Live behaviour is UNVERIFIED.** Tests use a fake client and refuse to open a socket. In particular, nobody has confirmed that Gemini accepts this exact JSON schema, which has `additionalProperties: false` and a union-typed example value. The local schema check runs regardless.
+
+## ADR-028 No graph or code viewer library
+
+The blueprint offers Monaco or CodeMirror, and Mermaid or ELK. A read-only viewer needs numbered lines and highlighted ranges, and a small layered SVG layout covers a graph of this size. That means no dependency, no bundle cost (the inventory chunk is 27 kB raw), no `eval` or inline scripts to fight a strict CSP, and native keyboard behaviour. Layouts are deterministic. Run 03's side-by-side view may need syntax colouring, and can revisit this.

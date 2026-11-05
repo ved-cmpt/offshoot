@@ -22,7 +22,8 @@ export const routes: Routes = [
       },
       {
         path: 'projects/:id',
-        loadComponent: () => import('./features/workbench/project-layout').then((m) => m.ProjectLayout),
+        loadComponent: () =>
+          import('./features/workbench/project-layout').then((m) => m.ProjectLayout),
         children: [
           { path: '', pathMatch: 'full', redirectTo: 'inventory' },
           {
@@ -33,7 +34,8 @@ export const routes: Routes = [
           {
             path: 'sources/:file',
             title: 'Source - LegacyLens',
-            loadComponent: () => import('./features/sources/source-viewer').then((m) => m.SourceViewer),
+            loadComponent: () =>
+              import('./features/sources/source-viewer').then((m) => m.SourceViewer),
           },
           {
             path: 'rules',

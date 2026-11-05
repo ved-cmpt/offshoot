@@ -3,7 +3,7 @@
 import logging
 import threading
 
-from sqlalchemy.exc import DBAPIError, OperationalError, ProgrammingError
+from sqlalchemy.exc import DBAPIError
 from sqlalchemy.orm import Session, sessionmaker
 
 from app.core.config import Settings
@@ -50,7 +50,10 @@ class JobWorker:
                 polls += 1
                 if not ran:
                     self._stop.wait(self._settings.job_poll_seconds)
-            except (OperationalError, ProgrammingError, DBAPIError) as exc:
+            except DBAPIError as exc:
                 # Expected before `alembic upgrade head` or while Postgres restarts. Keep polling.
                 logger.warning("Job worker is waiting for the database: %s", type(exc).__name__)
+                self._stop.wait(ERROR_BACKOFF_SECONDS)
+            except Exception as exc:  # noqa: BLE001 - Queued jobs would otherwise wait forever.
+                logger.error("Job worker hit an unexpected error: %s", type(exc).__name__)
                 self._stop.wait(ERROR_BACKOFF_SECONDS)

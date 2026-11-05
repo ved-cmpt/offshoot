@@ -55,10 +55,12 @@ describe('AuthService', () => {
 
   it('stays signed out when login fails', async () => {
     const login = firstValueFrom(auth.login('a@b.co', 'nope'));
-    http.expectOne('/api/v1/auth/login').flush(
-      { error: { code: 'INVALID_CREDENTIALS', message: 'No.', request_id: 'x' } },
-      { status: 401, statusText: 'Unauthorized' },
-    );
+    http
+      .expectOne('/api/v1/auth/login')
+      .flush(
+        { error: { code: 'INVALID_CREDENTIALS', message: 'No.', request_id: 'x' } },
+        { status: 401, statusText: 'Unauthorized' },
+      );
     await expect(login).rejects.toBeTruthy();
     expect(auth.isSignedIn()).toBe(false);
   });
@@ -105,7 +107,10 @@ describe('AuthService', () => {
     await flushMicrotasks();
     http
       .expectOne('/api/v1/auth/refresh')
-      .flush({ error: { code: 'INVALID_REFRESH_TOKEN' } }, { status: 401, statusText: 'Unauthorized' });
+      .flush(
+        { error: { code: 'INVALID_REFRESH_TOKEN' } },
+        { status: 401, statusText: 'Unauthorized' },
+      );
     await expect(restored).resolves.toBeUndefined();
     expect(auth.isSignedIn()).toBe(false);
   });

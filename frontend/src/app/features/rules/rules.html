@@ -2,7 +2,8 @@
   <h1 class="page-title">Business rules</h1>
 </div>
 <p class="muted">
-  The agent proposes rules. The server checks every citation, and only an architect can verify or reject.
+  The agent proposes rules. The server checks every citation, and only an architect can verify or
+  reject.
   @if (canExtract() && !isArchitect()) {
     Your role can run extraction and edit rules.
   } @else if (!canExtract()) {
@@ -24,18 +25,28 @@
               }
             </select>
           </label>
-          <button class="button" type="button" [disabled]="starting() || !extractProgram()" (click)="extract()">
+          <button
+            class="button"
+            type="button"
+            [disabled]="starting() || !extractProgram()"
+            (click)="extract()"
+          >
             {{ starting() ? 'Starting…' : 'Extract rules' }}
           </button>
         </div>
       } @else {
-        <p>Analyze the project first: <a [routerLink]="['/projects', projectId(), 'inventory']">go to the inventory</a>.</p>
+        <p>
+          Analyze the project first:
+          <a [routerLink]="['/projects', projectId(), 'inventory']">go to the inventory</a>.
+        </p>
       }
     } @else {
       <p role="status">Loading programs…</p>
     }
     @if (startError(); as message) {
-      <div class="state state--error" role="alert"><p>Extraction could not be started. {{ message }}</p></div>
+      <div class="state state--error" role="alert">
+        <p>Extraction could not be started. {{ message }}</p>
+      </div>
     }
     @if (job(); as running) {
       <app-job-progress label="Extraction" [start]="running" (finished)="jobFinished($event)" />
@@ -67,9 +78,15 @@
     Flag
     <select (change)="setFilter('flag', $any($event.target).value)">
       <option value="" [selected]="flag() === ''">Any</option>
-      <option value="SPAN_INVALID" [selected]="flag() === 'SPAN_INVALID'">Source lines invalid</option>
-      <option value="NAMES_NOT_FOUND" [selected]="flag() === 'NAMES_NOT_FOUND'">Data names not found</option>
-      <option value="LOW_CONFIDENCE" [selected]="flag() === 'LOW_CONFIDENCE'">Low confidence</option>
+      <option value="SPAN_INVALID" [selected]="flag() === 'SPAN_INVALID'">
+        Source lines invalid
+      </option>
+      <option value="NAMES_NOT_FOUND" [selected]="flag() === 'NAMES_NOT_FOUND'">
+        Data names not found
+      </option>
+      <option value="LOW_CONFIDENCE" [selected]="flag() === 'LOW_CONFIDENCE'">
+        Low confidence
+      </option>
     </select>
   </label>
 </section>
@@ -90,13 +107,17 @@
       <div class="state">
         @if (hasFilters()) {
           <p>No rules match these filters.</p>
-          <button class="button button--quiet" type="button" (click)="clearFilters()">Clear filters</button>
+          <button class="button button--quiet" type="button" (click)="clearFilters()">
+            Clear filters
+          </button>
         } @else {
           <p>No rules have been extracted yet.</p>
         }
       </div>
     } @else {
-      <p class="counts" role="status">{{ current.page.total }} in this selection. For the chosen program: {{ countsText() }}.</p>
+      <p class="counts" role="status">
+        {{ current.page.total }} in this selection. For the chosen program: {{ countsText() }}.
+      </p>
       <div class="list">
         @for (rule of current.page.items; track rule.id) {
           <app-rule-card [rule]="rule" (changed)="updateRule($event)" />
@@ -104,10 +125,18 @@
       </div>
       @if (current.page.total > pageSize) {
         <nav class="pager" aria-label="Rule pages">
-          <button class="button button--quiet" type="button" [disabled]="offset() === 0" (click)="goTo(offset() - pageSize)">
+          <button
+            class="button button--quiet"
+            type="button"
+            [disabled]="offset() === 0"
+            (click)="goTo(offset() - pageSize)"
+          >
             Previous
           </button>
-          <span>{{ offset() + 1 }} to {{ offset() + current.page.items.length }} of {{ current.page.total }}</span>
+          <span
+            >{{ offset() + 1 }} to {{ offset() + current.page.items.length }} of
+            {{ current.page.total }}</span
+          >
           <button
             class="button button--quiet"
             type="button"

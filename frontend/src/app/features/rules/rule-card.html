@@ -1,11 +1,18 @@
 @let item = rule();
-<article class="card" [class.card--flagged]="item.flags.length > 0" [attr.aria-labelledby]="'rule-' + item.id">
+<article
+  class="card"
+  [class.card--flagged]="item.flags.length > 0"
+  [attr.aria-labelledby]="'rule-' + item.id"
+>
   <header class="card__head">
     <h3 [id]="'rule-' + item.id">{{ item.title }}</h3>
     <p class="card__meta">
-      <span class="badge" [class.badge--ok]="item.state === 'VERIFIED'" [class.badge--danger]="item.state === 'REJECTED'">{{
-        stateLabels[item.state]
-      }}</span>
+      <span
+        class="badge"
+        [class.badge--ok]="item.state === 'VERIFIED'"
+        [class.badge--danger]="item.state === 'REJECTED'"
+        >{{ stateLabels[item.state] }}</span
+      >
       <span class="badge">{{ item.program }}</span>
       <span class="badge">{{ item.kind.toLowerCase() }}</span>
       <span class="card__muted">Confidence {{ confidence() }}</span>
@@ -80,7 +87,9 @@
         <dt>Examples</dt>
         <dd>
           @for (example of item.examples; track $index) {
-            <code class="block">{{ asJson(example.given) }} gives {{ asJson(example.expect) }}</code>
+            <code class="block"
+              >{{ asJson(example.given) }} gives {{ asJson(example.expect) }}</code
+            >
           }
         </dd>
       </div>
@@ -107,11 +116,32 @@
       @if (canEdit() || canDecide()) {
         <div class="actions">
           @if (canDecide()) {
-            <button class="button" type="button" [disabled]="busy() || !item.verifiable" (click)="verify()">Verify</button>
-            <button class="button button--quiet" type="button" [disabled]="busy()" (click)="openReject()">Reject</button>
+            <button
+              class="button"
+              type="button"
+              [disabled]="busy() || !item.verifiable"
+              (click)="verify()"
+            >
+              Verify
+            </button>
+            <button
+              class="button button--quiet"
+              type="button"
+              [disabled]="busy()"
+              (click)="openReject()"
+            >
+              Reject
+            </button>
           }
           @if (canEdit()) {
-            <button class="button button--quiet" type="button" [disabled]="busy()" (click)="openEdit()">Edit</button>
+            <button
+              class="button button--quiet"
+              type="button"
+              [disabled]="busy()"
+              (click)="openEdit()"
+            >
+              Edit
+            </button>
           }
         </div>
       }
@@ -120,7 +150,12 @@
       <form class="form" (submit)="submitReject($event)">
         <label>
           Reason for rejecting
-          <textarea #rejectReason rows="2" [value]="reason()" (input)="reason.set($any($event.target).value)"></textarea>
+          <textarea
+            #rejectReason
+            rows="2"
+            [value]="reason()"
+            (input)="reason.set($any($event.target).value)"
+          ></textarea>
         </label>
         <div class="actions">
           <button class="button" type="submit" [disabled]="busy()">Reject rule</button>
@@ -132,31 +167,60 @@
       <form class="form" (submit)="submitEdit($event)">
         <label>
           Title
-          <input #editTitle type="text" [value]="form().title" (input)="setField('title', $any($event.target).value)" />
+          <input
+            #editTitle
+            type="text"
+            [value]="form().title"
+            (input)="setField('title', $any($event.target).value)"
+          />
         </label>
         <label>
           Statement
-          <textarea rows="3" [value]="form().statement" (input)="setField('statement', $any($event.target).value)"></textarea>
+          <textarea
+            rows="3"
+            [value]="form().statement"
+            (input)="setField('statement', $any($event.target).value)"
+          ></textarea>
         </label>
         <label>
           Source spans, one per line, like RATECALC.cbl:183-189
-          <textarea rows="2" [value]="form().spans" (input)="setField('spans', $any($event.target).value)"></textarea>
+          <textarea
+            rows="2"
+            [value]="form().spans"
+            (input)="setField('spans', $any($event.target).value)"
+          ></textarea>
         </label>
         <label>
           Inputs, one per line
-          <textarea rows="2" [value]="form().inputs" (input)="setField('inputs', $any($event.target).value)"></textarea>
+          <textarea
+            rows="2"
+            [value]="form().inputs"
+            (input)="setField('inputs', $any($event.target).value)"
+          ></textarea>
         </label>
         <label>
           Outputs, one per line
-          <textarea rows="2" [value]="form().outputs" (input)="setField('outputs', $any($event.target).value)"></textarea>
+          <textarea
+            rows="2"
+            [value]="form().outputs"
+            (input)="setField('outputs', $any($event.target).value)"
+          ></textarea>
         </label>
         <label>
           Conditions, one per line
-          <textarea rows="2" [value]="form().conditions" (input)="setField('conditions', $any($event.target).value)"></textarea>
+          <textarea
+            rows="2"
+            [value]="form().conditions"
+            (input)="setField('conditions', $any($event.target).value)"
+          ></textarea>
         </label>
         <label>
           Examples, as JSON
-          <textarea rows="2" [value]="form().examples" (input)="setField('examples', $any($event.target).value)"></textarea>
+          <textarea
+            rows="2"
+            [value]="form().examples"
+            (input)="setField('examples', $any($event.target).value)"
+          ></textarea>
         </label>
         <div class="actions">
           <button class="button" type="submit" [disabled]="busy()">Save edit</button>

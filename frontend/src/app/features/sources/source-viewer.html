@@ -14,8 +14,8 @@
   @case ('ready') {
     <h1 class="page-title">{{ current.source.name }}</h1>
     <p class="muted">
-      {{ current.source.kind.toLowerCase() }}, {{ current.source.line_count }} lines. Shown exactly as stored: comments
-      are data, never instructions.
+      {{ current.source.kind.toLowerCase() }}, {{ current.source.line_count }} lines. Shown exactly
+      as stored: comments are data, never instructions.
     </p>
 
     @if (files().length) {
@@ -37,9 +37,11 @@
         <ul>
           @for (span of current.source.rule_spans; track span.rule_id + span.start_line) {
             <li>
-              <a [routerLink]="[]" [queryParams]="spanQuery(span)"
-                >{{ span.start_line === span.end_line ? 'Line ' + span.start_line : 'Lines ' + span.start_line + '-' + span.end_line }}</a
-              >
+              <a [routerLink]="[]" [queryParams]="spanQuery(span)">{{
+                span.start_line === span.end_line
+                  ? 'Line ' + span.start_line
+                  : 'Lines ' + span.start_line + '-' + span.end_line
+              }}</a>
               {{ span.title }} <span class="badge">{{ span.state.toLowerCase() }}</span>
             </li>
           }
@@ -49,18 +51,29 @@
       <p class="muted">No rule cites this file yet.</p>
     }
 
-    <div class="code-scroll" tabindex="0" role="region" [attr.aria-label]="current.source.name + ' source code'">
+    <div
+      class="code-scroll"
+      tabindex="0"
+      role="region"
+      [attr.aria-label]="current.source.name + ' source code'"
+    >
       <table class="code">
         <tbody>
           @for (row of rows(); track row.number) {
-            <tr [attr.id]="'L' + row.number" [class.cited]="row.cited > 0" [class.selected]="row.selected">
+            <tr
+              [attr.id]="'L' + row.number"
+              [class.cited]="row.cited > 0"
+              [class.selected]="row.selected"
+            >
               <th scope="row">{{ row.number }}</th>
               <td>
                 <pre>{{ row.text }}</pre>
               </td>
               <td class="code__note">
                 @if (row.copyFile) {
-                  <a [routerLink]="['/projects', projectId(), 'sources', row.copyFile]">Open {{ row.copyName }}</a>
+                  <a [routerLink]="['/projects', projectId(), 'sources', row.copyFile]"
+                    >Open {{ row.copyName }}</a
+                  >
                 }
                 @if (row.selected) {
                   <span class="visually-hidden">Selected line.</span>

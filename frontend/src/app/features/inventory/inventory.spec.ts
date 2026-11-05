@@ -160,18 +160,16 @@ describe('Inventory', () => {
       button.textContent?.includes('Run analysis'),
     )!;
     run.click();
-    http
-      .expectOne('/api/v1/projects/p1/analyze')
-      .flush(
-        {
-          error: {
-            code: 'FORBIDDEN',
-            message: 'You do not have permission to do this.',
-            request_id: 'r',
-          },
+    http.expectOne('/api/v1/projects/p1/analyze').flush(
+      {
+        error: {
+          code: 'FORBIDDEN',
+          message: 'You do not have permission to do this.',
+          request_id: 'r',
         },
-        { status: 403, statusText: 'Forbidden' },
-      );
+      },
+      { status: 403, statusText: 'Forbidden' },
+    );
     await settle();
     expect(page.querySelector('[role="alert"]')?.textContent).toContain(
       'You do not have permission',
@@ -215,13 +213,11 @@ describe('Inventory', () => {
       button.textContent?.includes('Show more'),
     )!;
     more.click();
-    http
-      .expectOne('/api/v1/projects/p1/inventory/layouts?limit=50&offset=1')
-      .flush({
-        ...LAYOUTS,
-        items: [{ ...LAYOUTS.items[0], id: 'l2', name: 'READ-RECORD' }],
-        total: 2,
-      });
+    http.expectOne('/api/v1/projects/p1/inventory/layouts?limit=50&offset=1').flush({
+      ...LAYOUTS,
+      items: [{ ...LAYOUTS.items[0], id: 'l2', name: 'READ-RECORD' }],
+      total: 2,
+    });
     await settle();
     expect(page.textContent).toContain('READ-RECORD');
     expect(page.textContent).toContain('CUSTOMER-RECORD');

@@ -115,7 +115,6 @@ def apply_edit(
     actor: User,
     expected_version: int,
     changes: dict[str, Any],
-    settings: Settings,
 ) -> None:
     """A person's edit. Spans and names are checked again; a verified rule loses its verification."""
     if rule.version != expected_version:

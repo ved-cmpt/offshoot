@@ -395,7 +395,7 @@ def get_source(project_id: str, file_id: str, db: DbSession) -> SourceOut:
                 copy_links.append(CopyLinkOut(line=line.number, name=target, file_id=copybooks.get(target)))
 
     rule_spans = []
-    rules = db.scalars(select(Rule).where(Rule.project_id == project.id).order_by(Rule.created_at, Rule.id)).all()
+    rules = db.scalars(select(Rule).where(Rule.project_id == project.id)).all()
     for rule in rules:
         for span in rule.spans:
             if span.get("valid") and span.get("file") == name:
@@ -409,6 +409,7 @@ def get_source(project_id: str, file_id: str, db: DbSession) -> SourceOut:
                         end_line=span["end_line"],
                     )
                 )
+    rule_spans.sort(key=lambda span: (span.start_line, span.end_line, span.title))
     return SourceOut(
         **_source_summary(row),
         project_id=project.id,

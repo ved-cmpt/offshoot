@@ -1,6 +1,6 @@
 # LegacyLens
 
-**Status: in development. Foundations only (Run 01 of 6).** The legacy application, data model, sign-in and project list work. There is no inventory, AI extraction, migration, equivalence verification or dashboard yet. See [`docs/IMPLEMENTATION_STATUS.md`](docs/IMPLEMENTATION_STATUS.md) for exactly what works today.
+**Status: in development (Run 02 of 6).** The legacy application, sign-in, deterministic inventory and rule extraction with human review work, in mock AI mode. There is no migration, equivalence verification or dashboard yet. Live Gemini is implemented but has never been called. See [`docs/IMPLEMENTATION_STATUS.md`](docs/IMPLEMENTATION_STATUS.md) for exactly what works today.
 
 LegacyLens will be an AI-assisted legacy modernization workbench: it inventories a COBOL application, extracts business rules that a person verifies against the source, migrates modules to C#, and proves behavioural equivalence by running the real legacy program alongside the new code. The model proposes; deterministic tooling verifies; people approve.
 
@@ -18,6 +18,12 @@ docker compose exec orchestrator python -m app.scripts.seed_demo
 ```
 
 Then open http://localhost:4200 and pick a demo account. API health is at http://localhost:8100/api/v1/readyz.
+
+Open **BillRite** to browse the inventory and its call graph, read the source, and review rules. Sign in as the demo architect to verify or reject the undecided RATECALC rules. Rules in the other programs carry demo decisions made by the seed, labelled as not being human reviews.
+
+## AI modes
+
+`AI_MODE=mock` is the default. It uses recorded fixtures and needs no key and no network. To use Gemini, set `AI_MODE=gemini`, `GEMINI_API_KEY` and `GEMINI_MODEL` in `.env` and restart the orchestrator. Live mode has unit tests with a fake client only, and no live call has been made yet.
 
 All accounts and data are synthetic, and the demo passwords are published on the sign-in page. `.env.example` holds placeholder secrets that are fine for a local stack, and all ports bind to `127.0.0.1`. Change the secrets before exposing this anywhere else.
 
@@ -45,11 +51,18 @@ docker compose run --rm dotnet-builder build-and-test
 
 API tests create and remove their own `legacylens_test` database. The COBOL characterization tests run the real programs in `cobol-runner`.
 
+To measure rule extraction against the answer key, run this on the host against a seeded stack. It never runs in a container, because the agent must not be able to reach the key. [`docs/EVALUATION.md`](docs/EVALUATION.md) explains the method and what the numbers do and do not show.
+
+```powershell
+python scripts/evaluate_rules.py --api http://localhost:8100
+```
+
 ## Project documents
 
 - [`AGENTS.md`](AGENTS.md): operating rules for coding agents
 - [`docs/ARCHITECTURE_DECISIONS.md`](docs/ARCHITECTURE_DECISIONS.md): decisions and deviations
 - [`docs/RUN_REPORTS/`](docs/RUN_REPORTS/): what each implementation run did and proved
+- [`docs/EVALUATION.md`](docs/EVALUATION.md): measured results, and their limits
 
 ## License
 

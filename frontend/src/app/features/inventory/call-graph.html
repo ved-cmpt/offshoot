@@ -10,7 +10,11 @@
   </label>
   @if (program()) {
     <label class="controls__check">
-      <input type="checkbox" [checked]="showExitLabels()" (change)="toggleExitLabels($any($event.target).checked)" />
+      <input
+        type="checkbox"
+        [checked]="showExitLabels()"
+        (change)="toggleExitLabels($any($event.target).checked)"
+      />
       Show -EXIT labels
     </label>
   }
@@ -32,8 +36,8 @@
       <p class="state">The graph is empty. Run the analysis first.</p>
     } @else {
       <p class="hint">
-        Select a node to list its links. Solid lines perform or call, dashed lines are a GO TO, and a thin line is
-        reached only through a THRU range.
+        Select a node to list its links. Solid lines perform or call, dashed lines are a GO TO, and
+        a thin line is reached only through a THRU range.
       </p>
       <div class="scroll" tabindex="0" role="region" aria-label="Call graph, scrolls sideways">
         <svg
@@ -45,7 +49,15 @@
           [attr.viewBox]="'0 0 ' + layout().width + ' ' + layout().height"
         >
           <defs>
-            <marker id="graph-arrow" viewBox="0 0 8 8" refX="7" refY="4" markerWidth="7" markerHeight="7" orient="auto">
+            <marker
+              id="graph-arrow"
+              viewBox="0 0 8 8"
+              refX="7"
+              refY="4"
+              markerWidth="7"
+              markerHeight="7"
+              orient="auto"
+            >
               <path class="graph__arrow" d="M0,0 L8,4 L0,8 z" />
             </marker>
           </defs>
@@ -75,7 +87,9 @@
               (keydown.space)="$event.preventDefault(); select(item.node)"
             >
               <rect [attr.width]="nodeWidth" [attr.height]="nodeHeight" rx="6" />
-              <text x="10" y="22">{{ displayName(item.node) }}{{ item.node.dead ? ' (dead)' : '' }}</text>
+              <text x="10" y="22">
+                {{ displayName(item.node) }}{{ item.node.dead ? ' (dead)' : '' }}
+              </text>
             </g>
           }
         </svg>
@@ -91,7 +105,9 @@
             }
             @if (node.file_id) {
               ·
-              <a [routerLink]="['/projects', projectId(), 'sources', node.file_id]" [queryParams]="sourceQuery(node)"
+              <a
+                [routerLink]="['/projects', projectId(), 'sources', node.file_id]"
+                [queryParams]="sourceQuery(node)"
                 >Open source</a
               >
             }

@@ -1,6 +1,8 @@
 @if (demoMode()) {
   <header>
-    <p class="demo-banner" role="note">Demo: synthetic COBOL application and simulated AI responses. All accounts are public.</p>
+    <p class="demo-banner" role="note">
+      Demo: synthetic COBOL application and simulated AI responses. All accounts are public.
+    </p>
   </header>
 }
 
@@ -27,7 +29,9 @@
             formControlName="email"
             autocomplete="username"
             [attr.aria-invalid]="form.controls.email.touched && form.controls.email.invalid"
-            [attr.aria-describedby]="form.controls.email.touched && form.controls.email.invalid ? 'email-error' : null"
+            [attr.aria-describedby]="
+              form.controls.email.touched && form.controls.email.invalid ? 'email-error' : null
+            "
           />
           @if (form.controls.email.touched && form.controls.email.invalid) {
             <p id="email-error" class="field__error">Enter your email address.</p>
@@ -42,7 +46,11 @@
             formControlName="password"
             autocomplete="current-password"
             [attr.aria-invalid]="form.controls.password.touched && form.controls.password.invalid"
-            [attr.aria-describedby]="form.controls.password.touched && form.controls.password.invalid ? 'password-error' : null"
+            [attr.aria-describedby]="
+              form.controls.password.touched && form.controls.password.invalid
+                ? 'password-error'
+                : null
+            "
           />
           @if (form.controls.password.touched && form.controls.password.invalid) {
             <p id="password-error" class="field__error">Enter your password.</p>
@@ -65,7 +73,9 @@
         @case ('error') {
           <div role="alert">
             <p>Demo accounts could not be loaded. You can still sign in with the form.</p>
-            <button class="button button--quiet" type="button" (click)="loadConfig()">Try again</button>
+            <button class="button button--quiet" type="button" (click)="loadConfig()">
+              Try again
+            </button>
           </div>
         }
       }

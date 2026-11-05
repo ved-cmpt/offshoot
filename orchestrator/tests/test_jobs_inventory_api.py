@@ -252,6 +252,28 @@ def test_the_worker_thread_picks_up_a_job(client: TestClient, db: Session, engin
         worker.stop()
 
 
+def test_the_worker_survives_an_unexpected_error(monkeypatch: pytest.MonkeyPatch) -> None:
+    import threading
+
+    from app.services.jobs import worker as worker_module
+
+    calls = threading.Semaphore(0)
+    worker = JobWorker(get_session_factory(), get_settings())
+
+    def explode(_polls: int = 0) -> bool:
+        calls.release()
+        raise RuntimeError("not a database error")
+
+    monkeypatch.setattr(worker, "run_once", explode)
+    monkeypatch.setattr(worker_module, "ERROR_BACKOFF_SECONDS", 0.01)
+    worker.start()
+    try:
+        assert calls.acquire(timeout=5)
+        assert calls.acquire(timeout=5), "The worker stopped after one error"
+    finally:
+        worker.stop()
+
+
 def test_analysis_replaces_rather_than_duplicates(
     client: TestClient, db: Session, engineer: dict[str, str], analyzed: Project
 ) -> None:

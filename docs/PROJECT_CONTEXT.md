@@ -15,7 +15,7 @@
 | Database | PostgreSQL 17 |
 | Legacy runtime | GnuCOBOL 3.2 in `cobol-runner` |
 | Target | C# on .NET 10 (LTS) in `dotnet-builder` |
-| AI | `AI_MODE=mock` by default; Gemini only when configured (from Run 02) |
+| AI | `AI_MODE=mock` by default; Gemini only when configured. Live mode is unit-tested but has never been called |
 
 ## The legacy application
 
@@ -31,7 +31,7 @@ runners/                cobol-runner and dotnet-builder images; nonet sandbox wr
 orchestrator/           FastAPI app, Alembic migrations, tests
 modern/                 .NET solution (placeholder until Run 03)
 frontend/               Angular workspace
-scripts/                Data generator
+scripts/                Data generator; rule evaluator, run from the host (it reads the answer key)
 ```
 
 ## Six-run plan

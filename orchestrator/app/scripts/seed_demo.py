@@ -194,7 +194,7 @@ def seed_analysis(db: Session, project: Project, owner: User, settings: Settings
 
 
 def seed_rules(db: Session, project: Project, owner: User, settings: Settings, result: SeedResult) -> None:
-    """Always the recorded fixtures: a seed must not spend a live AI budget."""
+    """Mock mode only (see run_seed): a seed must not spend a live AI budget."""
     provider = MockAgent()
     job_ids = []
     for program in BILLRITE_PROGRAMS:

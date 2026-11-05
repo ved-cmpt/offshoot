@@ -155,10 +155,12 @@ def list_rules(
         filters.append(Rule.flags.contains([flag.upper()]))
     total = db.scalar(select(func.count()).select_from(Rule).where(*filters)) or 0
     flagged_first = case((func.jsonb_array_length(Rule.flags) > 0, 0), else_=1)
+    # Source order. Rules from one extraction share a timestamp, so that cannot order them.
+    first_line = Rule.spans[0]["start_line"].as_integer()
     rows = db.scalars(
         select(Rule)
         .where(*filters)
-        .order_by(Rule.program, flagged_first, Rule.created_at, Rule.id)
+        .order_by(Rule.program, flagged_first, first_line.nulls_last(), Rule.title, Rule.id)
         .limit(limit)
         .offset(offset)
     ).all()
@@ -204,13 +206,13 @@ class RuleEdit(BaseModel):
 
 
 @router.patch("/rules/{rule_id}")
-def edit_rule(rule_id: str, body: RuleEdit, db: DbSession, user: Engineer, settings: AppSettings) -> RuleOut:
+def edit_rule(rule_id: str, body: RuleEdit, db: DbSession, user: Engineer) -> RuleOut:
     rule = _load_rule(db, rule_id, lock=True)
     changes = {name: getattr(body, name) for name in body.model_fields_set if name != "expected_version"}
     changes = {name: value for name, value in changes.items() if value is not None}
     if not changes:
         raise ApiError(422, "NOTHING_TO_CHANGE", "Send at least one field to change.")
-    rule_service.apply_edit(db, rule, user, body.expected_version, changes, settings)
+    rule_service.apply_edit(db, rule, user, body.expected_version, changes)
     db.commit()
     return _serialize(db, [rule])[0]
 

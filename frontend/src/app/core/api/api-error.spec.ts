@@ -22,6 +22,8 @@ describe('describeError', () => {
   });
 
   it('handles errors that are not HTTP errors', () => {
-    expect(describeError(new Error('secret internals'))).toBe('Something went wrong. Please try again.');
+    expect(describeError(new Error('secret internals'))).toBe(
+      'Something went wrong. Please try again.',
+    );
   });
 });

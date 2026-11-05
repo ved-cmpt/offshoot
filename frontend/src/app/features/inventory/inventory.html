@@ -9,7 +9,9 @@
 <p class="muted">Computed by static analysis of the COBOL. No AI is involved in this page.</p>
 
 @if (startError(); as message) {
-  <div class="state state--error" role="alert"><p>The analysis could not be started. {{ message }}</p></div>
+  <div class="state state--error" role="alert">
+    <p>The analysis could not be started. {{ message }}</p>
+  </div>
 }
 @if (job(); as running) {
   <app-job-progress label="Analysis" [start]="running" (finished)="jobFinished($event)" />
@@ -77,7 +79,9 @@
                 <tr>
                   <th scope="row">
                     @if (program.file_id) {
-                      <a [routerLink]="['/projects', projectId(), 'sources', program.file_id]">{{ program.name }}</a>
+                      <a [routerLink]="['/projects', projectId(), 'sources', program.file_id]">{{
+                        program.name
+                      }}</a>
                     } @else {
                       {{ program.name }}
                     }
@@ -93,7 +97,9 @@
                   <td class="links">
                     @for (copybook of program.copybooks; track copybook.name) {
                       @if (copybook.file_id) {
-                        <a [routerLink]="['/projects', projectId(), 'sources', copybook.file_id]">{{ copybook.name }}</a>
+                        <a [routerLink]="['/projects', projectId(), 'sources', copybook.file_id]">{{
+                          copybook.name
+                        }}</a>
                       }
                     }
                   </td>
@@ -112,7 +118,8 @@
       <section class="panel" aria-labelledby="dead-title">
         <h2 id="dead-title">Dead code</h2>
         <p class="muted">
-          Reachability follows PERFORM, THRU ranges, GO TO and fall-through from each program's first paragraph.
+          Reachability follows PERFORM, THRU ranges, GO TO and fall-through from each program's
+          first paragraph.
         </p>
         <h3>Paragraphs nothing can reach</h3>
         @if (current.inventory.dead_code.paragraphs.length) {
@@ -138,7 +145,8 @@
           <ul class="plain">
             @for (item of current.inventory.dead_code.records; track item.id) {
               <li>
-                <code>{{ item.name }}</code>, {{ item.length }} bytes
+                <code>{{ item.name }}</code
+                >, {{ item.length }} bytes
                 @if (item.file_id) {
                   (<a
                     [routerLink]="['/projects', projectId(), 'sources', item.file_id]"
@@ -205,7 +213,9 @@
           @case ('error') {
             <div class="state state--error" role="alert">
               <p>The layouts could not be loaded. {{ layoutState.message }}</p>
-              <button class="button button--quiet" type="button" (click)="loadLayouts()">Try again</button>
+              <button class="button button--quiet" type="button" (click)="loadLayouts()">
+                Try again
+              </button>
             </div>
           }
           @case ('ready') {
@@ -215,12 +225,18 @@
             @for (record of layoutState.records; track record.id) {
               <details class="record">
                 <summary>
-                  <code>{{ record.name }}</code>, {{ record.length }} bytes, in {{ record.file }}
+                  <code>{{ record.name }}</code
+                  >, {{ record.length }} bytes, in {{ record.file }}
                   @if (record.obsolete) {
                     <span class="badge badge--danger">obsolete</span>
                   }
                 </summary>
-                <div class="table-scroll" tabindex="0" role="region" [attr.aria-label]="record.name + ' fields'">
+                <div
+                  class="table-scroll"
+                  tabindex="0"
+                  role="region"
+                  [attr.aria-label]="record.name + ' fields'"
+                >
                   <table class="data-table data-table--tight">
                     <thead>
                       <tr>

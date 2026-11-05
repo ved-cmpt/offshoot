@@ -4,6 +4,16 @@ All notable changes are recorded here. Dates are UTC.
 
 ## [Unreleased]
 
+### Run 02 (2026-11-04)
+
+- Deterministic inventory: purpose-built COBOL parser, copybook expansion with original line numbers, paragraph index with `-EXIT` labels, PERFORM THRU, GO TO and CALL graph, file I/O map, data layouts with computed offsets, metrics and dead-code detection.
+- Postgres job queue with `FOR UPDATE SKIP LOCKED`, a worker thread, idempotency per input hash and recovery of lost jobs.
+- Rule extraction: `AgentProvider`, `MockAgent` with recorded fixtures for all five programs, `GeminiAgent` with strict validation, timeouts, retries and sanitized errors. Prompt `rules-v1` and server-side span and name checks.
+- Rule decisions: verify, edit and reject by role, `expected_version` with 409 on stale, every decision audited.
+- Proof that the answer key is excluded from every agent context, and measured precision, recall and span validity in mock mode (`docs/EVALUATION.md`).
+- Angular inventory with an interactive call graph, source viewer with rule spans and copybook links, rules screen and live job progress.
+- Seed extended with the inventory, rules and labelled demo decisions.
+
 ### Run 01 (2026-11-04)
 
 - Repository, handoff documents and seed architecture decisions.
