@@ -1,0 +1,302 @@
+{
+  "rules": [
+    {
+      "title": "Balance and credit are numeric",
+      "statement": "A balance or credit that fails the numeric test returns status E10.",
+      "kind": "VALIDATION",
+      "inputs": [
+        "LF-IN-BALANCE",
+        "LF-IN-CREDIT"
+      ],
+      "outputs": [
+        "LF-OUT-STATUS"
+      ],
+      "conditions": [
+        "LF-IN-BALANCE IS NOT NUMERIC or LF-IN-CREDIT IS NOT NUMERIC"
+      ],
+      "source_spans": [
+        {
+          "file": "LATEFEE.cbl",
+          "start_line": 94,
+          "end_line": 100
+        }
+      ],
+      "examples": [],
+      "confidence": 0.95
+    },
+    {
+      "title": "Bill date must be a real date",
+      "statement": "The bill date is windowed to four digits of year and then tested as a calendar date, so 000229 passes and 990229 fails with status E07.",
+      "kind": "VALIDATION",
+      "inputs": [
+        "LF-IN-BILL-DATE"
+      ],
+      "outputs": [
+        "LF-OUT-STATUS",
+        "WS-BILL-YYYYMMDD"
+      ],
+      "conditions": [
+        "FUNCTION TEST-DATE-YYYYMMDD result not 0"
+      ],
+      "source_spans": [
+        {
+          "file": "LATEFEE.cbl",
+          "start_line": 102,
+          "end_line": 115
+        }
+      ],
+      "examples": [],
+      "confidence": 0.93
+    },
+    {
+      "title": "Due date may be zero",
+      "statement": "A due date of zero is accepted and means there is nothing overdue. A non-zero due date goes through the century window and the calendar test, and failing that returns E07.",
+      "kind": "VALIDATION",
+      "inputs": [
+        "LF-IN-DUE-DATE"
+      ],
+      "outputs": [
+        "LF-OUT-STATUS",
+        "WS-DUE-YYYYMMDD"
+      ],
+      "conditions": [
+        "LF-IN-DUE-DATE NOT = ZERO"
+      ],
+      "source_spans": [
+        {
+          "file": "LATEFEE.cbl",
+          "start_line": 120,
+          "end_line": 135
+        }
+      ],
+      "examples": [],
+      "confidence": 0.92
+    },
+    {
+      "title": "Century window for two-digit years",
+      "statement": "Two-digit years from 50 up are read as 19YY and years below 50 as 20YY, so 49 means 2049 and 50 means 1950.",
+      "kind": "DECISION",
+      "inputs": [
+        "WS-WINDOW-YY",
+        "RT-CENTURY-PIVOT"
+      ],
+      "outputs": [
+        "WS-WINDOW-CC"
+      ],
+      "conditions": [
+        "WS-WINDOW-YY >= RT-CENTURY-PIVOT"
+      ],
+      "source_spans": [
+        {
+          "file": "LATEFEE.cbl",
+          "start_line": 142,
+          "end_line": 151
+        },
+        {
+          "file": "RATES.cpy",
+          "start_line": 43,
+          "end_line": 43
+        }
+      ],
+      "examples": [
+        {
+          "given": {
+            "WS-WINDOW-YY": 49
+          },
+          "expect": {
+            "WS-WINDOW-CC": 20
+          }
+        }
+      ],
+      "confidence": 0.96
+    },
+    {
+      "title": "Counting days overdue",
+      "statement": "Days overdue are the calendar days between due date and bill date, counted only with a positive balance and a non-zero due date. A due date still ahead gives zero days.",
+      "kind": "CALCULATION",
+      "inputs": [
+        "LF-IN-BALANCE",
+        "LF-IN-DUE-DATE",
+        "WS-BILL-YYYYMMDD",
+        "WS-DUE-YYYYMMDD"
+      ],
+      "outputs": [
+        "LF-OUT-DAYS"
+      ],
+      "conditions": [
+        "LF-IN-BALANCE > ZERO",
+        "LF-IN-DUE-DATE NOT = ZERO"
+      ],
+      "source_spans": [
+        {
+          "file": "LATEFEE.cbl",
+          "start_line": 157,
+          "end_line": 167
+        }
+      ],
+      "examples": [],
+      "confidence": 0.93
+    },
+    {
+      "title": "Thirty day grace period",
+      "statement": "A late fee is considered only after more than 30 days overdue. At exactly 30 days there is no fee.",
+      "kind": "DECISION",
+      "inputs": [
+        "LF-OUT-DAYS",
+        "RT-LATE-GRACE-DAYS"
+      ],
+      "outputs": [],
+      "conditions": [
+        "LF-OUT-DAYS > RT-LATE-GRACE-DAYS"
+      ],
+      "source_spans": [
+        {
+          "file": "LATEFEE.cbl",
+          "start_line": 175,
+          "end_line": 175
+        },
+        {
+          "file": "RATES.cpy",
+          "start_line": 38,
+          "end_line": 38
+        }
+      ],
+      "examples": [],
+      "confidence": 0.94
+    },
+    {
+      "title": "Late fee amount and limits",
+      "statement": "The fee is 1.5 percent of the balance rounded half-up to the cent, and only after that rounding is it held to at least 2.00 and at most 50.00.",
+      "kind": "CALCULATION",
+      "inputs": [
+        "LF-IN-BALANCE",
+        "RT-LATE-RATE",
+        "RT-LATE-MINIMUM",
+        "RT-LATE-MAXIMUM"
+      ],
+      "outputs": [
+        "WS-FEE-WORK",
+        "LF-OUT-FEE"
+      ],
+      "conditions": [],
+      "source_spans": [
+        {
+          "file": "LATEFEE.cbl",
+          "start_line": 188,
+          "end_line": 199
+        },
+        {
+          "file": "RATES.cpy",
+          "start_line": 39,
+          "end_line": 41
+        }
+      ],
+      "examples": [
+        {
+          "given": {
+            "LF-IN-BALANCE": 200.0
+          },
+          "expect": {
+            "LF-OUT-FEE": 3.0
+          }
+        }
+      ],
+      "confidence": 0.96
+    },
+    {
+      "title": "Senior waiver",
+      "statement": "Seniors whose flag is exactly Y pay no late fee when one would otherwise apply, and the waived flag goes to Y. When no fee would have applied the waived flag stays N.",
+      "kind": "DECISION",
+      "inputs": [
+        "LF-IN-SENIOR",
+        "LF-OUT-DAYS"
+      ],
+      "outputs": [
+        "LF-OUT-WAIVED"
+      ],
+      "conditions": [
+        "LF-IN-SENIOR = 'Y'"
+      ],
+      "source_spans": [
+        {
+          "file": "LATEFEE.cbl",
+          "start_line": 174,
+          "end_line": 183
+        }
+      ],
+      "examples": [],
+      "confidence": 0.9
+    },
+    {
+      "title": "Senior waiver",
+      "statement": "Seniors whose flag is Y do not pay a late fee that would otherwise apply.",
+      "kind": "DECISION",
+      "inputs": [
+        "LF-IN-SENIOR"
+      ],
+      "outputs": [
+        "LF-OUT-WAIVED"
+      ],
+      "conditions": [
+        "LF-IN-SENIOR = 'Y'"
+      ],
+      "source_spans": [
+        {
+          "file": "LATEFEE.cbl",
+          "start_line": 174,
+          "end_line": 183
+        }
+      ],
+      "examples": [],
+      "confidence": 0.82
+    },
+    {
+      "title": "Applying account credit",
+      "statement": "Credit used is the lesser of the credit held and the balance plus fee. The carry is what remains of the credit, and net arrears are balance plus fee less the credit used.",
+      "kind": "CALCULATION",
+      "inputs": [
+        "LF-IN-CREDIT",
+        "LF-IN-BALANCE",
+        "LF-OUT-FEE"
+      ],
+      "outputs": [
+        "LF-OUT-CREDIT-USED",
+        "LF-OUT-CREDIT-CARRY",
+        "LF-OUT-NET-ARREARS"
+      ],
+      "conditions": [
+        "LF-IN-CREDIT >= WS-GROSS-ARREARS"
+      ],
+      "source_spans": [
+        {
+          "file": "LATEFEE.cbl",
+          "start_line": 205,
+          "end_line": 217
+        }
+      ],
+      "examples": [],
+      "confidence": 0.94
+    },
+    {
+      "title": "Credit does not reduce current charges",
+      "statement": "Credit offsets arrears only. Any carry is reported but never lowers the current charge on the bill.",
+      "kind": "DECISION",
+      "inputs": [
+        "LF-IN-CREDIT"
+      ],
+      "outputs": [
+        "LF-OUT-CREDIT-CARRY"
+      ],
+      "conditions": [],
+      "source_spans": [
+        {
+          "file": "LATEFEE.cbl",
+          "start_line": 205,
+          "end_line": 217
+        }
+      ],
+      "examples": [],
+      "confidence": 0.8
+    }
+  ]
+}

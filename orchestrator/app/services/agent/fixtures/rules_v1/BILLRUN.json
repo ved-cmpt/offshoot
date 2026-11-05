@@ -1,0 +1,191 @@
+{
+  "rules": [
+    {
+      "title": "Matching reads to the customer master",
+      "statement": "Each read looks up its customer in the master by id, relying on both files being sorted on that id. A read that finds no master record becomes an error record with code E08.",
+      "kind": "PROCESS",
+      "inputs": [
+        "RD-CUST-ID",
+        "CUST-ID"
+      ],
+      "outputs": [
+        "WS-TXN-STATUS"
+      ],
+      "conditions": [
+        "CUST-ID NOT = RD-CUST-ID"
+      ],
+      "source_spans": [
+        {
+          "file": "BILLRUN.cbl",
+          "start_line": 163,
+          "end_line": 171
+        },
+        {
+          "file": "BILLRUN.cbl",
+          "start_line": 188,
+          "end_line": 192
+        }
+      ],
+      "examples": [],
+      "confidence": 0.93
+    },
+    {
+      "title": "Order of the module calls",
+      "statement": "For each read the driver calls MTRVAL, RATECALC, LATEFEE and STMTGEN in that order inside one PERFORM range. The first failing status skips the remaining steps.",
+      "kind": "PROCESS",
+      "inputs": [
+        "MV-OUT-STATUS",
+        "RC-OUT-STATUS",
+        "LF-OUT-STATUS",
+        "SG-OUT-STATUS"
+      ],
+      "outputs": [
+        "WS-TXN-STATUS"
+      ],
+      "conditions": [
+        "WS-TXN-STATUS = ERR-OK"
+      ],
+      "source_spans": [
+        {
+          "file": "BILLRUN.cbl",
+          "start_line": 173,
+          "end_line": 173
+        },
+        {
+          "file": "BILLRUN.cbl",
+          "start_line": 198,
+          "end_line": 246
+        }
+      ],
+      "examples": [],
+      "confidence": 0.95
+    },
+    {
+      "title": "One output record per read",
+      "statement": "An accepted read writes one bill record. A rejected read writes one error record holding its code, wording and the raw read, and the run carries on with the next read.",
+      "kind": "PROCESS",
+      "inputs": [
+        "WS-TXN-STATUS"
+      ],
+      "outputs": [
+        "BILL-RECORD",
+        "ERROR-RECORD"
+      ],
+      "conditions": [
+        "WS-TXN-STATUS = ERR-OK"
+      ],
+      "source_spans": [
+        {
+          "file": "BILLRUN.cbl",
+          "start_line": 174,
+          "end_line": 178
+        },
+        {
+          "file": "BILLRUN.cbl",
+          "start_line": 248,
+          "end_line": 277
+        },
+        {
+          "file": "BILLRUN.cbl",
+          "start_line": 308,
+          "end_line": 324
+        }
+      ],
+      "examples": [],
+      "confidence": 0.92
+    },
+    {
+      "title": "Bill date comes from the read",
+      "statement": "The bill date is taken from the read date and the system clock is not consulted, so rerunning the same files gives the same output.",
+      "kind": "DATA",
+      "inputs": [
+        "RD-READ-DATE"
+      ],
+      "outputs": [
+        "LF-IN-BILL-DATE",
+        "BL-BILL-DATE"
+      ],
+      "conditions": [],
+      "source_spans": [
+        {
+          "file": "BILLRUN.cbl",
+          "start_line": 218,
+          "end_line": 218
+        },
+        {
+          "file": "BILLRUN.cbl",
+          "start_line": 251,
+          "end_line": 251
+        }
+      ],
+      "examples": [],
+      "confidence": 0.9
+    },
+    {
+      "title": "Season uses the read month",
+      "statement": "The month passed for seasonal pricing is the month of the read date.",
+      "kind": "DATA",
+      "inputs": [
+        "RD-READ-MM"
+      ],
+      "outputs": [
+        "RC-IN-MONTH"
+      ],
+      "conditions": [],
+      "source_spans": [
+        {
+          "file": "BILLRUN.cbl",
+          "start_line": 208,
+          "end_line": 208
+        }
+      ],
+      "examples": [],
+      "confidence": 0.94
+    },
+    {
+      "title": "Total due on the bill",
+      "statement": "Total due adds the current charge total and the net arrears.",
+      "kind": "CALCULATION",
+      "inputs": [
+        "RC-OUT-TOTAL",
+        "LF-OUT-NET-ARREARS"
+      ],
+      "outputs": [
+        "WS-TOTAL-DUE"
+      ],
+      "conditions": [
+        "WS-TXN-STATUS = ERR-OK"
+      ],
+      "source_spans": [
+        {
+          "file": "BILLRUN.cbl",
+          "start_line": 225,
+          "end_line": 229
+        }
+      ],
+      "examples": [],
+      "confidence": 0.97
+    },
+    {
+      "title": "Run control totals",
+      "statement": "At the end the run reports reads, bills, rejected reads, total billed, customers on file, billed and not billed, totals per customer class and rejects by code.",
+      "kind": "PROCESS",
+      "inputs": [
+        "WS-READ-COUNT",
+        "WS-BILL-COUNT",
+        "WS-ERROR-COUNT"
+      ],
+      "outputs": [],
+      "conditions": [],
+      "source_spans": [
+        {
+          "file": "BILLRUN.cbl",
+          "start_line": 381,
+          "end_line": 426
+        }
+      ],
+      "examples": [],
+      "confidence": 0.55
+    }
+  ]
+}

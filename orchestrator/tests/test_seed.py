@@ -9,9 +9,10 @@ from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
 from app.core.config import get_settings
-from app.db.models import AuditLog, Project, SourceFile, User
+from app.db.models import Approval, AuditLog, InventoryItem, Job, Project, Rule, SourceFile, User
 from app.scripts.demo_accounts import demo_accounts
 from app.scripts.seed_demo import run_seed
+from app.services.rules import apply_decision
 from tests.conftest import bearer
 
 BILLRITE = Path("/legacy/billrite")
@@ -75,7 +76,7 @@ def test_seed_repairs_a_changed_demo_account(db: Session, seeded: None) -> None:
 def test_billrite_project_holds_the_application_sources(db: Session, seeded: None) -> None:
     project = db.scalar(select(Project).where(Project.name == "BillRite"))
     assert project is not None
-    assert (project.source_kind, project.status) == ("BUNDLED", "IMPORTED")
+    assert (project.source_kind, project.status) == ("BUNDLED", "ANALYZED")
     rows = db.scalars(select(SourceFile).where(SourceFile.project_id == project.id)).all()
     by_kind: dict[str, set[str]] = {}
     for row in rows:
@@ -128,6 +129,98 @@ def test_project_list_shows_billrite_with_counts(client: TestClient, seeded: Non
     account = demo_accounts(get_settings())[0]
     session = client.post("/api/v1/auth/login", json={"email": account.email, "password": account.password}).json()
     items = client.get("/api/v1/projects", headers=bearer(session)).json()["items"]
+    # Other tests add projects to this database, so look for it across every page.
+    offset = 50
+    while not any(item["name"] == "BillRite" for item in items):
+        page = client.get(f"/api/v1/projects?offset={offset}", headers=bearer(session)).json()
+        assert page["items"], "BillRite is not in the project list"
+        items = page["items"]
+        offset += 50
     billrite = next(item for item in items if item["name"] == "BillRite")
     assert billrite["source_file_count"] == 12
     assert billrite["source_line_count"] > 1400
+
+
+# --- What Run 02 added: inventory, proposed rules and labelled demo decisions (ADR-024).
+
+
+def billrite(db: Session) -> Project:
+    db.expire_all()
+    project = db.scalar(select(Project).where(Project.name == "BillRite"))
+    assert project is not None
+    return project
+
+
+def test_seed_analyzes_billrite(db: Session, seeded: None) -> None:
+    project = billrite(db)
+    assert project.status == "ANALYZED"
+    programs = db.scalars(
+        select(InventoryItem.name).where(InventoryItem.project_id == project.id, InventoryItem.kind == "PROGRAM")
+    ).all()
+    assert sorted(programs) == ["BILLRUN", "LATEFEE", "MTRVAL", "RATECALC", "STMTGEN"]
+
+
+def test_seed_proposes_rules_for_every_program(db: Session, seeded: None) -> None:
+    project = billrite(db)
+    rows = db.scalars(select(Rule).where(Rule.project_id == project.id)).all()
+    assert {row.program for row in rows} == {"BILLRUN", "LATEFEE", "MTRVAL", "RATECALC", "STMTGEN"}
+    assert len(rows) == 46
+
+
+def test_seeded_decisions_are_mostly_verified_with_one_rejection_and_some_pending(db: Session, seeded: None) -> None:
+    project = billrite(db)
+    rows = db.scalars(select(Rule).where(Rule.project_id == project.id)).all()
+    states: dict[str, list[Rule]] = {}
+    for row in rows:
+        states.setdefault(row.state, []).append(row)
+    assert len(states["VERIFIED"]) > len(states["PROPOSED"])
+    assert [row.title for row in states["REJECTED"]] == ["Senior discount on the energy charge"]
+    assert {row.program for row in states["VERIFIED"]} == {"BILLRUN", "LATEFEE", "MTRVAL", "STMTGEN"}
+    pending = {row.program for row in states["PROPOSED"]}
+    assert "RATECALC" in pending
+    assert all(not row.flags for row in states["VERIFIED"])
+    flagged_pending = [row.title for row in states["PROPOSED"] if row.flags]
+    assert sorted(flagged_pending) == ["All extracted rules are pre-approved", "Run control totals"]
+
+
+def test_seeded_decisions_are_labelled_as_not_being_reviews(db: Session, seeded: None) -> None:
+    project = billrite(db)
+    rows = db.scalars(select(Rule).where(Rule.project_id == project.id, Rule.state != "PROPOSED")).all()
+    for row in rows:
+        approval = db.scalars(select(Approval).where(Approval.entity_id == row.id)).one()
+        assert approval.reason is not None
+        assert "not a human review" in approval.reason
+        audit_row = db.scalars(
+            select(AuditLog).where(AuditLog.entity_id == str(row.id), AuditLog.action == "rule.decision")
+        ).one()
+        assert audit_row.safe_metadata["seeded"] is True
+
+
+def test_a_later_seed_never_overrides_a_persons_decision(db: Session, seeded: None) -> None:
+    project = billrite(db)
+    architect = db.scalar(select(User).where(User.role == "ARCHITECT", User.active))
+    assert architect is not None
+    row = db.scalar(
+        select(Rule).where(
+            Rule.project_id == project.id, Rule.state == "PROPOSED", Rule.program == "RATECALC", Rule.flags == []
+        )
+    )
+    assert row is not None
+    rule_id = row.id
+    apply_decision(db, row, architect, "REJECTED", "A person said no.", row.version, get_settings())
+    db.commit()
+    result = run_seed(db, get_settings())
+    assert result.changed is False
+    db.expire_all()
+    refreshed = db.get(Rule, rule_id)
+    assert refreshed is not None
+    assert refreshed.state == "REJECTED"
+
+
+def test_seed_jobs_are_reused_on_a_second_run(db: Session, seeded: None) -> None:
+    project = billrite(db)
+    before = db.scalar(select(func.count()).select_from(Job).where(Job.project_id == project.id))
+    assert before == 6
+    result = run_seed(db, get_settings())
+    assert (result.jobs_created, result.decisions_seeded) == (0, 0)
+    assert db.scalar(select(func.count()).select_from(Job).where(Job.project_id == project.id)) == before

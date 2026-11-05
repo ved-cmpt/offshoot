@@ -1,5 +1,7 @@
 """FastAPI application: routers, CORS, security middleware and the error envelope."""
 
+from collections.abc import AsyncIterator
+from contextlib import asynccontextmanager
 from typing import Any
 
 from fastapi import APIRouter, FastAPI, Request
@@ -11,7 +13,9 @@ from starlette.exceptions import HTTPException as StarletteHTTPException
 from app.core.config import get_settings
 from app.core.errors import ApiError
 from app.core.middleware import SecurityMiddleware
-from app.routers import admin, auth, health, projects
+from app.db.session import get_session_factory
+from app.routers import admin, auth, health, inventory, projects, rules
+from app.services.jobs.worker import JobWorker
 
 API_PREFIX = "/api/v1"
 STATUS_CODES = {
@@ -32,9 +36,21 @@ def _envelope(request: Request, status_code: int, code: str, message: str, **ext
     return JSONResponse(status_code=status_code, content={"error": error})
 
 
+@asynccontextmanager
+async def lifespan(_app: FastAPI) -> AsyncIterator[None]:
+    settings = get_settings()
+    worker = JobWorker(get_session_factory(), settings) if settings.job_worker_enabled else None
+    if worker is not None:
+        worker.start()
+    yield
+    if worker is not None:
+        worker.stop()
+
+
 def create_app() -> FastAPI:
     settings = get_settings()
     app = FastAPI(
+        lifespan=lifespan,
         title="LegacyLens orchestrator",
         version="0.1.0",
         docs_url=None,
@@ -64,6 +80,8 @@ def create_app() -> FastAPI:
     api.include_router(health.router)
     api.include_router(auth.router)
     api.include_router(projects.router)
+    api.include_router(inventory.router)
+    api.include_router(rules.router)
     api.include_router(admin.router)
     app.include_router(api)
     # Unprefixed aliases, for platform health checks.

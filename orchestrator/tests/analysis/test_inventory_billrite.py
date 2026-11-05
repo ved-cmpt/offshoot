@@ -87,9 +87,7 @@ def test_exactly_one_go_to_at_the_known_line(inventory: ProjectInventory) -> Non
 
 
 def test_exactly_one_dead_paragraph(inventory: ProjectInventory) -> None:
-    dead = [
-        (program.name, paragraph.name) for program in inventory.programs for paragraph in program.dead_paragraphs
-    ]
+    dead = [(program.name, paragraph.name) for program in inventory.programs for paragraph in program.dead_paragraphs]
     assert dead == [("RATECALC", "8500-APPLY-WINTER-DISCOUNT")]
 
 

@@ -1,4 +1,4 @@
-"""Project read endpoints. Creation and analysis arrive with Run 02."""
+"""Project read endpoints. Project creation and uploads are not built yet."""
 
 import uuid
 from datetime import datetime

@@ -1,11 +1,14 @@
 """Idempotent demo seed: `python -m app.scripts.seed_demo`.
 
-Creates the demo users and the BillRite project with its sources. Running it again
-changes nothing except one audit entry recording the run. Inventory, rules, plan and
-modules are seeded by the runs that build them (ADR-017).
+Creates the demo users, the BillRite project with its sources, its inventory, and in mock
+mode its proposed rules plus clearly labelled demo decisions (ADR-024). Running it again
+changes nothing except one audit entry recording the run. The plan and modules are seeded
+by the runs that build them (ADR-017).
 """
 
 import hashlib
+import time
+import uuid
 from dataclasses import dataclass
 from pathlib import Path
 
@@ -14,10 +17,14 @@ from sqlalchemy.orm import Session
 
 from app.core.config import Settings, get_settings
 from app.core.security import hash_password, verify_password
-from app.db.models import MAX_SOURCE_CONTENT_BYTES, Project, SourceFile, User
+from app.db.models import MAX_SOURCE_CONTENT_BYTES, Job, Project, Rule, SourceFile, User
 from app.db.session import get_session_factory
 from app.scripts.demo_accounts import demo_accounts
 from app.services import audit
+from app.services.agent.mock import MockAgent
+from app.services.jobs import queue
+from app.services.jobs.handlers import analyze_input_hash, extract_input_hash, run_pending
+from app.services.rules import apply_decision
 
 BILLRITE_NAME = "BillRite"
 BILLRITE_DESCRIPTION = (
@@ -26,6 +33,13 @@ BILLRITE_DESCRIPTION = (
 )
 # Only the application's own sources. The harness and the README are not project sources,
 # and the answer key in docs/ is not mounted into this container at all.
+BILLRITE_PROGRAMS = ("BILLRUN", "LATEFEE", "MTRVAL", "RATECALC", "STMTGEN")
+# RATECALC stays undecided so a visitor can work through a real review.
+SEEDED_VERIFIED_PROGRAMS = ("BILLRUN", "LATEFEE", "MTRVAL", "STMTGEN")
+SEEDED_REJECTED_TITLE = "Senior discount on the energy charge"
+SEED_VERIFY_REASON = "Demo seed decision, not a human review."
+SEED_REJECT_REASON = "Demo seed decision, not a human review: the cited lines do not exist."
+JOB_WAIT_SECONDS = 60
 SOURCE_GLOBS = (
     ("src/*.cbl", "PROGRAM"),
     ("copy/*.cpy", "COPYBOOK"),
@@ -41,6 +55,8 @@ class SeedResult:
     sources_created: int = 0
     sources_updated: int = 0
     sources_removed: int = 0
+    jobs_created: int = 0
+    decisions_seeded: int = 0
 
     @property
     def changed(self) -> bool:
@@ -52,6 +68,8 @@ class SeedResult:
                 self.sources_created,
                 self.sources_updated,
                 self.sources_removed,
+                self.jobs_created,
+                self.decisions_seeded,
             )
         )
 
@@ -106,7 +124,7 @@ def read_sources(root: Path) -> dict[str, tuple[str, str]]:
     return found
 
 
-def seed_project(db: Session, owner: User, root: Path, result: SeedResult) -> None:
+def seed_project(db: Session, owner: User, root: Path, result: SeedResult) -> Project:
     project = db.scalar(select(Project).where(Project.name == BILLRITE_NAME, Project.source_kind == "BUNDLED"))
     if project is None:
         project = Project(
@@ -148,12 +166,74 @@ def seed_project(db: Session, owner: User, root: Path, result: SeedResult) -> No
         if path not in sources:
             db.delete(row)
             result.sources_removed += 1
+    return project
+
+
+def _wait_for_jobs(db: Session, job_ids: list[uuid.UUID], settings: Settings) -> None:
+    """Run the jobs here, or wait for the API's worker if it has already claimed them."""
+    deadline = time.monotonic() + JOB_WAIT_SECONDS
+    while True:
+        db.commit()
+        run_pending(get_session_factory(), settings)
+        db.expire_all()
+        statuses = db.scalars(select(Job).where(Job.id.in_(job_ids))).all()
+        failed = [job.error_code for job in statuses if job.status == "FAILED"]
+        if failed:
+            raise RuntimeError(f"A seed job failed: {failed}")
+        if all(job.status == "SUCCEEDED" for job in statuses):
+            return
+        if time.monotonic() > deadline:
+            raise TimeoutError("Seed jobs did not finish in time")
+        time.sleep(0.2)
+
+
+def seed_analysis(db: Session, project: Project, owner: User, settings: Settings, result: SeedResult) -> None:
+    job, created = queue.enqueue(db, project.id, "ANALYZE", analyze_input_hash(db, project.id), {}, owner.id)
+    result.jobs_created += int(created)
+    _wait_for_jobs(db, [job.id], settings)
+
+
+def seed_rules(db: Session, project: Project, owner: User, settings: Settings, result: SeedResult) -> None:
+    """Always the recorded fixtures: a seed must not spend a live AI budget."""
+    provider = MockAgent()
+    job_ids = []
+    for program in BILLRITE_PROGRAMS:
+        input_hash = extract_input_hash(db, project.id, program, provider)
+        job, created = queue.enqueue(db, project.id, "EXTRACT", input_hash, {"program": program}, owner.id)
+        result.jobs_created += int(created)
+        job_ids.append(job.id)
+    _wait_for_jobs(db, job_ids, settings)
+
+
+def seed_decisions(db: Session, project: Project, architect: User, settings: Settings, result: SeedResult) -> None:
+    """Only rules no one has touched. These decisions are labelled, and they are not reviews."""
+    rows = db.scalars(select(Rule).where(Rule.project_id == project.id, Rule.state == "PROPOSED")).all()
+    for rule in rows:
+        if rule.edited_by is not None:
+            continue
+        if rule.title == SEEDED_REJECTED_TITLE:
+            apply_decision(db, rule, architect, "REJECTED", SEED_REJECT_REASON, rule.version, settings, seeded=True)
+        elif rule.program in SEEDED_VERIFIED_PROGRAMS and not rule.flags:
+            apply_decision(db, rule, architect, "VERIFIED", SEED_VERIFY_REASON, rule.version, settings, seeded=True)
+        else:
+            continue
+        result.decisions_seeded += 1
 
 
 def run_seed(db: Session, settings: Settings) -> SeedResult:
     result = SeedResult()
     admin = seed_users(db, settings, result)
-    seed_project(db, admin, Path(settings.billrite_path), result)
+    project = seed_project(db, admin, Path(settings.billrite_path), result)
+    db.commit()
+    seed_analysis(db, project, admin, settings, result)
+    if settings.ai_mode == "mock":
+        seed_rules(db, project, admin, settings, result)
+        # Only on the first seed of these rules, so a later run never overrides a person's review.
+        if result.jobs_created:
+            architect = db.scalar(select(User).where(User.role == "ARCHITECT", User.active))
+            if architect is None:
+                raise ValueError("The demo accounts must include an ARCHITECT")
+            seed_decisions(db, project, architect, settings, result)
     audit.record(
         db,
         "seed.run",
@@ -165,6 +245,8 @@ def run_seed(db: Session, settings: Settings) -> SeedResult:
             "sources_created": result.sources_created,
             "sources_updated": result.sources_updated,
             "sources_removed": result.sources_removed,
+            "jobs_created": result.jobs_created,
+            "decisions_seeded": result.decisions_seeded,
         },
     )
     db.commit()
@@ -177,7 +259,8 @@ def main() -> None:
     print(
         f"Seed complete. users created={result.users_created} updated={result.users_updated}; "
         f"project created={result.project_created}; sources created={result.sources_created} "
-        f"updated={result.sources_updated} removed={result.sources_removed}"
+        f"updated={result.sources_updated} removed={result.sources_removed}; "
+        f"jobs created={result.jobs_created}; decisions seeded={result.decisions_seeded}"
     )
 
 

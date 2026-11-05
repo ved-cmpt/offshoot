@@ -39,6 +39,11 @@ os.environ.update(
         "DEMO_PASSWORD_ENGINEER": "test-engineer-pass",
         "DEMO_PASSWORD_ARCHITECT": "test-architect-pass",
         "DEMO_PASSWORD_ADMIN": "test-admin-pass",
+        # Tests run jobs themselves, one at a time. test_jobs.py drives the worker directly.
+        "JOB_WORKER_ENABLED": "false",
+        "AI_MODE": "mock",
+        "GEMINI_API_KEY": "",
+        "GEMINI_MODEL": "",
     }
 )
 

@@ -217,6 +217,10 @@ class Rule(Base):
     edited_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
     created_at: Mapped[datetime] = created_at_column()
 
+    def spans_for_contract(self) -> list[dict[str, Any]]:
+        """The stored spans in the shape the rule contract uses, without derived fields."""
+        return [{key: span[key] for key in ("file", "start_line", "end_line")} for span in self.spans]
+
 
 class Plan(Base):
     __tablename__ = "plans"

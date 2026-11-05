@@ -27,6 +27,11 @@ ignore = ["PLR0913", "PLR0917", "PLR2004"]
 "tests/**" = ["S101", "S105", "S106", "S107", "S608", "PLC0415"]
 "alembic/versions/*" = ["E501", "S608"]
 "app/scripts/**" = ["T201"]
+# Lazy on purpose: mock mode must never import the provider SDK.
+"app/services/agent/gemini.py" = ["PLC0415"]
+"app/services/agent/provider.py" = ["PLC0415"]
+# A parser's statement dispatch reads better as one flat chain.
+"app/services/analysis/*" = ["PLR0912"]
 
 [tool.mypy]
 python_version = "3.12"

@@ -1,0 +1,207 @@
+{
+  "rules": [
+    {
+      "title": "Statement print line layout",
+      "statement": "The statement line is 80 columns laid out as customer id, name, MM/DD/YY date, kWh, estimate mark, current charge, fee, total due and message, with single spaces between them.",
+      "kind": "DATA",
+      "inputs": [],
+      "outputs": [
+        "ST-CUST-ID",
+        "ST-NAME",
+        "ST-DATE",
+        "ST-KWH",
+        "ST-EST-MARK",
+        "ST-CURRENT",
+        "ST-FEE",
+        "ST-TOTAL-DUE",
+        "ST-MESSAGE"
+      ],
+      "conditions": [],
+      "source_spans": [
+        {
+          "file": "STMTGEN.cbl",
+          "start_line": 37,
+          "end_line": 59
+        }
+      ],
+      "examples": [],
+      "confidence": 0.92
+    },
+    {
+      "title": "Total due truncates on the print line",
+      "statement": "Total due moves to a box holding four whole digits, so 10,000.00 or more loses its high-order digits: 12,345.67 prints as 2345.67. The bill record still has the full figure.",
+      "kind": "DATA",
+      "inputs": [
+        "SG-IN-TOTAL-DUE"
+      ],
+      "outputs": [
+        "ST-TOTAL-DUE"
+      ],
+      "conditions": [
+        "SG-IN-TOTAL-DUE >= 10000.00"
+      ],
+      "source_spans": [
+        {
+          "file": "STMTGEN.cbl",
+          "start_line": 57,
+          "end_line": 57
+        },
+        {
+          "file": "STMTGEN.cbl",
+          "start_line": 148,
+          "end_line": 148
+        }
+      ],
+      "examples": [],
+      "confidence": 0.95
+    },
+    {
+      "title": "Current charge truncates on the print line",
+      "statement": "The current charge box holds five whole digits, so an amount of 100,000.00 or more loses high-order digits the same way.",
+      "kind": "DATA",
+      "inputs": [
+        "SG-IN-CURRENT"
+      ],
+      "outputs": [
+        "ST-CURRENT"
+      ],
+      "conditions": [],
+      "source_spans": [
+        {
+          "file": "STMTGEN.cbl",
+          "start_line": 53,
+          "end_line": 53
+        },
+        {
+          "file": "STMTGEN.cbl",
+          "start_line": 146,
+          "end_line": 146
+        }
+      ],
+      "examples": [],
+      "confidence": 0.88
+    },
+    {
+      "title": "Name cut to twenty characters",
+      "statement": "Only the first 20 characters of the customer name reach the print line.",
+      "kind": "DATA",
+      "inputs": [
+        "SG-IN-NAME"
+      ],
+      "outputs": [
+        "ST-NAME"
+      ],
+      "conditions": [],
+      "source_spans": [
+        {
+          "file": "STMTGEN.cbl",
+          "start_line": 40,
+          "end_line": 40
+        },
+        {
+          "file": "STMTGEN.cbl",
+          "start_line": 128,
+          "end_line": 128
+        }
+      ],
+      "examples": [],
+      "confidence": 0.94
+    },
+    {
+      "title": "Choosing the statement message",
+      "statement": "ESTIMATED is printed for an estimate flag of E. Otherwise PAST DUE appears when arrears are above zero. Otherwise the message stays blank.",
+      "kind": "DECISION",
+      "inputs": [
+        "SG-IN-EST-FLAG",
+        "SG-IN-ARREARS"
+      ],
+      "outputs": [
+        "ST-MESSAGE"
+      ],
+      "conditions": [
+        "SG-IN-EST-FLAG = 'E'",
+        "SG-IN-ARREARS > ZERO"
+      ],
+      "source_spans": [
+        {
+          "file": "STMTGEN.cbl",
+          "start_line": 155,
+          "end_line": 164
+        }
+      ],
+      "examples": [
+        {
+          "given": {
+            "SG-IN-EST-FLAG": "E",
+            "SG-IN-ARREARS": 5.0
+          },
+          "expect": {
+            "ST-MESSAGE": "ESTIMATED"
+          }
+        }
+      ],
+      "confidence": 0.96
+    },
+    {
+      "title": "Statement date check ignores leap years",
+      "statement": "The date is checked against a month table giving February 29 days every year, so 990229 passes here. Other impossible dates return E07.",
+      "kind": "VALIDATION",
+      "inputs": [
+        "SG-IN-BILL-DATE",
+        "SG-IN-MM",
+        "SG-IN-DD"
+      ],
+      "outputs": [
+        "SG-OUT-STATUS"
+      ],
+      "conditions": [
+        "SG-IN-DD > WS-MONTH-DAYS (SG-IN-MM)"
+      ],
+      "source_spans": [
+        {
+          "file": "STMTGEN.cbl",
+          "start_line": 33,
+          "end_line": 36
+        },
+        {
+          "file": "STMTGEN.cbl",
+          "start_line": 96,
+          "end_line": 110
+        }
+      ],
+      "examples": [],
+      "confidence": 0.9
+    },
+    {
+      "title": "Amounts on the statement are numeric",
+      "statement": "Any non-numeric amount or kWh field returns status E10, and the rejected record keeps a blank print line.",
+      "kind": "VALIDATION",
+      "inputs": [
+        "SG-IN-KWH",
+        "SG-IN-CURRENT",
+        "SG-IN-FEE",
+        "SG-IN-ARREARS",
+        "SG-IN-TOTAL-DUE"
+      ],
+      "outputs": [
+        "SG-OUT-STATUS",
+        "SG-OUT-LINE"
+      ],
+      "conditions": [],
+      "source_spans": [
+        {
+          "file": "STMTGEN.cbl",
+          "start_line": 112,
+          "end_line": 121
+        },
+        {
+          "file": "STMTGEN.cbl",
+          "start_line": 76,
+          "end_line": 81
+        }
+      ],
+      "examples": [],
+      "confidence": 0.92
+    }
+  ]
+}

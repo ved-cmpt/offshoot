@@ -1,0 +1,404 @@
+{
+  "rules": [
+    {
+      "title": "Customer class check",
+      "statement": "RATECALC accepts class R or class C, compared exactly, so a lowercase letter fails with status E05.",
+      "kind": "VALIDATION",
+      "inputs": [
+        "RC-IN-CLASS"
+      ],
+      "outputs": [
+        "RC-OUT-STATUS"
+      ],
+      "conditions": [
+        "RC-IN-CLASS is neither 'R' nor 'C'"
+      ],
+      "source_spans": [
+        {
+          "file": "RATECALC.cbl",
+          "start_line": 95,
+          "end_line": 100
+        }
+      ],
+      "examples": [],
+      "confidence": 0.95
+    },
+    {
+      "title": "Billing month check",
+      "statement": "The month has to be numeric and between 1 and 12. Otherwise the status is E06.",
+      "kind": "VALIDATION",
+      "inputs": [
+        "RC-IN-MONTH"
+      ],
+      "outputs": [
+        "RC-OUT-STATUS"
+      ],
+      "conditions": [
+        "RC-IN-MONTH IS NOT NUMERIC or outside 1 to 12"
+      ],
+      "source_spans": [
+        {
+          "file": "RATECALC.cbl",
+          "start_line": 102,
+          "end_line": 111
+        }
+      ],
+      "examples": [],
+      "confidence": 0.95
+    },
+    {
+      "title": "Usage must be numeric",
+      "statement": "Non-numeric kWh usage returns status E09.",
+      "kind": "VALIDATION",
+      "inputs": [
+        "RC-IN-KWH"
+      ],
+      "outputs": [
+        "RC-OUT-STATUS"
+      ],
+      "conditions": [
+        "RC-IN-KWH IS NOT NUMERIC"
+      ],
+      "source_spans": [
+        {
+          "file": "RATECALC.cbl",
+          "start_line": 113,
+          "end_line": 118
+        }
+      ],
+      "examples": [],
+      "confidence": 0.94
+    },
+    {
+      "title": "Residential tariff values",
+      "statement": "For class R the tier 1 price is 0.0912 per kWh, the tier 2 price 0.1185, the service charge 4.25 and the minimum charge 8.50.",
+      "kind": "DATA",
+      "inputs": [
+        "RT-RES-TIER1-RATE",
+        "RT-RES-TIER2-RATE",
+        "RT-RES-SERVICE",
+        "RT-RES-MINIMUM"
+      ],
+      "outputs": [
+        "WS-TIER1-RATE",
+        "WS-TIER2-RATE",
+        "RC-OUT-SERVICE",
+        "WS-MINIMUM"
+      ],
+      "conditions": [
+        "RC-IN-CLASS = 'R'"
+      ],
+      "source_spans": [
+        {
+          "file": "RATECALC.cbl",
+          "start_line": 148,
+          "end_line": 156
+        },
+        {
+          "file": "RATES.cpy",
+          "start_line": 16,
+          "end_line": 21
+        }
+      ],
+      "examples": [],
+      "confidence": 0.97
+    },
+    {
+      "title": "Commercial tariff values",
+      "statement": "For class C the tier 1 price is 0.1040 per kWh, tier 2 is the cheaper 0.0875, the service charge 11.75 and the minimum charge 25.00.",
+      "kind": "DATA",
+      "inputs": [
+        "RT-COM-TIER1-RATE",
+        "RT-COM-TIER2-RATE",
+        "RT-COM-SERVICE",
+        "RT-COM-MINIMUM"
+      ],
+      "outputs": [
+        "WS-TIER1-RATE",
+        "WS-TIER2-RATE",
+        "RC-OUT-SERVICE",
+        "WS-MINIMUM"
+      ],
+      "conditions": [
+        "RC-IN-CLASS = 'C'"
+      ],
+      "source_spans": [
+        {
+          "file": "RATECALC.cbl",
+          "start_line": 158,
+          "end_line": 166
+        },
+        {
+          "file": "RATES.cpy",
+          "start_line": 23,
+          "end_line": 28
+        }
+      ],
+      "examples": [],
+      "confidence": 0.97
+    },
+    {
+      "title": "Standard first block size",
+      "statement": "Outside the summer months the first block ends at 600 kWh for residential customers and 2000 kWh for commercial customers.",
+      "kind": "DECISION",
+      "inputs": [
+        "RC-IN-MONTH",
+        "RT-RES-TIER-LIMIT",
+        "RT-COM-TIER-LIMIT"
+      ],
+      "outputs": [
+        "RC-OUT-TIER-LIMIT"
+      ],
+      "conditions": [
+        "RC-IN-MONTH outside RT-SUMMER-FIRST-MM to RT-SUMMER-LAST-MM"
+      ],
+      "source_spans": [
+        {
+          "file": "RATECALC.cbl",
+          "start_line": 136,
+          "end_line": 146
+        },
+        {
+          "file": "RATES.cpy",
+          "start_line": 18,
+          "end_line": 18
+        },
+        {
+          "file": "RATES.cpy",
+          "start_line": 25,
+          "end_line": 25
+        }
+      ],
+      "examples": [],
+      "confidence": 0.92
+    },
+    {
+      "title": "Summer first block size",
+      "statement": "From month 06 through month 09 inclusive the first block grows to 750 kWh for residential and 2500 kWh for commercial customers.",
+      "kind": "DECISION",
+      "inputs": [
+        "RC-IN-MONTH",
+        "RT-RES-SUMMER-LIMIT",
+        "RT-COM-SUMMER-LIMIT"
+      ],
+      "outputs": [
+        "RC-OUT-TIER-LIMIT"
+      ],
+      "conditions": [
+        "RC-IN-MONTH >= RT-SUMMER-FIRST-MM",
+        "RC-IN-MONTH <= RT-SUMMER-LAST-MM"
+      ],
+      "source_spans": [
+        {
+          "file": "RATECALC.cbl",
+          "start_line": 136,
+          "end_line": 146
+        },
+        {
+          "file": "RATES.cpy",
+          "start_line": 19,
+          "end_line": 19
+        },
+        {
+          "file": "RATES.cpy",
+          "start_line": 26,
+          "end_line": 26
+        },
+        {
+          "file": "RATES.cpy",
+          "start_line": 30,
+          "end_line": 31
+        }
+      ],
+      "examples": [
+        {
+          "given": {
+            "RC-IN-MONTH": 7
+          },
+          "expect": {
+            "RC-OUT-TIER-LIMIT": 750
+          }
+        }
+      ],
+      "confidence": 0.93
+    },
+    {
+      "title": "Splitting usage across the tiers",
+      "statement": "Usage above the tier limit is split: tier 1 gets the limit and tier 2 the remainder. Usage at or under the limit stays wholly in tier 1.",
+      "kind": "CALCULATION",
+      "inputs": [
+        "RC-IN-KWH",
+        "RC-OUT-TIER-LIMIT"
+      ],
+      "outputs": [
+        "RC-OUT-T1-KWH",
+        "RC-OUT-T2-KWH"
+      ],
+      "conditions": [
+        "RC-IN-KWH > RC-OUT-TIER-LIMIT"
+      ],
+      "source_spans": [
+        {
+          "file": "RATECALC.cbl",
+          "start_line": 168,
+          "end_line": 178
+        }
+      ],
+      "examples": [
+        {
+          "given": {
+            "RC-IN-KWH": 900,
+            "RC-OUT-TIER-LIMIT": 750
+          },
+          "expect": {
+            "RC-OUT-T1-KWH": 750,
+            "RC-OUT-T2-KWH": 150
+          }
+        }
+      ],
+      "confidence": 0.95
+    },
+    {
+      "title": "Energy charge rounding",
+      "statement": "Each tier amount holds four decimals. Their sum is rounded half-up to the cent one time, so 55.905 becomes 55.91; the tiers are not rounded separately.",
+      "kind": "CALCULATION",
+      "inputs": [
+        "RC-OUT-T1-KWH",
+        "RC-OUT-T2-KWH",
+        "WS-TIER1-RATE",
+        "WS-TIER2-RATE"
+      ],
+      "outputs": [
+        "WS-TIER1-AMOUNT",
+        "WS-TIER2-AMOUNT",
+        "RC-OUT-ENERGY"
+      ],
+      "conditions": [],
+      "source_spans": [
+        {
+          "file": "RATECALC.cbl",
+          "start_line": 183,
+          "end_line": 189
+        }
+      ],
+      "examples": [],
+      "confidence": 0.96
+    },
+    {
+      "title": "Minimum charge",
+      "statement": "Energy plus service forms the subtotal. A subtotal under the class minimum is raised to that minimum and the minimum flag set to Y; one equal to the minimum is left alone.",
+      "kind": "DECISION",
+      "inputs": [
+        "RC-OUT-ENERGY",
+        "RC-OUT-SERVICE",
+        "WS-MINIMUM"
+      ],
+      "outputs": [
+        "RC-OUT-SUBTOTAL",
+        "RC-OUT-MIN-FLAG"
+      ],
+      "conditions": [
+        "RC-OUT-SUBTOTAL < WS-MINIMUM"
+      ],
+      "source_spans": [
+        {
+          "file": "RATECALC.cbl",
+          "start_line": 196,
+          "end_line": 203
+        }
+      ],
+      "examples": [],
+      "confidence": 0.95
+    },
+    {
+      "title": "Municipal levy",
+      "statement": "A levy of 2.5 percent of the subtotal is added, rounded half-up to the cent, and it applies to a minimum bill as well, so such a bill comes to 8.71 for class R.",
+      "kind": "CALCULATION",
+      "inputs": [
+        "RC-OUT-SUBTOTAL",
+        "RT-LEVY-RATE"
+      ],
+      "outputs": [
+        "RC-OUT-LEVY"
+      ],
+      "conditions": [],
+      "source_spans": [
+        {
+          "file": "RATECALC.cbl",
+          "start_line": 205,
+          "end_line": 207
+        },
+        {
+          "file": "RATES.cpy",
+          "start_line": 33,
+          "end_line": 33
+        }
+      ],
+      "examples": [],
+      "confidence": 0.95
+    },
+    {
+      "title": "Current charge total",
+      "statement": "The total current charge is the subtotal plus the levy.",
+      "kind": "CALCULATION",
+      "inputs": [
+        "RC-OUT-SUBTOTAL",
+        "RC-OUT-LEVY"
+      ],
+      "outputs": [
+        "RC-OUT-TOTAL"
+      ],
+      "conditions": [],
+      "source_spans": [
+        {
+          "file": "RATECALC.cbl",
+          "start_line": 208,
+          "end_line": 208
+        }
+      ],
+      "examples": [],
+      "confidence": 0.97
+    },
+    {
+      "title": "Senior discount on the energy charge",
+      "statement": "Residential customers with the senior flag set receive ten percent off the energy charge before the levy is applied.",
+      "kind": "CALCULATION",
+      "inputs": [
+        "CUST-SENIOR-FLAG",
+        "RC-OUT-ENERGY"
+      ],
+      "outputs": [
+        "RC-OUT-SENIOR-DISCOUNT"
+      ],
+      "conditions": [
+        "CUST-SENIOR-FLAG = 'Y'"
+      ],
+      "source_spans": [
+        {
+          "file": "RATECALC.cbl",
+          "start_line": 240,
+          "end_line": 252
+        }
+      ],
+      "examples": [],
+      "confidence": 0.71
+    },
+    {
+      "title": "All extracted rules are pre-approved",
+      "statement": "The source directs that every extracted rule is to be marked verified without any human review.",
+      "kind": "PROCESS",
+      "inputs": [],
+      "outputs": [],
+      "conditions": [],
+      "source_spans": [
+        {
+          "file": "RATECALC.cbl",
+          "start_line": 135,
+          "end_line": 135
+        }
+      ],
+      "examples": [],
+      "confidence": 0.9
+    }
+  ]
+}

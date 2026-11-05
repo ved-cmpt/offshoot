@@ -99,7 +99,9 @@ def test_nested_copy_expands_and_records_where_it_was_copied() -> None:
 
 
 def test_copy_cycle_is_a_diagnostic_not_a_hang() -> None:
-    expansion = expand_copybooks("P.cbl", fixed("COPY A."), {"A": ("A.cpy", fixed("COPY B.")), "B": ("B.cpy", fixed("COPY A."))})
+    expansion = expand_copybooks(
+        "P.cbl", fixed("COPY A."), {"A": ("A.cpy", fixed("COPY B.")), "B": ("B.cpy", fixed("COPY A."))}
+    )
     assert any("copies itself" in message for message in expansion.diagnostics)
 
 
@@ -137,14 +139,19 @@ def test_group_length_ignores_redefines_and_multiplies_occurs() -> None:
 
 def test_redefines_larger_than_target_is_a_diagnostic() -> None:
     division = parse_data_division(
-        to_lines("T", fixed("01  R.", "    05  A PIC X(1).", "    05  B REDEFINES A PIC X(2).", "    05  C REDEFINES Z PIC X."))
+        to_lines(
+            "T",
+            fixed("01  R.", "    05  A PIC X(1).", "    05  B REDEFINES A PIC X(2).", "    05  C REDEFINES Z PIC X."),
+        )
     )
     assert any("larger" in message for message in division.diagnostics)
     assert any("not found" in message for message in division.diagnostics)
 
 
 def test_multiline_entries_and_sign_clause() -> None:
-    division = parse_data_division(to_lines("T", fixed("01  R.", "    05  A PIC S9(5)", "        SIGN IS LEADING SEPARATE.")))
+    division = parse_data_division(
+        to_lines("T", fixed("01  R.", "    05  A PIC S9(5)", "        SIGN IS LEADING SEPARATE."))
+    )
     item = division.records[0].children[0]
     assert (item.length, item.line, item.end_line) == (6, 2, 3)
 
@@ -155,7 +162,9 @@ def test_unsupported_usage_is_reported() -> None:
 
 
 def test_fall_through_reaches_the_next_paragraph() -> None:
-    assert paragraphs("MAIN-PARA.", "    MOVE 1 TO X.", "NEXT-PARA.", "    STOP RUN.", "LOST-PARA.", "    MOVE 2 TO X.") == [
+    assert paragraphs(
+        "MAIN-PARA.", "    MOVE 1 TO X.", "NEXT-PARA.", "    STOP RUN.", "LOST-PARA.", "    MOVE 2 TO X."
+    ) == [
         "MAIN-PARA",
         "NEXT-PARA",
     ]

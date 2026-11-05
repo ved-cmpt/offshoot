@@ -1,0 +1,235 @@
+{
+  "rules": [
+    {
+      "title": "Meter reads are numeric",
+      "statement": "A read record whose previous or current value fails the numeric test is refused with status E01, the code named ERR-READ-NOT-NUMERIC.",
+      "kind": "VALIDATION",
+      "inputs": [
+        "MV-IN-PREV-READ",
+        "MV-IN-CURR-READ"
+      ],
+      "outputs": [
+        "MV-OUT-STATUS"
+      ],
+      "conditions": [
+        "MV-IN-PREV-READ IS NOT NUMERIC or MV-IN-CURR-READ IS NOT NUMERIC"
+      ],
+      "source_spans": [
+        {
+          "file": "MTRVAL.cbl",
+          "start_line": 77,
+          "end_line": 83
+        }
+      ],
+      "examples": [],
+      "confidence": 0.95
+    },
+    {
+      "title": "Meter reads are not negative",
+      "statement": "Either read holding a value under zero stops validation with status E02.",
+      "kind": "VALIDATION",
+      "inputs": [
+        "MV-IN-PREV-READ",
+        "MV-IN-CURR-READ"
+      ],
+      "outputs": [
+        "MV-OUT-STATUS"
+      ],
+      "conditions": [
+        "MV-IN-PREV-READ < ZERO or MV-IN-CURR-READ < ZERO"
+      ],
+      "source_spans": [
+        {
+          "file": "MTRVAL.cbl",
+          "start_line": 85,
+          "end_line": 91
+        }
+      ],
+      "examples": [],
+      "confidence": 0.95
+    },
+    {
+      "title": "Read type is A or E",
+      "statement": "Only the read type letters A and E pass. Any other letter returns status E03.",
+      "kind": "VALIDATION",
+      "inputs": [
+        "MV-IN-READ-TYPE"
+      ],
+      "outputs": [
+        "MV-OUT-STATUS"
+      ],
+      "conditions": [
+        "MV-IN-READ-TYPE is neither 'A' nor 'E'"
+      ],
+      "source_spans": [
+        {
+          "file": "MTRVAL.cbl",
+          "start_line": 93,
+          "end_line": 99
+        }
+      ],
+      "examples": [
+        {
+          "given": {
+            "MV-IN-READ-TYPE": "X"
+          },
+          "expect": {
+            "MV-OUT-STATUS": "E03"
+          }
+        }
+      ],
+      "confidence": 0.94
+    },
+    {
+      "title": "Validation order for a read",
+      "statement": "The three read checks run numeric first, then sign, then read type, and a later check is skipped once one has failed.",
+      "kind": "PROCESS",
+      "inputs": [
+        "MV-OUT-STATUS"
+      ],
+      "outputs": [
+        "MV-OUT-STATUS"
+      ],
+      "conditions": [
+        "MV-OUT-STATUS = ERR-OK before each later check"
+      ],
+      "source_spans": [
+        {
+          "file": "MTRVAL.cbl",
+          "start_line": 66,
+          "end_line": 75
+        }
+      ],
+      "examples": [],
+      "confidence": 0.88
+    },
+    {
+      "title": "Usage when the dial moved forward",
+      "statement": "When the current read is at least the previous read, consumption is their difference. Identical reads give zero and leave the rollover flag at N.",
+      "kind": "CALCULATION",
+      "inputs": [
+        "MV-IN-CURR-READ",
+        "MV-IN-PREV-READ"
+      ],
+      "outputs": [
+        "MV-OUT-CONSUMPTION"
+      ],
+      "conditions": [
+        "MV-IN-CURR-READ >= MV-IN-PREV-READ"
+      ],
+      "source_spans": [
+        {
+          "file": "MTRVAL.cbl",
+          "start_line": 104,
+          "end_line": 112
+        }
+      ],
+      "examples": [
+        {
+          "given": {
+            "MV-IN-CURR-READ": 500,
+            "MV-IN-PREV-READ": 100
+          },
+          "expect": {
+            "MV-OUT-CONSUMPTION": 400
+          }
+        }
+      ],
+      "confidence": 0.96
+    },
+    {
+      "title": "Rollover usage calculation",
+      "statement": "A current read below the previous read is treated as a dial rollover: usage is 99999 minus previous, plus one, plus current, and the rollover flag becomes Y.",
+      "kind": "CALCULATION",
+      "inputs": [
+        "MV-IN-CURR-READ",
+        "MV-IN-PREV-READ",
+        "RT-METER-MAX"
+      ],
+      "outputs": [
+        "MV-OUT-CONSUMPTION",
+        "MV-OUT-ROLLOVER"
+      ],
+      "conditions": [
+        "MV-IN-CURR-READ < MV-IN-PREV-READ"
+      ],
+      "source_spans": [
+        {
+          "file": "MTRVAL.cbl",
+          "start_line": 118,
+          "end_line": 129
+        },
+        {
+          "file": "RATES.cpy",
+          "start_line": 35,
+          "end_line": 35
+        }
+      ],
+      "examples": [
+        {
+          "given": {
+            "MV-IN-PREV-READ": 99950,
+            "MV-IN-CURR-READ": 100
+          },
+          "expect": {
+            "MV-OUT-CONSUMPTION": 150,
+            "MV-OUT-ROLLOVER": "Y"
+          }
+        }
+      ],
+      "confidence": 0.93
+    },
+    {
+      "title": "Implausible rollover is refused",
+      "statement": "If a rollover would imply usage over the plausibility limit of 50000 kWh, the read gets status E04. Exactly 50000 still passes.",
+      "kind": "VALIDATION",
+      "inputs": [
+        "WS-ROLLOVER-USE",
+        "RT-MAX-PLAUSIBLE-USE"
+      ],
+      "outputs": [
+        "MV-OUT-STATUS"
+      ],
+      "conditions": [
+        "WS-ROLLOVER-USE > RT-MAX-PLAUSIBLE-USE"
+      ],
+      "source_spans": [
+        {
+          "file": "MTRVAL.cbl",
+          "start_line": 122,
+          "end_line": 123
+        },
+        {
+          "file": "RATES.cpy",
+          "start_line": 36,
+          "end_line": 36
+        }
+      ],
+      "examples": [],
+      "confidence": 0.91
+    },
+    {
+      "title": "Estimated read flag",
+      "statement": "A read of type E sets the estimate flag to E. Nothing else changes, so an estimate is priced the same way as an actual read.",
+      "kind": "DECISION",
+      "inputs": [
+        "MV-IN-READ-TYPE"
+      ],
+      "outputs": [
+        "MV-OUT-EST-FLAG"
+      ],
+      "conditions": [
+        "MV-IN-READ-TYPE = 'E'"
+      ],
+      "source_spans": [
+        {
+          "file": "MTRVAL.cbl",
+          "start_line": 135,
+          "end_line": 140
+        }
+      ],
+      "examples": [],
+      "confidence": 0.9
+    }
+  ]
+}
