@@ -1,0 +1,14 @@
+#!/bin/sh
+# Build and test the mounted .NET solution with networking disabled. The source
+# mount is read-only, so work on a copy in tmpfs. Packages come from the image's
+# offline cache.
+set -eu
+SOURCE="${1:-/src/modern}"
+WORK="$(mktemp -d /work/build.XXXXXX)"
+trap 'rm -rf "$WORK"' EXIT
+cp -r "$SOURCE/." "$WORK/"
+cd "$WORK"
+export DOTNET_CLI_HOME=/tmp/dotnet-home
+timeout 300 nonet dotnet restore LegacyLens.Modern.sln --locked-mode --source /opt/nuget/packages
+timeout 300 nonet dotnet build LegacyLens.Modern.sln --no-restore -c Release
+timeout 300 nonet dotnet test --solution LegacyLens.Modern.sln --no-build -c Release
