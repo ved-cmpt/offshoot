@@ -1,4 +1,4 @@
-"""Every tracked text file is UTF-8, has LF line endings and holds no U+FFFD replacement character.
+"""Every tracked or new (not ignored) text file is UTF-8, has LF line endings and holds no U+FFFD replacement character.
 
     python scripts/check_text.py
 
@@ -15,7 +15,9 @@ REPLACEMENT = chr(0xFFFD)  # Spelled out, so this file passes its own check.
 
 
 def main() -> int:
-    files = subprocess.run(["git", "ls-files"], capture_output=True, text=True, check=True).stdout.splitlines()
+    # Tracked files, and new ones not yet added (but never ignored ones such as .env).
+    command = ["git", "ls-files", "--cached", "--others", "--exclude-standard"]
+    files = subprocess.run(command, capture_output=True, text=True, check=True).stdout.splitlines()
     problems = []
     for path in files:
         if path.lower().endswith(BINARY):

@@ -21,7 +21,7 @@ The first pass had 13 of 14. The new UTF-8 test failed before the banner fix, as
 
 ## The owner's report: the banner's em dash
 
-The live banner read "Public demo � synthetic COBOL app".
+The live banner read "Public demo, then a replacement character (U+FFFD, shown as a question mark in a diamond), then synthetic COBOL app".
 
 **Root cause.** Not a header or the HTML meta: the app is served as `text/html; charset=utf-8` with `<meta charset="utf-8">`, and every script as `text/javascript; charset=utf-8`. The source file `frontend/src/app/features/shell/shell.html` itself held a literal U+FFFD. Run 05 had edited it through a shell heredoc, whose em dash was decoded with the wrong code page on this Windows host; Python then wrote the replacement character as valid UTF-8. Run 05's check looked only for invalid UTF-8 and CR bytes, so it passed. The Angular compiler copied the character into `chunk-Y-OjQcMK.js`, where the live bundle showed the bytes `EF BF BD`.
 
