@@ -3,6 +3,9 @@
 name: offshoot
 
 x-runner-hardening: &runner-hardening
+  # An init process as PID 1 reaps the build tools' orphaned children; without it they pile up
+  # as zombies until pids_limit stops every build.
+  init: true
   user: "10001:10001"
   read_only: true
   cap_drop:
