@@ -1,69 +1,66 @@
-# Monthly, grouped and few, so the free CI minutes go to real work (ADR-049). Every update
-# still has to pass CI, and versions are reviewed by hand before merging. Major upgrades, and
-# Python past 3.12 (Blueprint Section 2.4), are left to a deliberate decision.
+# Monthly, one grouped pull request per ecosystem at most, so the free CI minutes go to real
+# work (ADR-049). Every update still has to pass CI and is reviewed by hand before merging.
+# Major upgrades, and Python past 3.12 (Blueprint Section 2.4), are left to a deliberate decision.
 version: 2
 updates:
   - package-ecosystem: uv
     directory: /orchestrator
     schedule:
       interval: monthly
-    open-pull-requests-limit: 3
+    open-pull-requests-limit: 1
+    groups:
+      all:
+        patterns: ["*"]
     ignore:
       - dependency-name: "*"
         update-types: ["version-update:semver-major"]
-    groups:
-      python:
-        patterns: ["*"]
+
   - package-ecosystem: npm
-    directory: /frontend
-    schedule:
-      interval: monthly
-    open-pull-requests-limit: 3
-    ignore:
-      - dependency-name: "*"
-        update-types: ["version-update:semver-major"]
-    groups:
-      angular:
-        patterns: ["@angular/*", "@angular-devkit/*", "angular-eslint", "typescript"]
-      frontend:
-        patterns: ["*"]
-  - package-ecosystem: npm
-    directory: /e2e
+    directories: ["/frontend", "/e2e"]
     schedule:
       interval: monthly
     open-pull-requests-limit: 1
+    groups:
+      all:
+        patterns: ["*"]
     ignore:
       - dependency-name: "*"
         update-types: ["version-update:semver-major"]
-    groups:
-      e2e:
-        patterns: ["*"]
+
   - package-ecosystem: nuget
     directories: ["/modern", "/runners/dotnet-builder/template"]
     schedule:
       interval: monthly
-    open-pull-requests-limit: 3
+    open-pull-requests-limit: 1
+    groups:
+      all:
+        patterns: ["*"]
     ignore:
       - dependency-name: "*"
         update-types: ["version-update:semver-major"]
-    groups:
-      dotnet:
-        patterns: ["*"]
+
   - package-ecosystem: docker
     directories: ["/", "/orchestrator", "/frontend", "/runners/cobol-runner", "/runners/dotnet-builder", "/modern/src/Offshoot.Facade"]
     schedule:
       interval: monthly
-    open-pull-requests-limit: 3
+    open-pull-requests-limit: 1
+    groups:
+      all:
+        patterns: ["*"]
     ignore:
       - dependency-name: "*"
         update-types: ["version-update:semver-major"]
       - dependency-name: "python"
         versions: [">= 3.13"]
+
   - package-ecosystem: github-actions
     directory: /
     schedule:
       interval: monthly
-    open-pull-requests-limit: 2
+    open-pull-requests-limit: 1
     groups:
-      actions:
+      all:
         patterns: ["*"]
+    ignore:
+      - dependency-name: "*"
+        update-types: ["version-update:semver-major"]
