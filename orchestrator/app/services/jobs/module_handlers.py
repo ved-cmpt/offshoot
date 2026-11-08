@@ -9,8 +9,10 @@ MUTATE: Stryker.NET again on the current artifact, with the latest run's cases.
 """
 
 import uuid
+from pathlib import Path
 from typing import Any
 
+import httpx
 from sqlalchemy.orm import Session
 
 from app.core.config import Settings
@@ -24,14 +26,23 @@ from app.services.agent.context import (
     load_plan_context,
 )
 from app.services.agent.provider import AgentError, AgentProvider, get_agent_provider
-from app.services.agent.workflow_prompts import render_migration_request, render_plan_request, render_repair_request
+from app.services.agent.workflow_prompts import (
+    migration_block,
+    render_migration_request,
+    render_plan_request,
+    render_repair_request,
+)
+from app.services.facade_codec import ENDPOINTS, request_for
+from app.services.harness.recorded import recorded_inputs
 from app.services.harness.verify import VerificationError, prepare_cases, run_mutation, run_verification
 from app.services.jobs import queue
 from app.services.jobs.common import JobFailed, analyze_input_hash, attempts_allowed, record_attempts, set_stage
 from app.services.plan import PlanInvalid, migration_order, persist_plan, risk_signals
+from app.services.promotion import roll_back_on_failure, shadow_status
 from app.services.sandbox.client import ModernBuilder, SandboxError, get_legacy_runner, get_modern_builder
 
 MODULE_JOB_KINDS = ("MIGRATE", "REPAIR", "VERIFY", "MUTATE")
+HTTP_OK = 200
 
 
 def _module(db: Session, job: Job) -> Module:
@@ -295,8 +306,9 @@ def run_verify(db: Session, job: Job, settings: Settings) -> dict[str, Any]:
     artifact = db.get(CodeArtifact, module.current_artifact_id) if module.current_artifact_id else None
     if artifact is None or artifact.build_status != "BUILT":
         raise JobFailed("NO_BUILT_ARTIFACT")
-    if module.state not in ("VERIFYING", "VERIFIED", "BLOCKED"):
+    if module.state not in ("VERIFYING", "VERIFIED", "BLOCKED", "APPROVED"):
         raise JobFailed("INVALID_STATE")
+    was_approved = module.state == "APPROVED"
     modules.set_state(module, "VERIFYING")
     set_stage(db, job, "generating inputs")
     seed = int(job.payload.get("seed", settings.equivalence_seed))
@@ -312,6 +324,8 @@ def run_verify(db: Session, job: Job, settings: Settings) -> dict[str, Any]:
             stage=lambda text: set_stage(db, job, text),
         )
     except (VerificationError, SandboxError) as exc:
+        if was_approved:
+            roll_back_on_failure(db, module)
         raise _fail_module(db, module, "BLOCKED", exc.code) from None
 
     limits = gates.thresholds(db, module.id, settings)
@@ -336,7 +350,13 @@ def run_verify(db: Session, job: Job, settings: Settings) -> dict[str, Any]:
     )
     db.add(run)
     db.flush()
-    modules.set_state(module, "VERIFIED" if passed else "BLOCKED", None if passed else gates.first_failure(evaluated))
+    if passed:
+        # A passing re-verification of an approved module keeps its approval.
+        modules.set_state(module, "APPROVED" if was_approved else "VERIFIED")
+    else:
+        modules.set_state(module, "BLOCKED", gates.first_failure(evaluated))
+        if was_approved:
+            roll_back_on_failure(db, module)
     audit.record(
         db,
         "verification.recorded",
@@ -428,7 +448,76 @@ def run_mutate(db: Session, job: Job, settings: Settings) -> dict[str, Any]:
     return {"stage": "done", "run_id": str(run.id), "mutation_score": score, "program": module.program}
 
 
+# --- SHADOW: replay recorded traffic through the facade ---
+
+
+def facade_client(settings: Settings) -> httpx.Client:
+    """The public facade API, as any client sees it. The first modern call can build the artifact."""
+    return httpx.Client(base_url=settings.facade_url, timeout=180)
+
+
+def run_shadow(db: Session, job: Job, settings: Settings) -> dict[str, Any]:
+    """Send recorded BillRite requests through the real facade while the module is in shadow mode.
+
+    The facade runs legacy and modern for each one, answers with legacy, and reports the
+    comparison back to the internal API, which records it. This job only sends the traffic,
+    and holds no lock on the module while it does, because those reports update it.
+    """
+    module = db.get(Module, _module_id(job))
+    if module is None or module.project_id != job.project_id:
+        raise JobFailed("MODULE_NOT_FOUND")
+    if module.facade_mode != "SHADOW":
+        raise JobFailed("NOT_IN_SHADOW")
+    project = db.get(Project, module.project_id)
+    if project is None or project.source_kind != "BUNDLED":
+        raise JobFailed("UPLOAD_NOT_EXECUTABLE")
+    count = int(job.payload.get("count", settings.shadow_sample_size))
+    set_stage(db, job, "reading recorded traffic")
+    try:
+        block = migration_block(load_migration_context(db, module.project_id, module.program))
+        billfile = get_legacy_runner(settings).billrun()
+    except SandboxError as exc:
+        raise JobFailed(exc.code) from None
+    recorded = recorded_inputs(module.program, block, Path(settings.billrite_path), billfile)
+    requests = [body for body in (request_for(module.program, record) for record in recorded) if body is not None]
+    if not requests:
+        raise JobFailed("NO_RECORDED_TRAFFIC")
+    start = module.shadow_compared % len(requests)
+    chosen = [requests[(start + index) % len(requests)] for index in range(count)]
+    program, path = module.program, ENDPOINTS[module.program]
+    db.commit()
+    set_stage(db, job, f"sending {count} requests through the facade")
+    answered = 0
+    routes: dict[str, int] = {}
+    with facade_client(settings) as client:
+        for body in chosen:
+            try:
+                response = client.post(path, json=body)
+            except httpx.HTTPError:
+                raise JobFailed("FACADE_UNAVAILABLE") from None
+            route = response.headers.get("X-ParityForge-Route", "unknown")
+            routes[route] = routes.get(route, 0) + 1
+            if response.status_code == HTTP_OK:
+                answered += 1
+    db.expire_all()
+    module = db.get(Module, module.id)
+    if module is None:
+        raise JobFailed("MODULE_NOT_FOUND")
+    status = shadow_status(db, module, settings)
+    return {
+        "stage": "done",
+        "program": program,
+        "sent": count,
+        "answered": answered,
+        "routes": routes,
+        "shadow_compared": status.compared,
+        "shadow_mismatches": status.mismatches,
+        "shadow_ready": status.ready,
+    }
+
+
 HANDLERS = {
+    "SHADOW": run_shadow,
     "PLAN": run_plan,
     "MIGRATE": run_migrate,
     "REPAIR": run_repair,

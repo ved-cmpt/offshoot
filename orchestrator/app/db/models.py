@@ -39,7 +39,7 @@ RULE_STATES = ("PROPOSED", "VERIFIED", "REJECTED", "EDITED")
 PLAN_STATES = ("PROPOSED", "APPROVED", "REJECTED")
 MODULE_STATES = ("PENDING", "MIGRATING", "BUILD_FAILED", "VERIFYING", "BLOCKED", "VERIFIED", "APPROVED", "REJECTED")
 FACADE_MODES = ("LEGACY", "SHADOW", "MODERN")
-JOB_KINDS = ("ANALYZE", "EXTRACT", "PLAN", "MIGRATE", "BUILD", "VERIFY", "REPAIR", "MUTATE")
+JOB_KINDS = ("ANALYZE", "EXTRACT", "PLAN", "MIGRATE", "BUILD", "VERIFY", "REPAIR", "MUTATE", "SHADOW")
 JOB_STATUSES = ("QUEUED", "RUNNING", "SUCCEEDED", "FAILED")
 AI_MODES = ("mock", "gemini")
 AI_CALL_STATUSES = ("OK", "FAILED")
@@ -279,6 +279,9 @@ class Module(Base):
     # Why the module is in its state, as a fixed code (BLOCKED, BUILD_FAILED and so on).
     state_reason: Mapped[str | None] = mapped_column(String(64))
     updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False, server_default=func.now())
+    # Shadow comparisons since the module last entered SHADOW mode (Blueprint Section 7.3).
+    shadow_since: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    shadow_compared: Mapped[int] = mapped_column(Integer, nullable=False, server_default=text("0"))
 
 
 class Job(Base):

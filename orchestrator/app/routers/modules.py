@@ -16,9 +16,20 @@ from sqlalchemy.orm import Session
 
 from app.core.deps import ALL_ROLES, ARCHITECT_ONLY, ENGINEER_PLUS, AppSettings, DbSession, require_roles
 from app.core.errors import ApiError, not_found
-from app.db.models import CodeArtifact, Job, Module, Plan, Project, Rule, User, VerificationRun
+from app.db.models import (
+    Approval,
+    CodeArtifact,
+    Job,
+    Module,
+    Plan,
+    Project,
+    Rule,
+    ShadowMismatch,
+    User,
+    VerificationRun,
+)
 from app.routers.inventory import JobOut, get_project_or_404, parse_uuid, to_job_out
-from app.services import gates, modules
+from app.services import gates, modules, promotion
 from app.services.agent.provider import get_agent_provider
 from app.services.harness.verify import EXECUTABLE_MODULES
 from app.services.jobs import queue
@@ -28,7 +39,7 @@ router = APIRouter(tags=["modules"])
 RequireViewer = Depends(require_roles(ALL_ROLES))
 Engineer = Annotated[User, Depends(require_roles(ENGINEER_PLUS))]
 Architect = Annotated[User, Depends(require_roles(ARCHITECT_ONLY))]
-ACTIVE_KINDS = ("MIGRATE", "REPAIR", "VERIFY", "MUTATE")
+ACTIVE_KINDS = ("MIGRATE", "REPAIR", "VERIFY", "MUTATE", "SHADOW")
 
 
 class RunSummary(BaseModel):
@@ -81,10 +92,28 @@ class ModuleSummary(BaseModel):
     updated_at: datetime
 
 
+class ShadowOut(BaseModel):
+    compared: int
+    mismatches: int
+    sample: int
+    ready: bool
+    since: datetime | None
+
+
+class DecisionOut(BaseModel):
+    decision: str
+    reason: str | None
+    by: str | None
+    at: datetime
+
+
 class ModuleDetail(ModuleSummary):
     gates: list[dict[str, Any]]
     thresholds: dict[str, Any]
     verified_rules: int
+    shadow: ShadowOut
+    decision: DecisionOut | None
+    approvable: bool
 
 
 class ArtifactDetail(ArtifactSummary):
@@ -191,11 +220,35 @@ def _detail(db: Session, module: Module, settings: AppSettings) -> ModuleDetail:
         )
         or 0
     )
+    status = promotion.shadow_status(db, module, settings)
+    approval = db.scalar(
+        select(Approval)
+        .where(Approval.entity_type == "MODULE", Approval.entity_id == module.id)
+        .order_by(Approval.created_at.desc())
+        .limit(1)
+    )
+    decider = db.get(User, approval.actor_id) if approval else None
     return ModuleDetail(
         **summary.model_dump(),
         gates=current_gates(db, module, run, settings) if run else [],
         thresholds={"coverage": limits.coverage, "mutation": limits.mutation, "exceptions": limits.exceptions},
         verified_rules=verified,
+        shadow=ShadowOut(
+            compared=status.compared,
+            mismatches=status.mismatches,
+            sample=status.sample,
+            ready=status.ready,
+            since=status.since,
+        ),
+        decision=DecisionOut(
+            decision=approval.decision,
+            reason=approval.reason,
+            by=decider.display_name if decider else None,
+            at=approval.created_at,
+        )
+        if approval and module.state in ("APPROVED", "REJECTED")
+        else None,
+        approvable=module.state == "VERIFIED" and promotion.passing_verification(db, module, settings),
     )
 
 
@@ -360,7 +413,8 @@ def start_verification(
     module = load_module(db, module_id)
     _executable(db, module)
     artifact = db.get(CodeArtifact, module.current_artifact_id) if module.current_artifact_id else None
-    if artifact is None or artifact.build_status != "BUILT" or module.state not in ("VERIFIED", "BLOCKED", "VERIFYING"):
+    allowed = ("VERIFIED", "BLOCKED", "VERIFYING", "APPROVED")
+    if artifact is None or artifact.build_status != "BUILT" or module.state not in allowed:
         raise ApiError(409, "INVALID_STATE", "Only a module with a built artifact can be verified.")
     seed = body.seed if body and body.seed is not None else settings.equivalence_seed
     return _enqueue(db, module, "VERIFY", verify_input_hash(module, artifact, seed), user, {"seed": seed})
@@ -402,3 +456,102 @@ def add_gate_exception(
             modules.set_state(module, new_state, gates.first_failure(evaluated))
     db.commit()
     return _detail(db, module, settings)
+
+
+# --- Approval and promotion (F09) ---
+
+
+class ModuleDecisionRequest(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    decision: Literal["APPROVED", "REJECTED"]
+    expected_version: int = Field(ge=1)
+    reason: str | None = Field(default=None, max_length=2000)
+
+
+@router.post("/modules/{module_id}/decision")
+def decide_module(
+    module_id: str, body: ModuleDecisionRequest, db: DbSession, user: Architect, settings: AppSettings
+) -> ModuleDetail:
+    module = load_module(db, module_id, lock=True)
+    promotion.decide_module(db, module, user, body.decision, body.reason, body.expected_version, settings)
+    db.commit()
+    return _detail(db, module, settings)
+
+
+class FacadeModeRequest(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    mode: Literal["LEGACY", "SHADOW", "MODERN"]
+    expected_version: int = Field(ge=1)
+    reason: str | None = Field(default=None, max_length=500)
+
+
+@router.post("/modules/{module_id}/facade-mode")
+def set_facade_mode(
+    module_id: str, body: FacadeModeRequest, db: DbSession, user: Architect, settings: AppSettings
+) -> ModuleDetail:
+    module = load_module(db, module_id, lock=True)
+    promotion.set_facade_mode(db, module, user, body.mode, body.reason, body.expected_version, settings)
+    db.commit()
+    return _detail(db, module, settings)
+
+
+class ShadowReplayRequest(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    count: int | None = Field(default=None, ge=1, le=500)
+
+
+@router.post("/modules/{module_id}/shadow-replay", status_code=status.HTTP_202_ACCEPTED)
+def start_shadow_replay(
+    module_id: str, db: DbSession, user: Engineer, settings: AppSettings, body: ShadowReplayRequest | None = None
+) -> JobOut:
+    module = load_module(db, module_id)
+    _executable(db, module)
+    if module.facade_mode != "SHADOW":
+        raise ApiError(
+            409, "NOT_IN_SHADOW", "Recorded traffic can be replayed only while the module is in shadow mode."
+        )
+    count = body.count if body and body.count else settings.shadow_sample_size
+    input_hash = queue.hash_inputs(
+        "shadow", str(module.id), str(module.version), str(module.shadow_compared), str(count)
+    )
+    return _enqueue(db, module, "SHADOW", input_hash, user, {"count": count})
+
+
+class ShadowMismatchOut(BaseModel):
+    id: uuid.UUID
+    request_hash: str
+    diff: dict[str, Any]
+    created_at: datetime
+
+
+class ShadowView(BaseModel):
+    status: ShadowOut
+    mismatches: list[ShadowMismatchOut]
+
+
+@router.get("/modules/{module_id}/shadow", dependencies=[RequireViewer])
+def get_shadow(module_id: str, db: DbSession, settings: AppSettings) -> ShadowView:
+    module = load_module(db, module_id)
+    current = promotion.shadow_status(db, module, settings)
+    rows = db.scalars(
+        select(ShadowMismatch)
+        .where(ShadowMismatch.module_id == module.id)
+        .order_by(ShadowMismatch.created_at.desc())
+        .limit(25)
+    )
+    return ShadowView(
+        status=ShadowOut(
+            compared=current.compared,
+            mismatches=current.mismatches,
+            sample=current.sample,
+            ready=current.ready,
+            since=current.since,
+        ),
+        mismatches=[
+            ShadowMismatchOut(id=row.id, request_hash=row.request_hash, diff=row.diff, created_at=row.created_at)
+            for row in rows
+        ],
+    )

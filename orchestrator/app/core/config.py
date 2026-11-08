@@ -68,6 +68,18 @@ class Settings(BaseSettings):
     mutation_threshold: float = Field(default=70.0, ge=0, le=100)
     report_mismatch_limit: int = Field(default=25, ge=1, le=200)
 
+    # Strangler facade (Blueprint Sections 7.3 and 9, ADR-039).
+    facade_url: str = "http://facade:8080"
+    facade_shared_secret: SecretStr = SecretStr("")
+    facade_project: str = "BillRite"
+    shadow_sample_size: int = Field(default=20, ge=1, le=10000)
+
+    # Uploads (F03, Blueprint Section 11). Never executed; disabled in demo mode.
+    upload_max_bytes: int = Field(default=1024 * 1024, ge=1024)
+    upload_max_files: int = Field(default=40, ge=1)
+    upload_max_file_bytes: int = Field(default=256 * 1024, ge=1024)
+    upload_max_total_bytes: int = Field(default=2 * 1024 * 1024, ge=1024)
+
     @field_validator("cors_origins", mode="before")
     @classmethod
     def split_origins(cls, value: object) -> object:
