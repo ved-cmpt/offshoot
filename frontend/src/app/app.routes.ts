@@ -42,6 +42,23 @@ export const routes: Routes = [
             title: 'Rules - ParityForge',
             loadComponent: () => import('./features/rules/rules').then((m) => m.Rules),
           },
+          {
+            path: 'plan',
+            title: 'Plan - ParityForge',
+            loadComponent: () => import('./features/plan/plan').then((m) => m.PlanPage),
+          },
+          {
+            path: 'modules',
+            title: 'Modules - ParityForge',
+            loadComponent: () =>
+              import('./features/modules/module-list').then((m) => m.ModuleList),
+          },
+          {
+            path: 'modules/:mid',
+            title: 'Module - ParityForge',
+            loadComponent: () =>
+              import('./features/modules/module-workspace').then((m) => m.ModuleWorkspace),
+          },
         ],
       },
     ],

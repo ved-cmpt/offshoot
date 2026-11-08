@@ -22,6 +22,18 @@ import { map } from 'rxjs';
         ariaCurrentWhenActive="page"
         >Rules</a
       >
+      <a
+        [routerLink]="['/projects', projectId(), 'plan']"
+        routerLinkActive="tab--active"
+        ariaCurrentWhenActive="page"
+        >Plan</a
+      >
+      <a
+        [routerLink]="['/projects', projectId(), 'modules']"
+        routerLinkActive="tab--active"
+        ariaCurrentWhenActive="page"
+        >Modules</a
+      >
     </nav>
     <router-outlet />
   `,

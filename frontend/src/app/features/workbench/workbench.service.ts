@@ -266,6 +266,27 @@ const JOB_ERROR_TEXT: Record<string, string> = {
   NO_PROGRAMS: 'This project has no COBOL programs to analyze.',
   PROGRAM_NOT_FOUND: 'That program is not part of this project.',
   JOB_ABANDONED: 'The job stopped responding and was given up on.',
+  NOT_ANALYZED: 'Run the analysis first.',
+  PLAN_PROGRAMS_MISMATCH:
+    'The proposed plan did not place every program in exactly one service, so it was not stored.',
+  PLAN_UNKNOWN_PROGRAM:
+    'The proposed plan named a program that does not exist, so it was not stored.',
+  PLAN_DUPLICATE_SERVICE: 'The proposed plan named a service twice, so it was not stored.',
+  NO_VERIFIED_RULES: 'This program has no verified rules to migrate from.',
+  POLICY_VIOLATION: 'The generated code used an API the sandbox forbids, so the build failed.',
+  BUILD_FAILED: 'The generated code did not compile, and the repair budget is spent.',
+  TESTS_FAILED: 'The generated unit tests failed, and the repair budget is spent.',
+  SANDBOX_TIMEOUT: 'The code ran past its time limit in the sandbox and was stopped.',
+  SANDBOX_MEMORY_LIMIT: 'The code ran past its memory limit in the sandbox and was stopped.',
+  SANDBOX_UNAVAILABLE: 'The sandbox could not be reached.',
+  MODERN_RUN_FAILED: 'The generated module did not answer every case.',
+  LEGACY_SOURCE_MISMATCH: 'The project sources differ from the legacy program the runner executes.',
+  UPLOAD_NOT_EXECUTABLE: 'Uploaded sources are never executed.',
+  REPAIR_LIMIT: 'The repair budget for this module is spent.',
+  INVALID_STATE: 'The module is not in a state that allows this.',
+  NO_BUILT_ARTIFACT: 'There is no built artifact to verify.',
+  EQUIVALENCE_NOT_PASSED: 'Mutation testing needs a verification where every case matched.',
+  INTERNAL_ERROR: 'The job failed unexpectedly.',
 };
 
 export function describeJobError(code: string | null): string {

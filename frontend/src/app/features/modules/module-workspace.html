@@ -1,0 +1,562 @@
+@let current = state();
+@switch (current.kind) {
+  @case ('loading') {
+    <h1 class="page-title">Module</h1>
+    <p class="state" role="status">Loading the module…</p>
+  }
+  @case ('error') {
+    <h1 class="page-title">Module</h1>
+    <div class="state state--error" role="alert">
+      <p>The module could not be loaded. {{ current.message }}</p>
+      <button class="button button--quiet" type="button" (click)="load()">Try again</button>
+    </div>
+  }
+  @case ('ready') {
+    @let module = current.data.module;
+    <p class="crumbs">
+      <a [routerLink]="['/projects', projectId(), 'modules']">All modules</a>
+    </p>
+    <div class="page-head">
+      <h1 class="page-title">{{ module.program }}</h1>
+      <span
+        class="badge"
+        [class.badge--ok]="module.state === 'VERIFIED' || module.state === 'APPROVED'"
+        [class.badge--danger]="module.state === 'BLOCKED' || module.state === 'BUILD_FAILED'"
+        >{{ stateText[module.state] }}</span
+      >
+    </div>
+    <p class="muted">
+      Target service <strong>{{ module.target_service ?? 'none' }}</strong
+      >, step {{ module.order_index }} of the plan. Routing mode
+      {{ module.facade_mode.toLowerCase() }}.
+      @if (module.state_reason) {
+        {{ describeReason(module.state_reason) }}
+      }
+    </p>
+
+    @if (!module.migratable) {
+      <div class="state">
+        <p>
+          The per-record harness has no entry for {{ module.program }}, so it cannot be migrated or
+          verified in this version. It stays on the legacy program.
+        </p>
+      </div>
+    }
+
+    @if (canRun() && module.migratable) {
+      <section class="panel" aria-labelledby="actions-title">
+        <h2 id="actions-title">Actions</h2>
+        @if (actions().length) {
+          <div class="actions">
+            @for (action of actions(); track action) {
+              <button
+                class="button"
+                [class.button--quiet]="action === 'mutate' || action === 'verify'"
+                type="button"
+                [disabled]="busy()"
+                (click)="start(action)"
+              >
+                {{ actionText[action] }}
+              </button>
+            }
+          </div>
+        } @else if (!module.active_job) {
+          <p class="muted">Nothing to run in this state.</p>
+        }
+        <p class="muted">
+          Repairs used {{ module.repairs_used }}; {{ module.repairs_remaining }} left before a new
+          migration is needed. {{ module.verified_rules }} verified rules go to the agent.
+        </p>
+        @if (job(); as running) {
+          <app-job-progress
+            [label]="
+              running.kind === 'VERIFY'
+                ? 'Verification'
+                : running.kind === 'REPAIR'
+                  ? 'Repair'
+                  : running.kind === 'MUTATE'
+                    ? 'Mutation testing'
+                    : 'Migration'
+            "
+            [start]="running"
+            (finished)="jobFinished($event)"
+          />
+        }
+      </section>
+    }
+    @if (actionError(); as message) {
+      <div class="state state--error" role="alert">
+        <p>{{ message }}</p>
+      </div>
+    }
+
+    <section class="panel" aria-labelledby="gates-title">
+      <h2 id="gates-title">Gates</h2>
+      @if (module.gates.length) {
+        <ul class="gates">
+          @for (gate of module.gates; track gate.gate) {
+            <li [class.gate--failed]="!gate.passed">
+              <span
+                class="badge"
+                [class.badge--ok]="gate.passed"
+                [class.badge--danger]="!gate.passed"
+                >{{ gate.passed ? 'Pass' : 'Fail' }}</span
+              >
+              <strong>{{ gate.label }}</strong>
+              <span
+                >{{ formatValue(gate.value, gate.unit) }} (needs {{ gate.threshold
+                }}{{ gate.unit === '%' ? '%' : '' }})</span
+              >
+              @if (gate.exception) {
+                <span class="muted"
+                  >Threshold lowered by {{ gate.exception.by }}: {{ gate.exception.reason }}</span
+                >
+              }
+            </li>
+          }
+        </ul>
+      } @else {
+        <p class="muted">
+          No verification has run yet. Gates are decided by the harness, not the agent.
+        </p>
+      }
+    </section>
+
+    <section class="panel" aria-labelledby="code-title">
+      <h2 id="code-title">Legacy and generated code</h2>
+      <div class="side-by-side">
+        <div class="pane">
+          <h3>COBOL: {{ module.program }}.cbl</h3>
+          @if (run()?.report?.coverage; as coverage) {
+            <p class="muted">
+              Paragraph coverage {{ coverage.pct }}% in run {{ run()?.created_at | date: 'short' }}.
+              Lines marked "not run" belong to a paragraph no case reached.
+            </p>
+          }
+          @if (cobol().length) {
+            <div
+              class="code-scroll"
+              tabindex="0"
+              role="region"
+              aria-label="COBOL source with coverage"
+            >
+              <table class="code">
+                <tbody>
+                  @for (line of cobol(); track line.number) {
+                    <tr
+                      [class.line--hit]="line.coverage === 'hit'"
+                      [class.line--missed]="line.coverage === 'missed'"
+                    >
+                      <th scope="row">{{ line.number }}</th>
+                      <td class="mark">
+                        @if (line.coverage === 'missed') {
+                          not run
+                        }
+                      </td>
+                      <td>
+                        <pre>{{ line.text }}</pre>
+                      </td>
+                    </tr>
+                  }
+                </tbody>
+              </table>
+            </div>
+          } @else {
+            <p class="muted">The COBOL source is not available.</p>
+          }
+        </div>
+        <div class="pane">
+          <h3>C#: {{ artifact() ? 'version ' + artifact()?.version : 'not generated yet' }}</h3>
+          @if (artifactError(); as message) {
+            <p class="state state--error" role="alert">{{ message }}</p>
+          }
+          @if (artifact(); as code) {
+            <div class="file-tabs" role="tablist" aria-label="Generated files">
+              @for (file of code.file_contents; track file.path; let index = $index) {
+                <button
+                  type="button"
+                  role="tab"
+                  class="file-tab"
+                  [attr.aria-selected]="selectedFile() === index"
+                  [class.file-tab--current]="selectedFile() === index"
+                  (click)="selectedFile.set(index)"
+                >
+                  {{ file.path }}
+                </button>
+              }
+            </div>
+            @if (currentFile(); as file) {
+              <div class="code-scroll" tabindex="0" role="tabpanel" [attr.aria-label]="file.path">
+                <pre class="csharp">{{ file.content }}</pre>
+              </div>
+            }
+            @if (code.notes) {
+              <p class="muted">Agent notes: {{ code.notes }}</p>
+            }
+          } @else {
+            <p class="muted">Run a migration to generate the C# module.</p>
+          }
+        </div>
+      </div>
+    </section>
+
+    @if (artifact(); as code) {
+      <section class="panel" aria-labelledby="build-title">
+        <h2 id="build-title">Build and unit tests, version {{ code.version }}</h2>
+        <p>
+          <span
+            class="badge"
+            [class.badge--ok]="code.build_status === 'BUILT'"
+            [class.badge--danger]="code.build_status !== 'BUILT'"
+            >{{
+              code.build_status === 'BUILT'
+                ? 'Built and tested'
+                : code.build_status.replaceAll('_', ' ').toLowerCase()
+            }}</span
+          >
+          {{ code.kind === 'REPAIR' ? 'Repair attempt ' + (code.attempt - 1) : 'First migration' }},
+          {{ code.created_at | date: 'medium' }}, <code>{{ code.sha256.slice(0, 12) }}</code>
+        </p>
+        @if (code.build_report.build; as build) {
+          <p>
+            Build: {{ build.ok ? 'succeeded' : 'failed' }} with {{ build.errors ?? 0 }} errors and
+            {{ build.warnings ?? 0 }} warnings. Analyzers and the deny policy run as part of it.
+          </p>
+          @if (build.diagnostics?.length) {
+            <div class="table-scroll" tabindex="0" role="region" aria-label="Build diagnostics">
+              <table class="data-table data-table--tight">
+                <thead>
+                  <tr>
+                    <th scope="col">Rule</th>
+                    <th scope="col">File and line</th>
+                    <th scope="col">Message</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  @for (item of build.diagnostics; track item.file + item.line + item.id) {
+                    <tr>
+                      <th scope="row">
+                        <code>{{ item.id }}</code> {{ item.severity }}
+                      </th>
+                      <td>
+                        <code>{{ item.file }}:{{ item.line }}</code>
+                      </td>
+                      <td>{{ item.message }}</td>
+                    </tr>
+                  }
+                </tbody>
+              </table>
+            </div>
+          }
+        }
+        @if (code.build_report.tests; as tests) {
+          <p>
+            Unit tests: {{ tests.passed }} of {{ tests.total }} passed.
+            @if (tests.timed_out) {
+              They ran past the time limit.
+            }
+            @if (tests.out_of_memory) {
+              They ran past the memory limit.
+            }
+          </p>
+          @if (tests.failed_tests.length) {
+            <ul>
+              @for (name of tests.failed_tests; track name) {
+                <li>
+                  <code>{{ name }}</code>
+                </li>
+              }
+            </ul>
+          }
+        }
+      </section>
+    }
+
+    <section class="panel" aria-labelledby="report-title">
+      <h2 id="report-title">Verification report</h2>
+      @if (runError(); as message) {
+        <div class="state state--error" role="alert">
+          <p>The report could not be loaded. {{ message }}</p>
+        </div>
+      }
+      @if (run(); as selected) {
+        @if (selected.kind === 'MUTATION') {
+          <p>
+            Mutation run on {{ selected.created_at | date: 'medium' }}: score
+            {{ selected.mutation_score ?? 'not measured' }}%.
+          </p>
+        } @else {
+          <p class="summary">
+            <strong>{{ selected.passed }} of {{ selected.cases }} cases identical</strong>
+            <span
+              class="badge"
+              [class.badge--ok]="selected.status === 'PASSED'"
+              [class.badge--danger]="selected.status !== 'PASSED'"
+              >{{ selected.status === 'PASSED' ? 'Passed every gate' : 'Did not pass' }}</span
+            >
+          </p>
+          <p class="muted">
+            Run {{ selected.created_at | date: 'medium' }}, artifact version
+            {{ selected.artifact_version }}, seed <code>{{ selected.seed }}</code
+            >. Coverage {{ selected.coverage_pct ?? 'not measured' }}%, mutation score
+            {{ selected.mutation_score ?? 'not measured'
+            }}{{ selected.mutation_score !== null ? '%' : '' }}.
+          </p>
+          @if (sources().length) {
+            <h3>Where the cases came from</h3>
+            <ul class="sources">
+              @for (entry of sources(); track entry[0]) {
+                <li>{{ sourceText[entry[0]] ?? entry[0] }}: {{ entry[1] }}</li>
+              }
+            </ul>
+          }
+          @if (selected.report.mismatches.length) {
+            <h3>
+              Mismatches ({{ selected.failed }}; first
+              {{ selected.report.mismatches.length }} shown)
+            </h3>
+            <p>
+              Fields that differed:
+              @for (entry of mismatchedFields(); track entry[0]; let last = $last) {
+                <code>{{ entry[0] }}</code> {{ entry[1] }} times{{ last ? '.' : ', ' }}
+              }
+            </p>
+            <div
+              class="table-scroll"
+              tabindex="0"
+              role="region"
+              aria-label="Field-level differences"
+            >
+              <table class="data-table data-table--tight">
+                <thead>
+                  <tr>
+                    <th scope="col">Case</th>
+                    <th scope="col">Input</th>
+                    <th scope="col">Field</th>
+                    <th scope="col" class="num">Legacy</th>
+                    <th scope="col" class="num">Modern</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  @for (mismatch of selected.report.mismatches; track mismatch.case) {
+                    @for (diff of mismatch.diffs; track diff.field; let first = $first) {
+                      <tr>
+                        <th scope="row">{{ first ? mismatch.case : '' }}</th>
+                        <td>
+                          @if (first) {
+                            <code>{{ mismatch.input }}</code>
+                            <span class="muted case-label">{{ mismatch.label }}</span>
+                          }
+                        </td>
+                        <td>
+                          <code>{{ diff.field }}</code>
+                        </td>
+                        <td class="num">
+                          <code>{{ diff.legacy }}</code>
+                        </td>
+                        <td class="num">
+                          <code>{{ diff.modern }}</code>
+                        </td>
+                      </tr>
+                    }
+                  }
+                </tbody>
+              </table>
+            </div>
+          } @else {
+            <p>Every output field of every case matched the legacy program exactly.</p>
+          }
+          @if (selected.report.coverage.missed.length) {
+            <p>Paragraphs no case reached: {{ selected.report.coverage.missed.join(', ') }}.</p>
+          }
+          <h3>Mutation testing</h3>
+          @if (selected.report.mutation.skipped) {
+            <p class="muted">{{ selected.report.mutation.skipped }}</p>
+          } @else if (selected.report.mutation.error) {
+            <p class="muted">
+              Mutation testing did not finish: {{ selected.report.mutation.error }}.
+            </p>
+          } @else {
+            <p>
+              {{ selected.report.mutation.tool }}: {{ selected.report.mutation.detected }} of
+              {{ selected.report.mutation.valid_mutants }} mutants detected, score
+              {{ selected.report.mutation.score }}%.
+            </p>
+            @if (selected.report.mutation.survivors?.length) {
+              <details>
+                <summary>
+                  Surviving mutants ({{ selected.report.mutation.survivors?.length }})
+                </summary>
+                <ul>
+                  @for (mutant of selected.report.mutation.survivors; track $index) {
+                    <li>
+                      <code>{{ mutant.file }}:{{ mutant.line }}</code> {{ mutant.mutator }}:
+                      <code>{{ mutant.replacement }}</code>
+                    </li>
+                  }
+                </ul>
+              </details>
+            }
+          }
+        }
+      } @else if (!runError()) {
+        <p class="muted">No verification has run yet.</p>
+      }
+    </section>
+
+    <section class="panel" aria-labelledby="rules-title">
+      <h2 id="rules-title">Linked rules</h2>
+      @if (current.data.rules.length) {
+        <ul class="rules">
+          @for (rule of current.data.rules; track rule.id) {
+            <li>
+              <span class="badge" [class.badge--ok]="rule.state === 'VERIFIED'">{{
+                rule.state.toLowerCase()
+              }}</span>
+              {{ rule.title }}
+              @if (coveredRuleIds().has(rule.id)) {
+                <span class="muted">implemented, per the agent</span>
+              }
+              @if (exercisedRuleIds().get(rule.id); as cases) {
+                <span class="muted">exercised by {{ cases }} {{ cases === 1 ? 'case' : 'cases' }}</span>
+              }
+            </li>
+          }
+        </ul>
+      } @else {
+        <p class="muted">No rules have been extracted for this program.</p>
+      }
+    </section>
+
+    <section class="panel" aria-labelledby="history-title">
+      <h2 id="history-title">Run history</h2>
+      @if (current.data.runs.length) {
+        <div class="table-scroll" tabindex="0" role="region" aria-label="Verification runs">
+          <table class="data-table">
+            <thead>
+              <tr>
+                <th scope="col">When</th>
+                <th scope="col">Result</th>
+                <th scope="col" class="num">Cases</th>
+                <th scope="col" class="num">Failed</th>
+                <th scope="col" class="num">Coverage</th>
+                <th scope="col" class="num">Mutation</th>
+                <th scope="col">Code</th>
+              </tr>
+            </thead>
+            <tbody>
+              @for (item of current.data.runs; track item.id) {
+                <tr [class.selected]="run()?.id === item.id">
+                  <th scope="row">
+                    <button
+                      type="button"
+                      class="link"
+                      (click)="selectRun(item.id)"
+                      [attr.aria-pressed]="run()?.id === item.id"
+                    >
+                      {{ item.created_at | date: 'short' }}
+                    </button>
+                  </th>
+                  <td>
+                    {{
+                      item.kind === 'MUTATION'
+                        ? 'Mutation only'
+                        : item.status === 'PASSED'
+                          ? 'Passed'
+                          : 'Failed'
+                    }}
+                  </td>
+                  <td class="num">{{ item.cases }}</td>
+                  <td class="num">{{ item.failed }}</td>
+                  <td class="num">
+                    {{
+                      item.coverage_pct !== null ? (item.coverage_pct | number: '1.2-2') + '%' : ''
+                    }}
+                  </td>
+                  <td class="num">
+                    {{
+                      item.mutation_score !== null
+                        ? (item.mutation_score | number: '1.2-2') + '%'
+                        : ''
+                    }}
+                  </td>
+                  <td>v{{ item.artifact_version }}</td>
+                </tr>
+              }
+            </tbody>
+          </table>
+        </div>
+      } @else {
+        <p class="muted">No runs yet.</p>
+      }
+      @if (current.data.artifacts.length) {
+        <h3>Code versions</h3>
+        <ul class="versions">
+          @for (item of current.data.artifacts; track item.id) {
+            <li>
+              <button
+                type="button"
+                class="link"
+                (click)="selectArtifact(item.version)"
+                [attr.aria-pressed]="artifact()?.version === item.version"
+              >
+                Version {{ item.version }}
+              </button>
+              {{ item.kind === 'REPAIR' ? 'repair' : 'migration' }},
+              {{ item.build_status.replaceAll('_', ' ').toLowerCase() }},
+              {{ item.created_at | date: 'short' }}
+            </li>
+          }
+        </ul>
+      }
+    </section>
+
+    @if (isArchitect() && module.latest_run) {
+      <section class="panel" aria-labelledby="exception-title">
+        <h2 id="exception-title">Gate exception</h2>
+        <p class="muted">
+          Lower this module's coverage or mutation threshold, with a reason that is kept on record.
+          Build, unit tests and equivalence cannot be excepted.
+        </p>
+        <div class="exception">
+          <label>
+            Gate
+            <select (change)="exceptionGate.set($any($event.target).value)">
+              <option value="COVERAGE" [selected]="exceptionGate() === 'COVERAGE'">Coverage</option>
+              <option value="MUTATION" [selected]="exceptionGate() === 'MUTATION'">
+                Mutation score
+              </option>
+            </select>
+          </label>
+          <label>
+            New threshold (%)
+            <input
+              type="number"
+              min="0"
+              max="100"
+              step="0.01"
+              [value]="exceptionThreshold()"
+              (input)="exceptionThreshold.set($any($event.target).value)"
+            />
+          </label>
+          <label class="exception__reason">
+            Reason
+            <textarea
+              rows="2"
+              [value]="exceptionReason()"
+              (input)="exceptionReason.set($any($event.target).value)"
+            ></textarea>
+          </label>
+          <button
+            class="button button--quiet"
+            type="button"
+            [disabled]="busy()"
+            (click)="addException(module)"
+          >
+            Record exception
+          </button>
+        </div>
+      </section>
+    }
+  }
+}

@@ -1,0 +1,225 @@
+<div class="page-head">
+  <h1 class="page-title">Modernization plan</h1>
+</div>
+<p class="muted">
+  The agent proposes services and risks. The migration order comes from the call graph and the
+  estimate from measured metrics, never from the agent. Only an architect approves.
+</p>
+
+@if (canPropose()) {
+  <section class="panel" aria-labelledby="propose-title">
+    <h2 id="propose-title">Propose a plan</h2>
+    <p class="muted">Each proposal is a new version. The latest one is decided.</p>
+    <button class="button" type="button" [disabled]="busy()" (click)="propose()">
+      {{ busy() && !plan() ? 'Starting…' : 'Propose plan' }}
+    </button>
+    @if (job(); as running) {
+      <app-job-progress label="Plan" [start]="running" (finished)="jobFinished($event)" />
+    }
+  </section>
+}
+
+@if (actionError(); as message) {
+  <div class="state state--error" role="alert">
+    <p>{{ message }}</p>
+  </div>
+}
+
+@let current = state();
+@switch (current.kind) {
+  @case ('loading') {
+    <p class="state" role="status">Loading the plan…</p>
+  }
+  @case ('error') {
+    <div class="state state--error" role="alert">
+      <p>The plan could not be loaded. {{ current.message }}</p>
+      <button class="button button--quiet" type="button" (click)="load()">Try again</button>
+    </div>
+  }
+  @case ('ready') {
+    @if (current.view.plan; as plan) {
+      <section class="panel" aria-labelledby="status-title">
+        <h2 id="status-title">Version {{ plan.version }}: {{ planStateText[plan.state] }}</h2>
+        <p>
+          Proposed {{ plan.created_at | date: 'medium' }} by <code>{{ plan.model_id }}</code> with
+          prompt <code>{{ plan.prompt_version }}</code
+          >.
+        </p>
+        @if (plan.decided_at) {
+          <p>
+            {{ plan.state === 'APPROVED' ? 'Approved' : 'Rejected' }} by
+            {{ plan.decided_by_name }} on {{ plan.decided_at | date: 'medium' }}.
+            @if (plan.decision_reason) {
+              Reason: {{ plan.decision_reason }}
+            }
+          </p>
+        }
+        @if (isArchitect() && plan.state === 'PROPOSED') {
+          <div class="decision">
+            <button
+              class="button"
+              type="button"
+              [disabled]="busy()"
+              (click)="decide(plan, 'APPROVED')"
+            >
+              Approve plan
+            </button>
+            @if (!rejecting()) {
+              <button class="button button--quiet" type="button" (click)="rejecting.set(true)">
+                Reject…
+              </button>
+            } @else {
+              <label class="decision__reason">
+                Reason for rejecting
+                <textarea
+                  rows="2"
+                  [value]="reason()"
+                  (input)="reason.set($any($event.target).value)"
+                ></textarea>
+              </label>
+              <button
+                class="button button--quiet"
+                type="button"
+                [disabled]="busy()"
+                (click)="decide(plan, 'REJECTED')"
+              >
+                Reject plan
+              </button>
+            }
+          </div>
+        } @else if (plan.state === 'PROPOSED') {
+          <p class="muted">An architect decides on this plan.</p>
+        }
+      </section>
+
+      <section class="panel" aria-labelledby="map-title">
+        <h2 id="map-title">Service map</h2>
+        <ul class="service-map">
+          @for (service of plan.services; track service.name) {
+            <li class="service">
+              <h3>{{ service.name }}</h3>
+              <p class="muted">{{ service.description }}</p>
+              <ul class="service__programs">
+                @for (program of servicePrograms(plan, service.name); track program) {
+                  <li>
+                    <code>{{ program }}</code>
+                    @if (modulesByProgram().get(program); as module) {
+                      <a [routerLink]="['/projects', projectId(), 'modules', module.id]">
+                        {{ moduleStateText[module.state] }}
+                      </a>
+                    }
+                  </li>
+                }
+              </ul>
+            </li>
+          }
+        </ul>
+      </section>
+
+      <section class="panel" aria-labelledby="order-title">
+        <h2 id="order-title">Migration order</h2>
+        <ol class="timeline">
+          @for (step of plan.order; track step.program) {
+            <li>
+              <span class="timeline__step">Step {{ step.position }}</span>
+              <strong>{{ step.program }}</strong>
+              <span class="badge">{{ step.service }}</span>
+              <span class="muted">{{ step.reason }}</span>
+            </li>
+          }
+        </ol>
+      </section>
+
+      <section class="panel" aria-labelledby="risks-title">
+        <h2 id="risks-title">Risks</h2>
+        @if (plan.risks.length) {
+          <ul class="risks">
+            @for (risk of plan.risks; track risk.title) {
+              <li>
+                <span class="badge" [class.badge--danger]="risk.severity === 'HIGH'"
+                  >{{ severityText[risk.severity] }} risk</span
+                >
+                <strong>{{ risk.title }}</strong>
+                <span class="muted">({{ risk.programs.join(', ') }})</span>
+                <p>{{ risk.detail }}</p>
+              </li>
+            }
+          </ul>
+        } @else {
+          <p class="muted">The proposal lists no risks.</p>
+        }
+        @if (plan.signals.risk_signals?.length) {
+          <details>
+            <summary>What static analysis found ({{ plan.signals.risk_signals?.length }})</summary>
+            <ul>
+              @for (signal of plan.signals.risk_signals; track signal.program + signal.signal) {
+                <li>{{ signal.program }}: {{ signal.signal }}, {{ signal.detail }}</li>
+              }
+            </ul>
+          </details>
+        }
+      </section>
+
+      <section class="panel" aria-labelledby="estimate-title">
+        <h2 id="estimate-title">Estimate</h2>
+        <p class="muted">{{ plan.estimate.method }}</p>
+        <div class="table-scroll" tabindex="0" role="region" aria-label="Estimate by module">
+          <table class="data-table">
+            <thead>
+              <tr>
+                <th scope="col">Program</th>
+                <th scope="col" class="num">Code lines</th>
+                <th scope="col" class="num">Decisions</th>
+                <th scope="col" class="num">Traps</th>
+                <th scope="col" class="num">Verified rules</th>
+                <th scope="col" class="num">Points</th>
+              </tr>
+            </thead>
+            <tbody>
+              @for (row of plan.estimate.modules; track row.program) {
+                <tr>
+                  <th scope="row">{{ row.program }}</th>
+                  <td class="num">{{ row.code_lines }}</td>
+                  <td class="num">{{ row.decisions }}</td>
+                  <td class="num">{{ row.traps }}</td>
+                  <td class="num">{{ row.verified_rules }}</td>
+                  <td class="num">{{ row.points }}</td>
+                </tr>
+              }
+            </tbody>
+            <tfoot>
+              <tr>
+                <th scope="row">Total</th>
+                <td colspan="4"></td>
+                <td class="num">{{ plan.estimate.total_points }}</td>
+              </tr>
+            </tfoot>
+          </table>
+        </div>
+      </section>
+
+      @if (current.view.history.length > 1) {
+        <section class="panel" aria-labelledby="history-title">
+          <h2 id="history-title">Earlier versions</h2>
+          <ul>
+            @for (item of current.view.history; track item.version) {
+              <li>
+                Version {{ item.version }}: {{ planStateText[item.state] }},
+                {{ item.created_at | date: 'medium' }}
+              </li>
+            }
+          </ul>
+        </section>
+      }
+    } @else {
+      <div class="state">
+        <p>There is no plan yet.</p>
+        @if (canPropose()) {
+          <p class="muted">Propose one above. The project must be analyzed first.</p>
+        } @else {
+          <p class="muted">An engineer or architect proposes it.</p>
+        }
+      </div>
+    }
+  }
+}
