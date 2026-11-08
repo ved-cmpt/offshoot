@@ -6,7 +6,7 @@
 #   docker build -t offshoot .
 #   docker compose -f compose.prod.yaml up --build -d     (local, with its own Postgres)
 
-FROM node:24.22.2-trixie-slim@sha256:54f84b4cf8432b21aaffd5d3ce8d41e12cea0d10d33c09d2f3c9879d49d6b446 AS web
+FROM node:26.13.0-trixie-slim@sha256:5adad64f9a1fca2d51972caa65983634c8a774eb300d72b20f7f2a0f60368072 AS web
 ENV NG_CLI_ANALYTICS=false
 WORKDIR /web
 COPY frontend/package.json frontend/package-lock.json ./
