@@ -1,7 +1,7 @@
-using LegacyLens.Placeholder;
+using ParityForge.Placeholder;
 using Xunit;
 
-namespace LegacyLens.Placeholder.Tests;
+namespace ParityForge.Placeholder.Tests;
 
 public class BuildProbeTests
 {

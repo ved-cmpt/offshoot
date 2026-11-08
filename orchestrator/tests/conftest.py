@@ -14,7 +14,7 @@ from sqlalchemy import Engine, create_engine, text
 from sqlalchemy.engine import make_url
 from sqlalchemy.orm import Session
 
-TEST_DB = "legacylens_test"
+TEST_DB = "parityforge_test"
 
 
 def _for_test_db(url: str) -> str:
@@ -138,4 +138,4 @@ def bearer(session: dict[str, Any]) -> dict[str, str]:
     return {"Authorization": f"Bearer {session['access_token']}"}
 
 
-CSRF = {"X-LegacyLens-CSRF": "1"}
+CSRF = {"X-ParityForge-CSRF": "1"}

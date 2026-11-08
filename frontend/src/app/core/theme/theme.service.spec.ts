@@ -26,7 +26,7 @@ describe('ThemeService', () => {
 
   it('prefers a stored choice over the system preference', () => {
     mockSystemPreference(true);
-    localStorage.setItem('legacylens-theme', 'light');
+    localStorage.setItem('parityforge-theme', 'light');
     const theme = TestBed.inject(ThemeService);
     theme.initialize();
     expect(theme.theme()).toBe('light');
@@ -34,7 +34,7 @@ describe('ThemeService', () => {
 
   it('ignores a stored value it does not recognize', () => {
     mockSystemPreference(false);
-    localStorage.setItem('legacylens-theme', 'neon');
+    localStorage.setItem('parityforge-theme', 'neon');
     const theme = TestBed.inject(ThemeService);
     theme.initialize();
     expect(theme.theme()).toBe('light');
@@ -47,7 +47,7 @@ describe('ThemeService', () => {
     theme.toggle();
     expect(theme.theme()).toBe('dark');
     expect(document.documentElement.dataset['theme']).toBe('dark');
-    expect(localStorage.getItem('legacylens-theme')).toBe('dark');
+    expect(localStorage.getItem('parityforge-theme')).toBe('dark');
     theme.toggle();
     expect(document.documentElement.dataset['theme']).toBe('light');
   });

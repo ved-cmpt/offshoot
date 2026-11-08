@@ -62,7 +62,7 @@ def require_csrf_header(request: Request, settings: AppSettings) -> None:
     CORS policy refuses those origins. If the browser sends an Origin, it must also
     be one we allow.
     """
-    if request.headers.get("X-LegacyLens-CSRF") != "1":
+    if request.headers.get("X-ParityForge-CSRF") != "1":
         raise ApiError(403, "CSRF_REQUIRED", "A required request header is missing.")
     origin = request.headers.get("Origin")
     if origin is None:

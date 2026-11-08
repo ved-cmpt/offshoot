@@ -6,7 +6,7 @@ export const routes: Routes = [
   {
     path: 'login',
     canActivate: [guestGuard],
-    title: 'Sign in - LegacyLens',
+    title: 'Sign in - ParityForge',
     loadComponent: () => import('./features/login/login').then((m) => m.Login),
   },
   {
@@ -17,7 +17,7 @@ export const routes: Routes = [
       { path: '', pathMatch: 'full', redirectTo: 'projects' },
       {
         path: 'projects',
-        title: 'Projects - LegacyLens',
+        title: 'Projects - ParityForge',
         loadComponent: () => import('./features/projects/projects').then((m) => m.Projects),
       },
       {
@@ -28,18 +28,18 @@ export const routes: Routes = [
           { path: '', pathMatch: 'full', redirectTo: 'inventory' },
           {
             path: 'inventory',
-            title: 'Inventory - LegacyLens',
+            title: 'Inventory - ParityForge',
             loadComponent: () => import('./features/inventory/inventory').then((m) => m.Inventory),
           },
           {
             path: 'sources/:file',
-            title: 'Source - LegacyLens',
+            title: 'Source - ParityForge',
             loadComponent: () =>
               import('./features/sources/source-viewer').then((m) => m.SourceViewer),
           },
           {
             path: 'rules',
-            title: 'Rules - LegacyLens',
+            title: 'Rules - ParityForge',
             loadComponent: () => import('./features/rules/rules').then((m) => m.Rules),
           },
         ],

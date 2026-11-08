@@ -8,7 +8,7 @@
 
 <main class="login">
   <header class="login__header">
-    <h1>LegacyLens</h1>
+    <h1>ParityForge</h1>
     <p>Legacy modernization with proof. Sign in to continue.</p>
   </header>
 
@@ -93,7 +93,10 @@
                 <p>{{ roleSummaries[account.role] }}</p>
                 <dl class="account__credentials">
                   <dt>Email</dt>
-                  <dd>{{ account.email }}</dd>
+                  <!-- A break opportunity before the @ keeps long addresses readable. -->
+                  @let at =
+                    account.email.includes('@') ? account.email.indexOf('@') : account.email.length;
+                  <dd>{{ account.email.slice(0, at) }}<wbr />{{ account.email.slice(at) }}</dd>
                   <dt>Password</dt>
                   <dd>{{ account.password }}</dd>
                 </dl>

@@ -1,8 +1,10 @@
-# LegacyLens
+# ParityForge
 
 **Status: in development (Run 02 of 6).** The legacy application, sign-in, deterministic inventory and rule extraction with human review work, in mock AI mode. There is no migration, equivalence verification or dashboard yet. Live Gemini is implemented but has never been called. See [`docs/IMPLEMENTATION_STATUS.md`](docs/IMPLEMENTATION_STATUS.md) for exactly what works today.
 
-LegacyLens will be an AI-assisted legacy modernization workbench: it inventories a COBOL application, extracts business rules that a person verifies against the source, migrates modules to C#, and proves behavioural equivalence by running the real legacy program alongside the new code. The model proposes; deterministic tooling verifies; people approve.
+ParityForge will be an AI-assisted legacy modernization workbench: it inventories a COBOL application, extracts business rules that a person verifies against the source, migrates modules to C#, and proves behavioural equivalence by running the real legacy program alongside the new code. The model proposes; deterministic tooling verifies; people approve.
+
+This project was previously developed under the working name LegacyLens.
 
 The full specification is in [`docs/IMPLEMENTATION_BLUEPRINT.md`](docs/IMPLEMENTATION_BLUEPRINT.md).
 
@@ -49,7 +51,7 @@ docker compose exec frontend npm run build
 docker compose run --rm dotnet-builder build-and-test
 ```
 
-API tests create and remove their own `legacylens_test` database. The COBOL characterization tests run the real programs in `cobol-runner`.
+API tests create and remove their own `parityforge_test` database. The COBOL characterization tests run the real programs in `cobol-runner`.
 
 To measure rule extraction against the answer key, run this on the host against a seeded stack. It never runs in a container, because the agent must not be able to reach the key. [`docs/EVALUATION.md`](docs/EVALUATION.md) explains the method and what the numbers do and do not show.
 

@@ -9,6 +9,6 @@ trap 'rm -rf "$WORK"' EXIT
 cp -r "$SOURCE/." "$WORK/"
 cd "$WORK"
 export DOTNET_CLI_HOME=/tmp/dotnet-home
-timeout 300 nonet dotnet restore LegacyLens.Modern.sln --locked-mode --source /opt/nuget/packages
-timeout 300 nonet dotnet build LegacyLens.Modern.sln --no-restore -c Release
-timeout 300 nonet dotnet test --solution LegacyLens.Modern.sln --no-build -c Release
+timeout 300 nonet dotnet restore ParityForge.Modern.sln --locked-mode --source /opt/nuget/packages
+timeout 300 nonet dotnet build ParityForge.Modern.sln --no-restore -c Release
+timeout 300 nonet dotnet test --solution ParityForge.Modern.sln --no-build -c Release

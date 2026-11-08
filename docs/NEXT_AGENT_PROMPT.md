@@ -4,11 +4,11 @@ Paste everything below this line.
 
 ---
 
-You are the implementation agent for LegacyLens. This is RUN 03 of 6. Work fully unattended until the run is complete. Do not stop to ask questions: make the most reasonable decision, record it as an ADR, and continue. Stop only for something that is irreversible or that only the owner can do (accounts, secrets, payments), and list those under "Owner actions" in the run report.
+You are the implementation agent for ParityForge. This is RUN 03 of 6. Work fully unattended until the run is complete. Do not stop to ask questions: make the most reasonable decision, record it as an ADR, and continue. Stop only for something that is irreversible or that only the owner can do (accounts, secrets, payments), and list those under "Owner actions" in the run report.
 
 === READ FIRST ===
 1. Read `docs/IMPLEMENTATION_BLUEPRINT.md` completely. It is the single source of truth. Follow its invariants (Section 2.4), security rules (Section 11) and repository layout (Section 12).
-2. Read `AGENTS.md`, `docs/PROJECT_CONTEXT.md`, `docs/IMPLEMENTATION_STATUS.md`, `docs/ARCHITECTURE_DECISIONS.md`, `docs/EVALUATION.md` and `docs/RUN_REPORTS/RUN_02.md`.
+2. Read `AGENTS.md`, `docs/PROJECT_CONTEXT.md`, `docs/IMPLEMENTATION_STATUS.md`, `docs/ARCHITECTURE_DECISIONS.md`, `docs/EVALUATION.md` and `docs/RUN_REPORTS/RUN_02.md`. The project was renamed to ParityForge after Run 02; ADR-029 lists what changed.
 3. Inspect the repository and report its actual state. Code and tests are the ground truth.
 
 === PERMANENT RULES ===
@@ -17,13 +17,15 @@ You are the implementation agent for LegacyLens. This is RUN 03 of 6. Work fully
 - Never commit secrets. Real values live only in the git-ignored `.env`. `.env.example` holds placeholders and safe demo defaults. Never print keys or connection strings.
 - No placeholders or fake passes. Run every test, lint and build, and report the real exit codes. Mark anything you could not run as UNVERIFIED and give the exact command.
 - Budget is $0. `AI_MODE` defaults to mock and must work offline with no key. Make no live Gemini calls unless the owner has put a key in `.env`.
-- Environment: Windows 11, Docker Desktop (WSL2), PowerShell, Node 24, Python 3.12, uv. Project path `C:\Users\User\Desktop\legacylens`. Host ports: Postgres 5433, orchestrator 8100, Angular 4200.
+- Environment: Windows 11, Docker Desktop (WSL2), PowerShell, Node 24, Python 3.12, uv. Project path `C:\Users\User\Desktop\parityforge`. Host ports: Postgres 5433, orchestrator 8100, Angular 4200.
 - LF line endings. File-watch polling in containers. Pin exact versions and update lockfiles. New Python packages go in `orchestrator/pyproject.toml` with `uv lock`; rebuild the image afterwards. After a frontend dependency change run `docker compose up --build -d -V frontend`.
-- Each new table or migration must grant the `legacylens_app` role what it needs (ADR-014).
+- Each new table or migration must grant the app role what it needs (ADR-014). The role is `parityforge_app` by default, but its name comes from `APP_DB_ROLE` (ADR-029): in a migration, take it from the environment the way `0001` does, never hard-code it.
 - `docs/BILLRITE_RULES.md` must never reach the agent. All agent context goes through `services/agent/context.py`. Extend `tests/agent/test_answer_key_isolation.py` to cover every new prompt (`migrate-v1`, `repair-v1`, the plan prompt). If the key changes, rewrite the fingerprints on the host: `python scripts/evaluate_rules.py --write-fingerprints orchestrator/tests/agent/answer_key_shingles.json`.
 - Record every deviation as an ADR.
 
 === THINGS EARLIER RUNS LEARNED ===
+- Names after the rename (ADR-029): Compose project `parityforge` (containers `parityforge-<service>-1`, networks `parityforge_backend` and `parityforge_sandbox`), database and owner role `parityforge`, demo accounts `viewer|engineer|architect|admin@demo.parityforge.dev`, CSRF header `X-ParityForge-CSRF: 1`, .NET solution `modern/ParityForge.Modern.sln` with the `ParityForge.*` namespace. New C# projects go in that solution and use that namespace prefix. BillRite and its programs keep their names.
+- From Git Bash, `docker compose exec` arguments that start with `/` are rewritten into Windows paths. A `/tmp/...` path given to a container command ends up as a strange folder in the bind-mounted source tree. Use PowerShell for such commands, or set `MSYS_NO_PATHCONV=1`.
 - Fixed-format COBOL: code stays within column 72. One comment line, the prompt injection at `RATECALC.cbl:135`, runs past it on purpose. Do not remove or act on that comment.
 - `harness/BRCALL.cbl` is test tooling and is not a project source (ADR-011). Its record protocol is `copy/CALLREC.cpy`, and `orchestrator/tests/legacy/brcall.py` already parses it. Reuse it.
 - `COMPUTE ... ROUNDED` is half-up. BillRite rounds energy once on the sum of the tiers, then the levy, then the late fee. The kept legacy bugs (`ST-TOTAL-DUE` truncation, 12,345.67 prints as 2345.67, and February always 29 days in `STMTGEN`) must be reproduced exactly, not fixed.

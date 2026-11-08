@@ -2,7 +2,7 @@
        PROGRAM-ID. BRCALL.
       ******************************************************************
       * PROGRAM:   BRCALL                                              *
-      * SYSTEM:    LEGACYLENS TEST HARNESS, NOT PART OF BILLRITE       *
+      * SYSTEM:    PARITYFORGE TEST HARNESS, NOT PART OF BILLRITE      *
       * PURPOSE:   CALL ONE BILLRITE MODULE ONE RECORD AT A TIME.      *
       *                                                                *
       * USAGE:     BRCALL MTRVAL|RATECALC|LATEFEE|STMTGEN              *

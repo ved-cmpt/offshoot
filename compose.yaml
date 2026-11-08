@@ -1,6 +1,6 @@
-# LegacyLens local stack. See docs/ARCHITECTURE_DECISIONS.md (ADR-009) for how
+# ParityForge local stack. See docs/ARCHITECTURE_DECISIONS.md (ADR-009) for how
 # the two runner services are isolated.
-name: legacylens
+name: parityforge
 
 x-runner-hardening: &runner-hardening
   user: "10001:10001"
@@ -19,9 +19,10 @@ services:
     image: postgres:17.11-trixie@sha256:3b0cda93be7c8dba2ed484d19393d93845dc3dafb88973e248ba8e6d99d784e1
     command: ["postgres", "-c", "timezone=UTC", "-c", "log_timezone=UTC"]
     environment:
-      POSTGRES_DB: legacylens
-      POSTGRES_USER: legacylens
+      POSTGRES_DB: parityforge
+      POSTGRES_USER: parityforge
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?copy .env.example to .env}
+      APP_DB_ROLE: ${APP_DB_ROLE:-parityforge_app}
       APP_DB_PASSWORD: ${APP_DB_PASSWORD:?copy .env.example to .env}
     ports:
       - "127.0.0.1:${POSTGRES_HOST_PORT:-5433}:5432"
@@ -29,7 +30,7 @@ services:
       - postgres-data:/var/lib/postgresql/data
       - ./db/init:/docker-entrypoint-initdb.d:ro
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U legacylens -d legacylens"]
+      test: ["CMD-SHELL", "pg_isready -U parityforge -d parityforge"]
       interval: 5s
       timeout: 3s
       retries: 20
@@ -47,8 +48,9 @@ services:
       GEMINI_MODEL: ${GEMINI_MODEL:-}
       AI_TIMEOUT_SECONDS: ${AI_TIMEOUT_SECONDS:-60}
       AI_PROJECT_CALL_BUDGET: ${AI_PROJECT_CALL_BUDGET:-50}
-      DATABASE_URL: postgresql+psycopg://legacylens_app:${APP_DB_PASSWORD}@postgres:5432/legacylens
-      MIGRATION_DATABASE_URL: postgresql+psycopg://legacylens:${POSTGRES_PASSWORD}@postgres:5432/legacylens
+      APP_DB_ROLE: ${APP_DB_ROLE:-parityforge_app}
+      DATABASE_URL: postgresql+psycopg://${APP_DB_ROLE:-parityforge_app}:${APP_DB_PASSWORD}@postgres:5432/parityforge
+      MIGRATION_DATABASE_URL: postgresql+psycopg://parityforge:${POSTGRES_PASSWORD}@postgres:5432/parityforge
       JWT_SECRET: ${JWT_SECRET:?copy .env.example to .env}
       ACCESS_TOKEN_TTL_SECONDS: ${ACCESS_TOKEN_TTL_SECONDS:-900}
       REFRESH_TOKEN_TTL_SECONDS: ${REFRESH_TOKEN_TTL_SECONDS:-604800}

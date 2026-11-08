@@ -182,7 +182,7 @@ Nothing is required for Run 02.
 The stack is running and seeded right now, so you can open http://localhost:4200 immediately. To start from nothing, in PowerShell:
 
 ```powershell
-cd C:\Users\User\Desktop\legacylens
+cd C:\Users\User\Desktop\parityforge
 docker compose down -v
 Copy-Item .env.example .env
 docker compose up --build -d

@@ -1,4 +1,4 @@
-namespace LegacyLens.Placeholder;
+namespace ParityForge.Placeholder;
 
 /// <summary>
 /// Placeholder until Run 03 adds the migrated services. It uses the rounding mode

@@ -74,7 +74,7 @@ Tests must run real COBOL from the orchestrator container, which holds no Docker
 
 **Roles.** Section 1.3 says ADMIN "manages users and demo resets", while Section 9 uses "Engineer+". Guards therefore use explicit sets, not a hierarchy: every role can read; `ENGINEER` and `ARCHITECT` can run jobs; only `ARCHITECT` approves; `ARCHITECT` and `ADMIN` read the audit log; only `ADMIN` manages users. A test pins the whole matrix.
 
-**Database.** Feasible locally, so it is done. The API connects as `legacylens_app`, which is not a superuser and cannot create databases or roles. It has `SELECT/INSERT/UPDATE/DELETE` on tables, `SELECT/INSERT` only on `audit_logs`, `SELECT` only on `alembic_version`, and no DDL rights. Migrations run as the owner through `MIGRATION_DATABASE_URL`. `db/init` creates the login on first volume initialization; the migration creates a `NOLOGIN` role if none exists, so that grants apply on a hosted database such as Neon. Each later migration that adds a table must grant it to this role, because the grants name existing tables, not future ones.
+**Database.** Feasible locally, so it is done. The API connects as `parityforge_app`, which is not a superuser and cannot create databases or roles. It has `SELECT/INSERT/UPDATE/DELETE` on tables, `SELECT/INSERT` only on `audit_logs`, `SELECT` only on `alembic_version`, and no DDL rights. Migrations run as the owner through `MIGRATION_DATABASE_URL`. `db/init` creates the login on first volume initialization; the migration creates a `NOLOGIN` role if none exists, so that grants apply on a hosted database such as Neon. Each later migration that adds a table must grant it to this role, because the grants name existing tables, not future ones.
 
 **Limit.** The local owner is the container's superuser, which could disable the audit triggers on purpose. Run 05 should use a non-superuser owner on Neon.
 
@@ -96,7 +96,7 @@ The seed loads `src/*.cbl`, `copy/*.cpy` and `data/LAYOUTS.txt`. It does not loa
 
 ## ADR-018 Session and CSRF details
 
-- **CSRF** is a required custom header, `X-LegacyLens-CSRF: 1`, on the cookie endpoints, plus an `Origin` check when the browser sends one. A cross-site page cannot add the header without a preflight, which strict CORS refuses, and `SameSite=Strict` already withholds the cookie. No token is needed on top.
+- **CSRF** is a required custom header, `X-ParityForge-CSRF: 1`, on the cookie endpoints, plus an `Origin` check when the browser sends one. A cross-site page cannot add the header without a preflight, which strict CORS refuses, and `SameSite=Strict` already withholds the cookie. No token is needed on top.
 - **The refresh cookie** is scoped to `Path=/api/v1/auth`, so it is sent only to the session endpoints.
 - **The access token has no role claim.** The role is read from the database on each request, so a role change applies immediately.
 - **Multiple tabs.** The cookie rotates on each use and reuse revokes the family, so two tabs refreshing together could end the session. The SPA serializes refreshes across tabs with the Web Locks API, and shares one in-flight refresh within a tab. There is deliberately no server-side grace window, which would weaken reuse detection.
@@ -180,3 +180,13 @@ Bounded time has two layers: the SDK's HTTP timeout, and a wall-clock limit on t
 ## ADR-028 No graph or code viewer library
 
 The blueprint offers Monaco or CodeMirror, and Mermaid or ELK. A read-only viewer needs numbered lines and highlighted ranges, and a small layered SVG layout covers a graph of this size. That means no dependency, no bundle cost (the inventory chunk is 27 kB raw), no `eval` or inline scripts to fight a strict CSP, and native keyboard behaviour. Layouts are deterministic. Run 03's side-by-side view may need syntax colouring, and can revisit this.
+
+## ADR-029 Project renamed to ParityForge
+
+**Date:** 2026-11-07, between Run 02 and Run 03. **Status:** approved by the owner.
+
+**Reason.** The working name LegacyLens is already used by an unrelated product, so the owner renamed the project to ParityForge. The GitHub repository and the local folder were renamed by the owner. Git history is kept as it is and was not rewritten, so older commits still use the working name.
+
+**Scope.** Display names (browser titles, sign-in page, banner, README, documents and the blueprint) and every identifier that carried the old name: the Compose project, and with it the network and volume names; the database, its owner role and the app role; the Python distribution name and the JWT issuer and audience defaults; the Angular package name, the local-storage theme key and the refresh lock name; the CSRF header, now `X-ParityForge-CSRF`, on both the API and the client; the .NET solution, projects and namespaces (`ParityForge.Modern.sln`, `ParityForge.Placeholder`); the demo account emails (`architect@demo.parityforge.dev` and so on); the test and scratch database names; and the `BRCALL` harness banner comment. BillRite, its programs and its copybooks are not renamed. There is no `render.yaml` yet. Behaviour is otherwise identical. One visible side effect: a theme choice saved in a browser under the old key is not carried over, so it falls back to the system preference once.
+
+**Database name and role: config, not a schema migration.** The database name and owner role are deployment config in `compose.yaml`. The app role name was a constant in migration `0001`, which interpolates it into its `GRANT` statements. It now comes from `APP_DB_ROLE` (default `parityforge_app`, validated as a plain lower-case identifier), which `compose.yaml` passes to both `db/init`, which creates the login, and the orchestrator, which uses it in `DATABASE_URL` and in the migration. No new migration was added and no table, column or constraint changed: the edit to `0001` only moves a name into config. This is safe because no database built from the old name survives anywhere: the owner ran `docker compose down -v`, and no hosted database exists yet (Neon arrives in Run 05). Anyone with a local volume from before the rename must run `docker compose down -v` once, because the Postgres image creates the database and roles only on first start.

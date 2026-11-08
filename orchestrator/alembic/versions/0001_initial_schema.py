@@ -5,6 +5,8 @@ Revises:
 Create Date: 2026-11-05 01:51:01.898455+00:00
 """
 
+import os
+import re
 from collections.abc import Sequence
 
 import sqlalchemy as sa
@@ -17,7 +19,11 @@ down_revision: str | None = None
 branch_labels: str | Sequence[str] | None = None
 depends_on: str | Sequence[str] | None = None
 
-APP_ROLE = "legacylens_app"
+# The least-privilege login the API uses. It is deployment config, not schema: the
+# name comes from APP_DB_ROLE and must match the role db/init creates (ADR-029).
+APP_ROLE = os.environ.get("APP_DB_ROLE", "parityforge_app")
+if not re.fullmatch(r"[a-z_][a-z0-9_]{0,62}", APP_ROLE):
+    raise ValueError("APP_DB_ROLE must be a lower-case SQL identifier")
 
 
 def _create_audit_guards() -> None:

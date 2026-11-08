@@ -2,6 +2,8 @@
 
 **Current state:** Run 02 of 6 is complete. Run 03 is next.
 
+**Rename (2026-11-07):** the project is now ParityForge (ADR-029). Display names and every identifier were renamed with behaviour unchanged: Compose project, database and roles (the app role name now comes from `APP_DB_ROLE`), Python and Angular packages, the CSRF header, the .NET solution and namespaces, and the demo emails (`@demo.parityforge.dev`). Verified from a clean slate on 2026-11-07: all 5 services healthy, migrations to `0002`, seed twice (second run changed nothing), pytest 562 passed, ruff and mypy clean, frontend lint, 124 tests and build, .NET 3 tests, `make billrun`, API login for all 4 roles, and a real-browser check of sign-in, inventory and rules. A local volume from before the rename needs `docker compose down -v` once.
+
 Code and tests are the ground truth. Evidence is in [`RUN_REPORTS/RUN_02.md`](RUN_REPORTS/RUN_02.md) and [`RUN_REPORTS/RUN_01.md`](RUN_REPORTS/RUN_01.md).
 
 ## Works today

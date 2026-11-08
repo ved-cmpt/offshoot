@@ -1,6 +1,6 @@
 # Project context
 
-**LegacyLens** is a portfolio-grade, AI-assisted legacy modernization workbench. It takes a COBOL application, inventories it with deterministic static analysis, extracts business rules with an AI agent (each linked to source lines and reviewed by a person), plans the migration, generates C# one module at a time, and proves behavioural equivalence by running the real legacy program and the new code on the same inputs. People approve each step. The model proposes; deterministic tooling verifies; people approve.
+**ParityForge** is a portfolio-grade, AI-assisted legacy modernization workbench. It takes a COBOL application, inventories it with deterministic static analysis, extracts business rules with an AI agent (each linked to source lines and reviewed by a person), plans the migration, generates C# one module at a time, and proves behavioural equivalence by running the real legacy program and the new code on the same inputs. People approve each step. The model proposes; deterministic tooling verifies; people approve.
 
 **Owner:** Vedsai Vangapandu (GitHub `ved-cmpt`).
 **Budget:** $0 (open-source tools and free tiers).

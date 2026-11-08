@@ -4,6 +4,11 @@ All notable changes are recorded here. Dates are UTC.
 
 ## [Unreleased]
 
+### Renamed (2026-11-07)
+
+- The project is renamed from its working name LegacyLens to ParityForge, in display names and in every identifier: Compose project, database and roles, Python and Angular packages, the CSRF header, the .NET solution and namespaces, and the demo account emails (now `@demo.parityforge.dev`). The app role name is now configured by `APP_DB_ROLE`. Behaviour is unchanged. Existing local stacks need `docker compose down -v` once (ADR-029).
+- The sign-in page now wraps a demo email before the `@`, because the longer domain broke one address mid-word.
+
 ### Run 02 (2026-11-04)
 
 - Deterministic inventory: purpose-built COBOL parser, copybook expansion with original line numbers, paragraph index with `-EXIT` labels, PERFORM THRU, GO TO and CALL graph, file I/O map, data layouts with computed offsets, metrics and dead-code detection.

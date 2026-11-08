@@ -21,7 +21,7 @@ COPY runners/dotnet-builder/build-and-test /usr/local/bin/build-and-test
 # Restore while the image builds so that builds at run time never need the network.
 COPY modern/ /tmp/restore/
 RUN chmod 0755 /usr/local/bin/build-and-test \
-    && dotnet restore /tmp/restore/LegacyLens.Modern.sln --locked-mode \
+    && dotnet restore /tmp/restore/ParityForge.Modern.sln --locked-mode \
     && rm -rf /tmp/restore /tmp/dotnet-home /tmp/nuget-http /tmp/nuget-scratch \
     && chmod -R a+rX /opt/nuget \
     && groupadd --gid 10001 runner \
