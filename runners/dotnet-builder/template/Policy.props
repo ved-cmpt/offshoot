@@ -3,7 +3,7 @@
        that hold generated files. A banned API is error RS0030 and fails the build, and
        unsafe code is error CS0227 because AllowUnsafeBlocks is false. -->
   <ItemGroup>
-    <PackageReference Include="Microsoft.CodeAnalysis.BannedApiAnalyzers" Version="5.0.0">
+    <PackageReference Include="Microsoft.CodeAnalysis.BannedApiAnalyzers" Version="5.6.0">
       <PrivateAssets>all</PrivateAssets>
       <IncludeAssets>runtime; build; native; contentfiles; analyzers</IncludeAssets>
     </PackageReference>
