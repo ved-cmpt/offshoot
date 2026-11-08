@@ -3,8 +3,11 @@
 Creates the demo users, the BillRite project with its sources, its inventory, and in mock
 mode its proposed rules plus clearly labelled demo decisions (ADR-024). Since Run 03 it also
 proposes the plan, approves it as a labelled demo decision, and migrates and verifies the
-four called programs through the real sandbox and harness (ADR-037). Every number those
-leave behind comes from real runs. Running it again changes nothing except one audit entry.
+four called programs through the real sandbox and harness (ADR-037). Since Run 04 it also
+approves MTRVAL and LATEFEE as labelled demo decisions and sends recorded BillRite traffic
+through the real facade in shadow mode: MTRVAL then goes modern, LATEFEE stays in shadow
+part-way through its sample (ADR-041). Every number those leave behind comes from real
+runs. Running it again changes nothing except one audit entry.
 """
 
 import hashlib
@@ -27,6 +30,7 @@ from app.services.jobs import queue
 from app.services.jobs.handlers import analyze_input_hash, extract_input_hash, run_pending
 from app.services.jobs.module_handlers import migrate_input_hash
 from app.services.plan import decide_plan, latest_plan
+from app.services.promotion import decide_module, set_facade_mode
 from app.services.rules import apply_decision
 
 BILLRITE_NAME = "BillRite"
@@ -42,6 +46,10 @@ BILLRITE_PROGRAMS = ("BILLRUN", "LATEFEE", "MTRVAL", "RATECALC", "STMTGEN")
 SEEDED_VERIFIED_PROGRAMS = ("BILLRUN", "LATEFEE", "MTRVAL", "RATECALC", "STMTGEN")
 SEEDED_MODULES = ("MTRVAL", "RATECALC", "LATEFEE", "STMTGEN")
 SEED_PLAN_REASON = "Demo seed decision, not a human review."
+# Blueprint Section 8.2: one modern, one shadow, one verified awaiting approval, one blocked
+# with the rounding history (RATECALC), one pending (BILLRUN).
+SEED_MODERN = "MTRVAL"
+SEED_SHADOW = "LATEFEE"
 SEEDED_REJECTED_TITLE = "Senior discount on the energy charge"
 SEED_VERIFY_REASON = "Demo seed decision, not a human review."
 SEED_REJECT_REASON = "Demo seed decision, not a human review: the cited lines do not exist."
@@ -65,6 +73,7 @@ class SeedResult:
     decisions_seeded: int = 0
     plans_seeded: int = 0
     modules_migrated: int = 0
+    modules_promoted: int = 0
 
     @property
     def changed(self) -> bool:
@@ -80,6 +89,7 @@ class SeedResult:
                 self.decisions_seeded,
                 self.plans_seeded,
                 self.modules_migrated,
+                self.modules_promoted,
             )
         )
 
@@ -274,6 +284,40 @@ def seed_modules(db: Session, project: Project, owner: User, settings: Settings,
         result.modules_migrated += 1
 
 
+def _replay(db: Session, module: Module, owner: User, count: int, settings: Settings, result: SeedResult) -> None:
+    input_hash = queue.hash_inputs("seed-shadow", str(module.id), str(module.version), str(count))
+    payload = {"module_id": str(module.id), "program": module.program, "count": count}
+    job, created = queue.enqueue(db, module.project_id, "SHADOW", input_hash, payload, owner.id, reuse_finished=False)
+    result.jobs_created += int(created)
+    _wait_for_jobs(db, [job.id], settings)
+
+
+def seed_promotions(
+    db: Session, project: Project, owner: User, architect: User, settings: Settings, result: SeedResult
+) -> None:
+    """Approve two verified modules and route real recorded traffic through the facade.
+
+    Only on modules nobody has decided on yet, so a later seed never overrides a person.
+    """
+    for program, target in ((SEED_MODERN, "MODERN"), (SEED_SHADOW, "SHADOW")):
+        module = db.scalar(select(Module).where(Module.project_id == project.id, Module.program == program))
+        if module is None or module.state != "VERIFIED" or module.facade_mode != "LEGACY":
+            continue
+        decide_module(db, module, architect, "APPROVED", SEED_PLAN_REASON, module.version, settings, seeded=True)
+        set_facade_mode(db, module, architect, "SHADOW", SEED_PLAN_REASON, module.version, settings, seeded=True)
+        db.commit()
+        sample = settings.shadow_sample_size
+        _replay(db, module, owner, sample if target == "MODERN" else max(1, sample // 2), settings, result)
+        db.expire_all()
+        module = db.get(Module, module.id)
+        if module is None:
+            raise RuntimeError("The seeded module disappeared")
+        if target == "MODERN":
+            set_facade_mode(db, module, architect, "MODERN", SEED_PLAN_REASON, module.version, settings, seeded=True)
+            db.commit()
+        result.modules_promoted += 1
+
+
 def run_seed(db: Session, settings: Settings) -> SeedResult:
     result = SeedResult()
     admin = seed_users(db, settings, result)
@@ -293,6 +337,7 @@ def run_seed(db: Session, settings: Settings) -> SeedResult:
             raise ValueError("The demo accounts must include an ARCHITECT")
         seed_plan(db, project, admin, architect, settings, result)
         seed_modules(db, project, admin, settings, result)
+        seed_promotions(db, project, admin, architect, settings, result)
     audit.record(
         db,
         "seed.run",
@@ -308,6 +353,7 @@ def run_seed(db: Session, settings: Settings) -> SeedResult:
             "decisions_seeded": result.decisions_seeded,
             "plans_seeded": result.plans_seeded,
             "modules_migrated": result.modules_migrated,
+            "modules_promoted": result.modules_promoted,
         },
     )
     db.commit()
@@ -322,7 +368,8 @@ def main() -> None:
         f"project created={result.project_created}; sources created={result.sources_created} "
         f"updated={result.sources_updated} removed={result.sources_removed}; "
         f"jobs created={result.jobs_created}; decisions seeded={result.decisions_seeded}; "
-        f"plans seeded={result.plans_seeded}; modules migrated={result.modules_migrated}"
+        f"plans seeded={result.plans_seeded}; modules migrated={result.modules_migrated}; "
+        f"modules promoted={result.modules_promoted}"
     )
 
 

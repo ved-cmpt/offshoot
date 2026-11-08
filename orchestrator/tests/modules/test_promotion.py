@@ -263,6 +263,8 @@ class FakeFacade(httpx.BaseTransport):
         self.paths: list[str] = []
 
     def handle_request(self, request: httpx.Request) -> httpx.Response:
+        if request.method == "GET" and request.url.path == "/routes":
+            return httpx.Response(200, json={"version": "v", "modules": {"MTRVAL": "SHADOW"}})
         self.paths.append(request.url.path)
         report(self.client, modern=self.modern or LEGACY)
         return httpx.Response(200, json={"status": "E00"}, headers={"X-ParityForge-Route": "shadow"})

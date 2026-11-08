@@ -8,6 +8,7 @@ VERIFY: the harness runs legacy and modern on the same cases, then the gates dec
 MUTATE: Stryker.NET again on the current artifact, with the latest run's cases.
 """
 
+import time
 import uuid
 from pathlib import Path
 from typing import Any
@@ -43,6 +44,7 @@ from app.services.sandbox.client import ModernBuilder, SandboxError, get_legacy_
 
 MODULE_JOB_KINDS = ("MIGRATE", "REPAIR", "VERIFY", "MUTATE")
 HTTP_OK = 200
+ROUTE_WAIT_SECONDS = 30
 
 
 def _module(db: Session, job: Job) -> Module:
@@ -451,6 +453,19 @@ def run_mutate(db: Session, job: Job, settings: Settings) -> dict[str, Any]:
 # --- SHADOW: replay recorded traffic through the facade ---
 
 
+def _wait_for_shadow_route(client: httpx.Client, program: str) -> None:
+    """The facade reads its route table every few seconds. Until it routes this module through
+    shadow, requests would skip the comparison, so wait for it."""
+    for _ in range(ROUTE_WAIT_SECONDS):
+        try:
+            if client.get("/routes").json().get("modules", {}).get(program) == "SHADOW":
+                return
+        except (httpx.HTTPError, ValueError):
+            pass
+        time.sleep(1)
+    raise JobFailed("FACADE_NOT_ROUTING")
+
+
 def facade_client(settings: Settings) -> httpx.Client:
     """The public facade API, as any client sees it. The first modern call can build the artifact."""
     return httpx.Client(base_url=settings.facade_url, timeout=180)
@@ -486,10 +501,12 @@ def run_shadow(db: Session, job: Job, settings: Settings) -> dict[str, Any]:
     chosen = [requests[(start + index) % len(requests)] for index in range(count)]
     program, path = module.program, ENDPOINTS[module.program]
     db.commit()
-    set_stage(db, job, f"sending {count} requests through the facade")
     answered = 0
     routes: dict[str, int] = {}
     with facade_client(settings) as client:
+        set_stage(db, job, "waiting for the facade to route through shadow")
+        _wait_for_shadow_route(client, program)
+        set_stage(db, job, f"sending {count} requests through the facade")
         for body in chosen:
             try:
                 response = client.post(path, json=body)

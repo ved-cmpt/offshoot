@@ -2,9 +2,11 @@
 rules and an approved plan, driven through the public API exactly as a person would.
 """
 
+import os
 import uuid
 from typing import Any
 
+import httpx
 from fastapi.testclient import TestClient
 from sqlalchemy.orm import Session
 
@@ -101,3 +103,36 @@ def runs(client: TestClient, actors: Actors, module_id: str) -> list[dict[str, A
 def run_detail(client: TestClient, actors: Actors, module_id: str, run_id: str) -> dict[str, Any]:
     found: dict[str, Any] = client.get(f"/api/v1/modules/{module_id}/runs/{run_id}", headers=actors.viewer).json()
     return found
+
+
+# --- A stand-in for the facade, for tests that cannot reach the real one ---
+
+FACADE_TOKEN = {"X-Facade-Token": os.environ.get("FACADE_SHARED_SECRET", "")}
+OUTPUT_LENGTHS = {"MTRVAL": 10, "RATECALC": 58, "LATEFEE": 37, "STMTGEN": 83}
+FACADE_PATHS = {
+    "/meter/validate": "MTRVAL",
+    "/billing/rate": "RATECALC",
+    "/billing/late-fee": "LATEFEE",
+    "/statement/render": "STMTGEN",
+}
+
+
+class FakeFacade(httpx.BaseTransport):
+    """Behaves like the facade in shadow mode: it reads the real route table, and for each
+    request reports an identical legacy and modern record to the internal API."""
+
+    def __init__(self, client: TestClient) -> None:
+        self.client = client
+        self.paths: list[str] = []
+
+    def handle_request(self, request: httpx.Request) -> httpx.Response:
+        if request.method == "GET" and request.url.path == "/routes":
+            table = self.client.get("/api/v1/internal/facade/routes", headers=FACADE_TOKEN).json()
+            modes = {program: entry["mode"] for program, entry in table["modules"].items()}
+            return httpx.Response(200, json={"version": table["version"], "modules": modes})
+        self.paths.append(request.url.path)
+        program = FACADE_PATHS[request.url.path]
+        record = "E00" + "0" * (OUTPUT_LENGTHS[program] - 3)
+        body = {"program": program, "input": "replayed", "legacy": record, "modern": record}
+        self.client.post("/api/v1/internal/facade/shadow", json=body, headers=FACADE_TOKEN)
+        return httpx.Response(200, json={"status": "E00"}, headers={"X-ParityForge-Route": "shadow"})

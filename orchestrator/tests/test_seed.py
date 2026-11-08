@@ -19,7 +19,21 @@ BILLRITE = Path("/legacy/billrite")
 
 
 @pytest.fixture
-def seeded(db: Session, migrated_db: None) -> None:
+def seeded(db: Session, migrated_db: None, client: TestClient, monkeypatch: pytest.MonkeyPatch) -> None:
+    """The seed, with the facade replaced by a stand-in that reports to the test database.
+
+    The real facade reads the running stack's database, not this one. It is exercised by the
+    seed on the stack itself and by the browser suite.
+    """
+    import httpx
+
+    from app.services.jobs import module_handlers
+    from tests.modules.helpers import FakeFacade
+
+    fake = FakeFacade(client)
+    monkeypatch.setattr(
+        module_handlers, "facade_client", lambda _settings: httpx.Client(base_url="http://facade", transport=fake)
+    )
     run_seed(db, get_settings())
 
 
@@ -218,10 +232,11 @@ def test_a_later_seed_never_overrides_a_persons_decision(db: Session, seeded: No
 def test_seed_jobs_are_reused_on_a_second_run(db: Session, seeded: None) -> None:
     project = billrite(db)
     before = db.scalar(select(func.count()).select_from(Job).where(Job.project_id == project.id))
-    # Analysis, five extractions, the plan, four migrations and their four verifications.
-    assert before == 15
+    # Analysis, five extractions, the plan, four migrations, four verifications, two shadow replays.
+    assert before == 17
     result = run_seed(db, get_settings())
     assert (result.jobs_created, result.decisions_seeded, result.plans_seeded, result.modules_migrated) == (0, 0, 0, 0)
+    assert result.modules_promoted == 0
     assert db.scalar(select(func.count()).select_from(Job).where(Job.project_id == project.id)) == before
 
 
@@ -248,13 +263,21 @@ def test_seed_modules_come_from_real_runs(db: Session, seeded: None) -> None:
 
     project = billrite(db)
     modules = {m.program: m for m in db.scalars(select(Module).where(Module.project_id == project.id))}
-    assert {name: m.state for name, m in modules.items()} == {
-        "MTRVAL": "VERIFIED",
-        "RATECALC": "BLOCKED",
-        "LATEFEE": "VERIFIED",
-        "STMTGEN": "VERIFIED",
-        "BILLRUN": "PENDING",
+    # Blueprint Section 8.2: one modern, one shadow, one awaiting approval, one blocked, one pending.
+    assert {name: (m.state, m.facade_mode) for name, m in modules.items()} == {
+        "MTRVAL": ("APPROVED", "MODERN"),
+        "RATECALC": ("BLOCKED", "LEGACY"),
+        "LATEFEE": ("APPROVED", "SHADOW"),
+        "STMTGEN": ("VERIFIED", "LEGACY"),
+        "BILLRUN": ("PENDING", "LEGACY"),
     }
+    sample = get_settings().shadow_sample_size
+    assert modules["MTRVAL"].shadow_compared == sample
+    assert 0 < modules["LATEFEE"].shadow_compared < sample
+    module_ids = [module.id for module in modules.values()]
+    decisions = db.scalars(select(Approval).where(Approval.entity_id.in_(module_ids))).all()
+    assert len(decisions) == 2  # MTRVAL and LATEFEE.
+    assert all("not a human review" in (row.reason or "") for row in decisions)
     ratecalc = modules["RATECALC"]
     assert ratecalc.state_reason == "EQUIVALENCE_FAILED"
     run = db.scalars(select(VerificationRun).where(VerificationRun.module_id == ratecalc.id)).one()
@@ -286,7 +309,7 @@ def test_the_demo_reset_restores_the_seeded_state_and_keeps_the_audit_log(db: Se
 
     assert main([]) == 2  # Refuses without --confirm.
     result = reset_demo(db, get_settings())
-    assert (result.plans_seeded, result.modules_migrated) == (1, 4)
+    assert (result.plans_seeded, result.modules_migrated, result.modules_promoted) == (1, 4, 2)
     db.expire_all()
     fresh = billrite(db)
     assert fresh.id != project.id
