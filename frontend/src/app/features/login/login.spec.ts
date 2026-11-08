@@ -134,6 +134,8 @@ describe('Login', () => {
     expect(cards[0].querySelector('dl')?.textContent).not.toContain('@');
     expect(cards[0].textContent).toContain('v-pass');
     expect(page.querySelector('.demo-banner')?.textContent).toContain('synthetic');
+    expect(page.querySelector('.demo-banner')?.textContent).toContain('Public demo — synthetic COBOL app');
+    expect(page.querySelector('.demo-banner')?.textContent).not.toContain('\ufffd');
   });
 
   it('has no banner or cards outside demo mode', async () => {
