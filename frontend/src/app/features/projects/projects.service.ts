@@ -27,4 +27,12 @@ export class ProjectsService {
   list(): Observable<ProjectPage> {
     return this.http.get<ProjectPage>('/api/v1/projects');
   }
+
+  /** A new project from a .zip of COBOL sources. The server checks it, and never runs it. */
+  create(name: string, archive: File): Observable<Project> {
+    const form = new FormData();
+    form.append('name', name);
+    form.append('archive', archive, archive.name);
+    return this.http.post<Project>('/api/v1/projects', form);
+  }
 }

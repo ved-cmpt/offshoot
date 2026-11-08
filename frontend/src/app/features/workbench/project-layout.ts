@@ -8,8 +8,14 @@ import { map } from 'rxjs';
   selector: 'app-project-layout',
   imports: [RouterLink, RouterLinkActive, RouterOutlet],
   template: `
-    <nav class="tabs" aria-label="Project">
+    <nav class="tabs no-print" aria-label="Project">
       <a routerLink="/projects">All projects</a>
+      <a
+        [routerLink]="['/projects', projectId(), 'overview']"
+        routerLinkActive="tab--active"
+        ariaCurrentWhenActive="page"
+        >Overview</a
+      >
       <a
         [routerLink]="['/projects', projectId(), 'inventory']"
         routerLinkActive="tab--active"
@@ -33,6 +39,12 @@ import { map } from 'rxjs';
         routerLinkActive="tab--active"
         ariaCurrentWhenActive="page"
         >Modules</a
+      >
+      <a
+        [routerLink]="['/projects', projectId(), 'report']"
+        routerLinkActive="tab--active"
+        ariaCurrentWhenActive="page"
+        >Report</a
       >
     </nav>
     <router-outlet />

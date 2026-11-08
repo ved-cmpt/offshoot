@@ -22,7 +22,9 @@ import {
   ModernizationService,
   ModuleAction,
   ModuleDetail,
+  PromotionService,
   RunDetail,
+  ShadowView,
   RunSummary,
   describeReason,
 } from '../modernization/modernization.service';
@@ -107,6 +109,7 @@ export function coverageLines(
 })
 export class ModuleWorkspace implements OnInit {
   private readonly api = inject(ModernizationService);
+  private readonly promotion = inject(PromotionService);
   private readonly workbench = inject(WorkbenchService);
   private readonly route = inject(ActivatedRoute);
   private readonly auth = inject(AuthService);
@@ -130,6 +133,9 @@ export class ModuleWorkspace implements OnInit {
   protected readonly exceptionGate = signal<'COVERAGE' | 'MUTATION'>('COVERAGE');
   protected readonly exceptionThreshold = signal('');
   protected readonly exceptionReason = signal('');
+  protected readonly rejecting = signal(false);
+  protected readonly decisionReason = signal('');
+  protected readonly shadowView = signal<ShadowView | null>(null);
 
   protected readonly stateText = MODULE_STATE_TEXT;
   protected readonly actionText = ACTION_TEXT;
@@ -163,7 +169,7 @@ export class ModuleWorkspace implements OnInit {
     }
     if (
       module.current_artifact?.build_status === 'BUILT' &&
-      ['VERIFIED', 'BLOCKED'].includes(module.state)
+      ['VERIFIED', 'BLOCKED', 'APPROVED'].includes(module.state)
     ) {
       found.push('verify');
     }
@@ -242,6 +248,7 @@ export class ModuleWorkspace implements OnInit {
           if (data.module.active_job && !this.job()) {
             this.job.set(data.module.active_job);
           }
+          this.loadShadow(data.module);
           const latest = data.runs[0];
           if (latest) {
             this.selectRun(latest.id);
@@ -269,6 +276,71 @@ export class ModuleWorkspace implements OnInit {
       }),
       catchError(() => of(null)),
     );
+  }
+
+  private loadShadow(module: ModuleDetail): void {
+    if (module.facade_mode === 'LEGACY' && !module.shadow.since) {
+      this.shadowView.set(null);
+      return;
+    }
+    this.promotion
+      .shadow(module.id)
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe({
+        next: (view) => this.shadowView.set(view),
+        error: () => this.shadowView.set(null),
+      });
+  }
+
+  protected decide(module: ModuleDetail, decision: 'APPROVED' | 'REJECTED'): void {
+    const reason = this.decisionReason().trim();
+    if (decision === 'REJECTED' && !reason) {
+      this.actionError.set('A rejection needs a reason.');
+      return;
+    }
+    this.runPromotion(this.promotion.decide(module, decision, reason || null));
+  }
+
+  protected setMode(module: ModuleDetail, mode: 'LEGACY' | 'SHADOW' | 'MODERN'): void {
+    this.runPromotion(this.promotion.setMode(module, mode, null));
+  }
+
+  protected replay(module: ModuleDetail): void {
+    this.busy.set(true);
+    this.actionError.set(null);
+    this.promotion
+      .replay(module.id)
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe({
+        next: (job) => {
+          this.busy.set(false);
+          this.job.set(job);
+        },
+        error: (error: unknown) => {
+          this.busy.set(false);
+          this.actionError.set(describeError(error));
+        },
+      });
+  }
+
+  private runPromotion(request: Observable<ModuleDetail>): void {
+    this.busy.set(true);
+    this.actionError.set(null);
+    request.pipe(takeUntilDestroyed(this.destroyRef)).subscribe({
+      next: () => {
+        this.busy.set(false);
+        this.rejecting.set(false);
+        this.decisionReason.set('');
+        this.load(true);
+      },
+      error: (error: unknown) => {
+        this.busy.set(false);
+        this.actionError.set(describeError(error));
+        if (error instanceof HttpErrorResponse && error.status === 409) {
+          this.load(true);
+        }
+      },
+    });
   }
 
   protected selectRun(runId: string): void {
@@ -362,6 +434,16 @@ export class ModuleWorkspace implements OnInit {
           this.actionError.set(describeError(error));
         },
       });
+  }
+
+  protected jobLabel(kind: string): string {
+    const labels: Record<string, string> = {
+      VERIFY: 'Verification',
+      REPAIR: 'Repair',
+      MUTATE: 'Mutation testing',
+      SHADOW: 'Shadow replay',
+    };
+    return labels[kind] ?? 'Migration';
   }
 
   protected formatValue(value: number | null, unit: string): string {

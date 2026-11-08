@@ -1,0 +1,153 @@
+@let current = state();
+@switch (current.kind) {
+  @case ('loading') {
+    <h1 class="page-title">Overview</h1>
+    <p class="state" role="status">Loading the overview…</p>
+  }
+  @case ('error') {
+    <h1 class="page-title">Overview</h1>
+    <div class="state state--error" role="alert">
+      <p>The overview could not be loaded. {{ current.message }}</p>
+      <button class="button button--quiet" type="button" (click)="load()">Try again</button>
+    </div>
+  }
+  @case ('ready') {
+    @let data = current.data;
+    <h1 class="page-title">{{ data.project.name }}</h1>
+    <p class="muted">Every number on this page is read from stored runs, rules and decisions.</p>
+
+    <ul class="tiles">
+      <li class="tile">
+        <h2>Modules</h2>
+        @if (data.modules.length) {
+          <p class="tile__value">{{ data.modules.length }}</p>
+          <ul class="tile__list">
+            @for (entry of states(); track entry.name) {
+              <li>{{ stateText[entry.name] }}: {{ entry.count }}</li>
+            }
+          </ul>
+        } @else {
+          <p>No modules yet. They are created when an architect approves the plan.</p>
+        }
+      </li>
+      <li class="tile">
+        <h2>Rules verified</h2>
+        @if (data.rules.total) {
+          <p class="tile__value">{{ data.rules.verified_pct | number: '1.0-1' }}%</p>
+          <p>{{ data.rules.verified }} of {{ data.rules.total }} rules.</p>
+          <p class="muted">
+            {{ data.rules.human_decisions }} decisions by people;
+            {{ data.rules.seeded_decisions }} labelled demo seed decisions.
+          </p>
+        } @else {
+          <p>No rules extracted yet.</p>
+        }
+      </li>
+      <li class="tile">
+        <h2>Equivalence</h2>
+        @if (data.equivalence.cases) {
+          <p class="tile__value">
+            {{ data.equivalence.identical }} of {{ data.equivalence.cases }}
+          </p>
+          <p>
+            cases identical to the legacy program, over the latest run of
+            {{ data.equivalence.modules_verified }} modules.
+          </p>
+        } @else {
+          <p>No verification has run yet.</p>
+        }
+      </li>
+      <li class="tile">
+        <h2>AI usage</h2>
+        <p class="tile__value">{{ data.ai.calls }} calls</p>
+        <p>
+          {{ data.ai.input_tokens | number }} input and {{ data.ai.output_tokens | number }} output
+          tokens; estimated cost ${{ data.ai.estimated_cost_usd | number: '1.2-4' }}.
+          @if (data.ai.failed) {
+            {{ data.ai.failed }} failed.
+          }
+        </p>
+        <p class="muted">{{ data.ai.note }}</p>
+      </li>
+    </ul>
+
+    <section class="panel" aria-labelledby="modules-title">
+      <h2 id="modules-title">Modules, coverage and mutation score</h2>
+      @if (data.modules.length) {
+        <div class="table-scroll" tabindex="0" role="region" aria-label="Module verification">
+          <table class="data-table">
+            <thead>
+              <tr>
+                <th scope="col">Module</th>
+                <th scope="col">State</th>
+                <th scope="col">Routing</th>
+                <th scope="col" class="num">Identical cases</th>
+                <th scope="col" class="num">Coverage</th>
+                <th scope="col" class="num">Mutation</th>
+                <th scope="col" class="num">Shadow compared</th>
+              </tr>
+            </thead>
+            <tbody>
+              @for (row of data.modules; track row.id) {
+                <tr>
+                  <th scope="row">
+                    <a [routerLink]="['/projects', projectId(), 'modules', row.id]">{{
+                      row.program
+                    }}</a>
+                  </th>
+                  <td>{{ stateText[row.state] }}</td>
+                  <td>{{ modeText[row.facade_mode] }}</td>
+                  <td class="num">
+                    @if (row.cases) {
+                      {{ row.passed }} of {{ row.cases }}
+                    }
+                  </td>
+                  <td class="num">
+                    @if (row.coverage_pct !== null) {
+                      {{ row.coverage_pct | number: '1.2-2' }}%
+                    }
+                  </td>
+                  <td class="num">
+                    @if (row.mutation_score !== null) {
+                      {{ row.mutation_score | number: '1.2-2' }}%
+                    }
+                  </td>
+                  <td class="num">
+                    @if (row.facade_mode !== 'LEGACY') {
+                      {{ row.shadow_compared }}, {{ row.shadow_mismatches }} mismatched
+                    }
+                  </td>
+                </tr>
+              }
+            </tbody>
+          </table>
+        </div>
+      } @else {
+        <p class="muted">
+          Nothing to show yet. Start with the
+          <a [routerLink]="['/projects', projectId(), 'plan']">plan</a>.
+        </p>
+      }
+    </section>
+
+    <section class="panel" aria-labelledby="activity-title">
+      <h2 id="activity-title">Recent activity</h2>
+      @if (data.activity.length) {
+        <ul class="activity">
+          @for (event of data.activity; track event.at + event.what) {
+            <li>
+              <span class="muted">{{ event.at | date: 'short' }}</span>
+              <span>{{ event.kind === 'job' ? 'Job' : 'Decision' }}: {{ event.what }}</span>
+              <span class="badge">{{ event.outcome.toLowerCase() }}</span>
+              @if (event.by) {
+                <span class="muted">by {{ event.by }}{{ event.seeded ? ' (demo seed)' : '' }}</span>
+              }
+            </li>
+          }
+        </ul>
+      } @else {
+        <p class="muted">No activity yet.</p>
+      }
+    </section>
+  }
+}

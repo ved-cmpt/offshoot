@@ -238,6 +238,9 @@ export function makeModule(overrides: Partial<ModuleDetail> = {}): ModuleDetail 
     gates: FAILED_GATES,
     thresholds: { coverage: 85, mutation: 70, exceptions: {} },
     verified_rules: 12,
+    shadow: { compared: 0, mismatches: 0, sample: 20, ready: false, since: null },
+    decision: null,
+    approvable: false,
     ...overrides,
   };
 }
@@ -247,6 +250,9 @@ export function makeSummary(overrides: Partial<ModuleSummary> = {}): ModuleSumma
   delete summary.gates;
   delete summary.thresholds;
   delete summary.verified_rules;
+  delete summary.shadow;
+  delete summary.decision;
+  delete summary.approvable;
   return { ...(summary as ModuleSummary), ...overrides };
 }
 

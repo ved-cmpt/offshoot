@@ -2,8 +2,12 @@ import { provideHttpClient } from '@angular/common/http';
 import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { provideRouter } from '@angular/router';
+import { of } from 'rxjs';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 
+import { AuthService, Role } from '../../core/auth/auth.service';
+import { ConfigService, PublicConfig } from '../../core/config/config.service';
+import { authAs } from '../workbench/testing';
 import { Projects } from './projects';
 import { ProjectPage } from './projects.service';
 
@@ -35,15 +39,28 @@ describe('Projects', () => {
     fixture.detectChanges();
   }
 
-  beforeEach(() => {
+  function create(role: Role = 'VIEWER', demoMode = true): void {
+    const config: PublicConfig = { demo_mode: demoMode, ai_mode: 'mock', demo_accounts: [] };
     TestBed.configureTestingModule({
       imports: [Projects],
-      providers: [provideHttpClient(), provideHttpClientTesting(), provideRouter([])],
+      providers: [
+        provideHttpClient(),
+        provideHttpClientTesting(),
+        provideRouter([]),
+        { provide: AuthService, useValue: authAs(role) },
+        { provide: ConfigService, useValue: { load: () => of(config) } },
+      ],
     });
     http = TestBed.inject(HttpTestingController);
     fixture = TestBed.createComponent(Projects);
     page = fixture.nativeElement;
     fixture.detectChanges();
+  }
+
+  beforeEach((context) => {
+    if (!context.task.name.startsWith('upload:')) {
+      create();
+    }
   });
 
   afterEach(() => http.verify());
@@ -58,7 +75,7 @@ describe('Projects', () => {
     await settle();
     const project = page.querySelector('.project')!;
     expect(project.querySelector('h2')?.textContent?.trim()).toBe('BillRite');
-    expect(project.querySelector('h2 a')?.getAttribute('href')).toBe('/projects/p1/inventory');
+    expect(project.querySelector('h2 a')?.getAttribute('href')).toBe('/projects/p1/overview');
     expect(project.textContent).toContain('Synthetic billing system.');
     expect(project.textContent).toContain('Imported, not analyzed yet');
     expect(project.textContent).toContain('Bundled sample');
@@ -93,5 +110,81 @@ describe('Projects', () => {
     await settle();
     expect(page.querySelector('.project h2')?.textContent?.trim()).toBe('BillRite');
     expect(page.querySelector('[role="alert"]')).toBeNull();
+  });
+
+  it('upload: is hidden from viewers', async () => {
+    create('VIEWER', false);
+    http.expectOne('/api/v1/projects').flush(PAGE);
+    await settle();
+    expect(page.textContent).not.toContain('New project from COBOL sources');
+  });
+
+  it('upload: says it is off in the public demo', async () => {
+    create('ENGINEER', true);
+    http.expectOne('/api/v1/projects').flush(PAGE);
+    await settle();
+    expect(page.textContent).toContain('Uploads are turned off in the public demo');
+    expect(page.querySelector('input[type="file"]')).toBeNull();
+  });
+
+  it('upload: sends the archive and the name, then lists the new project', async () => {
+    create('ENGINEER', false);
+    http.expectOne('/api/v1/projects').flush(PAGE);
+    await settle();
+    const name = page.querySelector<HTMLInputElement>('input[type="text"]')!;
+    name.value = 'Payroll';
+    name.dispatchEvent(new Event('input'));
+    const file = new File(['x'], 'payroll.zip', { type: 'application/zip' });
+    const input = page.querySelector<HTMLInputElement>('input[type="file"]')!;
+    Object.defineProperty(input, 'files', { value: [file] });
+    input.dispatchEvent(new Event('change'));
+    [...page.querySelectorAll('button')]
+      .find((b) => b.textContent?.includes('Create project'))!
+      .click();
+    const request = http.expectOne({ method: 'POST', url: '/api/v1/projects' });
+    const body = request.request.body as FormData;
+    expect(body.get('name')).toBe('Payroll');
+    expect((body.get('archive') as File).name).toBe('payroll.zip');
+    request.flush({
+      ...PAGE.items[0],
+      id: 'p2',
+      name: 'Payroll',
+      source_kind: 'UPLOAD',
+      source_file_count: 3,
+    });
+    http.expectOne('/api/v1/projects').flush(PAGE);
+    await settle();
+    expect(page.querySelector('[role="status"]')?.textContent).toContain(
+      'Created Payroll with 3 files.',
+    );
+  });
+
+  it('upload: shows the server refusal', async () => {
+    create('ARCHITECT', false);
+    http.expectOne('/api/v1/projects').flush(PAGE);
+    await settle();
+    const name = page.querySelector<HTMLInputElement>('input[type="text"]')!;
+    name.value = 'Bad';
+    name.dispatchEvent(new Event('input'));
+    const input = page.querySelector<HTMLInputElement>('input[type="file"]')!;
+    Object.defineProperty(input, 'files', { value: [new File(['x'], 'bad.zip')] });
+    input.dispatchEvent(new Event('change'));
+    [...page.querySelectorAll('button')]
+      .find((b) => b.textContent?.includes('Create project'))!
+      .click();
+    http.expectOne({ method: 'POST', url: '/api/v1/projects' }).flush(
+      {
+        error: {
+          code: 'UPLOAD_PATH_REJECTED',
+          message: 'Archive paths may not leave the archive.',
+          request_id: 'r',
+        },
+      },
+      { status: 422, statusText: 'Unprocessable' },
+    );
+    await settle();
+    expect(page.querySelector('[role="alert"]')?.textContent).toContain(
+      'Archive paths may not leave',
+    );
   });
 });

@@ -1,5 +1,49 @@
 <h1 class="page-title">Projects</h1>
 
+@if (canCreate()) {
+  <section class="panel" aria-labelledby="upload-title">
+    <h2 id="upload-title">New project from COBOL sources</h2>
+    @if (demoMode()) {
+      <p class="muted">
+        Uploads are turned off in the public demo. Locally, set DEMO_MODE=false to upload a .zip of
+        .cbl, .cob, .cpy and .txt files.
+      </p>
+    } @else {
+      <p class="muted">
+        A .zip of .cbl, .cob, .cpy and .txt files. It is checked and stored, then it can be analyzed
+        and its rules extracted. Uploaded code is never compiled or run.
+      </p>
+      <div class="upload">
+        <label>
+          Project name
+          <input
+            type="text"
+            maxlength="120"
+            [value]="name()"
+            (input)="name.set($any($event.target).value)"
+          />
+        </label>
+        <label>
+          Archive (.zip)
+          <input type="file" accept=".zip,application/zip" (change)="pick($event)" />
+        </label>
+        <button class="button" type="button" [disabled]="uploading()" (click)="upload()">
+          {{ uploading() ? 'Uploadingâ€¦' : 'Create project' }}
+        </button>
+      </div>
+      @if (uploadError(); as message) {
+        <p class="state state--error" role="alert">{{ message }}</p>
+      }
+      @if (created(); as project) {
+        <p role="status">
+          Created {{ project.name }} with {{ project.source_file_count }} files.
+          <a [routerLink]="['/projects', project.id, 'inventory']">Analyze it</a>.
+        </p>
+      }
+    }
+  </section>
+}
+
 @let current = state();
 @switch (current.kind) {
   @case ('loading') {
@@ -19,7 +63,7 @@
         @for (project of current.projects; track project.id) {
           <li class="project">
             <h2 class="project__name">
-              <a [routerLink]="['/projects', project.id, 'inventory']">{{ project.name }}</a>
+              <a [routerLink]="['/projects', project.id, 'overview']">{{ project.name }}</a>
             </h2>
             @if (project.description) {
               <p class="project__description">{{ project.description }}</p>
@@ -47,8 +91,10 @@
               </div>
             </dl>
             <p class="project__links">
+              <a [routerLink]="['/projects', project.id, 'overview']">Overview</a>
               <a [routerLink]="['/projects', project.id, 'inventory']">Inventory</a>
               <a [routerLink]="['/projects', project.id, 'rules']">Rules</a>
+              <a [routerLink]="['/projects', project.id, 'modules']">Modules</a>
             </p>
           </li>
         }

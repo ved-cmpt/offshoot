@@ -69,15 +69,7 @@
         </p>
         @if (job(); as running) {
           <app-job-progress
-            [label]="
-              running.kind === 'VERIFY'
-                ? 'Verification'
-                : running.kind === 'REPAIR'
-                  ? 'Repair'
-                  : running.kind === 'MUTATE'
-                    ? 'Mutation testing'
-                    : 'Migration'
-            "
+            [label]="jobLabel(running.kind)"
             [start]="running"
             (finished)="jobFinished($event)"
           />
@@ -119,6 +111,147 @@
         <p class="muted">
           No verification has run yet. Gates are decided by the harness, not the agent.
         </p>
+      }
+    </section>
+
+    <section class="panel" aria-labelledby="approval-title">
+      <h2 id="approval-title">Approval</h2>
+      @if (module.decision; as decided) {
+        <p>
+          {{ decided.decision === 'APPROVED' ? 'Approved' : 'Rejected' }} by {{ decided.by }} on
+          {{ decided.at | date: 'medium' }}.
+          @if (decided.reason) {
+            Reason: {{ decided.reason }}
+          }
+        </p>
+      } @else if (module.state === 'VERIFIED') {
+        <p>Verified and awaiting an architect's decision.</p>
+      } @else {
+        <p class="muted">
+          A module can be approved only when its latest verification passed every gate.
+        </p>
+      }
+      @if (
+        isArchitect() &&
+        (module.state === 'VERIFIED' ||
+          module.state === 'BLOCKED' ||
+          module.state === 'BUILD_FAILED')
+      ) {
+        <div class="actions">
+          @if (module.approvable) {
+            <button
+              class="button"
+              type="button"
+              [disabled]="busy()"
+              (click)="decide(module, 'APPROVED')"
+            >
+              Approve module
+            </button>
+          }
+          @if (!rejecting()) {
+            <button class="button button--quiet" type="button" (click)="rejecting.set(true)">
+              Reject…
+            </button>
+          } @else {
+            <label class="exception__reason">
+              Reason for rejecting
+              <textarea
+                rows="2"
+                [value]="decisionReason()"
+                (input)="decisionReason.set($any($event.target).value)"
+              ></textarea>
+            </label>
+            <button
+              class="button button--quiet"
+              type="button"
+              [disabled]="busy()"
+              (click)="decide(module, 'REJECTED')"
+            >
+              Reject module
+            </button>
+          }
+        </div>
+      }
+    </section>
+
+    <section class="panel" aria-labelledby="routing-title">
+      <h2 id="routing-title">Routing</h2>
+      <p>
+        The facade sends <strong>{{ module.program }}</strong> traffic to
+        <strong>{{
+          module.facade_mode === 'LEGACY'
+            ? 'the legacy program'
+            : module.facade_mode === 'SHADOW'
+              ? 'both, and answers with legacy (shadow)'
+              : 'the modern module'
+        }}</strong
+        >.
+      </p>
+      @if (module.facade_mode !== 'LEGACY') {
+        <p>
+          Shadow comparisons since {{ module.shadow.since | date: 'medium' }}:
+          {{ module.shadow.compared }} compared, {{ module.shadow.mismatches }} mismatched.
+          Promotion needs {{ module.shadow.sample }} with none mismatched:
+          {{ module.shadow.ready ? 'met' : 'not met yet' }}.
+        </p>
+      }
+      @if (isArchitect() && module.state === 'APPROVED') {
+        <div class="actions">
+          @if (module.facade_mode === 'LEGACY') {
+            <button
+              class="button"
+              type="button"
+              [disabled]="busy()"
+              (click)="setMode(module, 'SHADOW')"
+            >
+              Start shadow mode
+            </button>
+          }
+          @if (module.facade_mode === 'SHADOW') {
+            <button
+              class="button"
+              type="button"
+              [disabled]="busy() || !module.shadow.ready"
+              (click)="setMode(module, 'MODERN')"
+            >
+              Promote to modern
+            </button>
+          }
+          @if (module.facade_mode !== 'LEGACY') {
+            <button
+              class="button button--quiet"
+              type="button"
+              [disabled]="busy()"
+              (click)="setMode(module, 'LEGACY')"
+            >
+              Roll back to legacy
+            </button>
+          }
+        </div>
+      }
+      @if (canRun() && module.facade_mode === 'SHADOW') {
+        <button
+          class="button button--quiet"
+          type="button"
+          [disabled]="busy() || !!module.active_job"
+          (click)="replay(module)"
+        >
+          Replay recorded traffic
+        </button>
+      }
+      @if (shadowView()?.mismatches?.length) {
+        <h3>Shadow mismatches</h3>
+        <ul>
+          @for (item of shadowView()!.mismatches; track item.id) {
+            <li>
+              {{ item.created_at | date: 'short' }}: input <code>{{ item.diff.input }}</code
+              >,
+              @for (diff of item.diff.diffs; track diff.field) {
+                <code>{{ diff.field }}</code> legacy {{ diff.legacy }}, modern {{ diff.modern }};
+              }
+            </li>
+          }
+        </ul>
       }
     </section>
 
@@ -418,7 +551,9 @@
                 <span class="muted">implemented, per the agent</span>
               }
               @if (exercisedRuleIds().get(rule.id); as cases) {
-                <span class="muted">exercised by {{ cases }} {{ cases === 1 ? 'case' : 'cases' }}</span>
+                <span class="muted"
+                  >exercised by {{ cases }} {{ cases === 1 ? 'case' : 'cases' }}</span
+                >
               }
             </li>
           }

@@ -104,16 +104,14 @@ describe('PlanPage', () => {
     });
     request.flush(makePlan({ state: 'APPROVED' }));
     await settle();
-    http
-      .expectOne(PLAN_URL)
-      .flush({
-        plan: makePlan({
-          state: 'APPROVED',
-          decided_by_name: 'Avery',
-          decided_at: '2026-11-08T03:00:00Z',
-        }),
-        history: [],
-      });
+    http.expectOne(PLAN_URL).flush({
+      plan: makePlan({
+        state: 'APPROVED',
+        decided_by_name: 'Avery',
+        decided_at: '2026-11-08T03:00:00Z',
+      }),
+      history: [],
+    });
     http.expectOne(MODULES_URL).flush([]);
     await settle();
     expect(page.textContent).toContain('Approved by Avery');
@@ -145,18 +143,16 @@ describe('PlanPage', () => {
   it('reloads after a stale decision and says why', async () => {
     await open('ARCHITECT');
     button('Approve plan')!.click();
-    http
-      .expectOne(`${PLAN_URL}/decision`)
-      .flush(
-        {
-          error: {
-            code: 'STALE_VERSION',
-            message: 'The plan has changed. Reload it: the latest is version 2.',
-            request_id: 'r',
-          },
+    http.expectOne(`${PLAN_URL}/decision`).flush(
+      {
+        error: {
+          code: 'STALE_VERSION',
+          message: 'The plan has changed. Reload it: the latest is version 2.',
+          request_id: 'r',
         },
-        { status: 409, statusText: 'Conflict' },
-      );
+      },
+      { status: 409, statusText: 'Conflict' },
+    );
     await settle();
     expect(page.querySelector('[role="alert"]')?.textContent).toContain('the latest is version 2');
     http.expectOne(PLAN_URL).flush({ plan: makePlan({ version: 2 }), history: [] });

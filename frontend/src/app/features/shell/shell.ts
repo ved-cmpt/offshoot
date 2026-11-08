@@ -26,6 +26,10 @@ export class Shell {
   protected readonly theme = this.themeService.theme;
   protected readonly isSigningOut = signal(false);
   protected readonly demoMode = computed(() => this.config()?.demo_mode ?? false);
+  protected readonly canReadAudit = computed(() => {
+    const role = this.user()?.role;
+    return role === 'ARCHITECT' || role === 'ADMIN';
+  });
   protected readonly themeToggleLabel = computed(() =>
     this.theme() === 'dark' ? 'Use light theme' : 'Use dark theme',
   );

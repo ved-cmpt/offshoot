@@ -17,6 +17,15 @@
         ariaCurrentWhenActive="page"
         >Projects</a
       >
+      @if (canReadAudit()) {
+        <a
+          class="nav-link"
+          routerLink="/admin/audit"
+          routerLinkActive="nav-link--active"
+          ariaCurrentWhenActive="page"
+          >Audit log</a
+        >
+      }
     </nav>
 
     <div class="shell-header__actions">

@@ -21,11 +21,26 @@ export const routes: Routes = [
         loadComponent: () => import('./features/projects/projects').then((m) => m.Projects),
       },
       {
+        path: 'admin/audit',
+        title: 'Audit log - ParityForge',
+        loadComponent: () => import('./features/audit/audit').then((m) => m.AuditLog),
+      },
+      {
         path: 'projects/:id',
         loadComponent: () =>
           import('./features/workbench/project-layout').then((m) => m.ProjectLayout),
         children: [
-          { path: '', pathMatch: 'full', redirectTo: 'inventory' },
+          { path: '', pathMatch: 'full', redirectTo: 'overview' },
+          {
+            path: 'overview',
+            title: 'Overview - ParityForge',
+            loadComponent: () => import('./features/overview/overview').then((m) => m.Overview),
+          },
+          {
+            path: 'report',
+            title: 'Assessment report - ParityForge',
+            loadComponent: () => import('./features/report/report').then((m) => m.ReportPage),
+          },
           {
             path: 'inventory',
             title: 'Inventory - ParityForge',
@@ -50,8 +65,7 @@ export const routes: Routes = [
           {
             path: 'modules',
             title: 'Modules - ParityForge',
-            loadComponent: () =>
-              import('./features/modules/module-list').then((m) => m.ModuleList),
+            loadComponent: () => import('./features/modules/module-list').then((m) => m.ModuleList),
           },
           {
             path: 'modules/:mid',

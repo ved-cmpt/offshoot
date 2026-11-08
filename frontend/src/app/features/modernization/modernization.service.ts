@@ -243,6 +243,9 @@ export interface ModuleDetail extends ModuleSummary {
     exceptions: Record<string, { threshold: number; reason: string; by: string | null }>;
   };
   verified_rules: number;
+  shadow: ShadowStatus;
+  decision: { decision: string; reason: string | null; by: string | null; at: string } | null;
+  approvable: boolean;
 }
 
 export type ModuleAction = 'migrate' | 'repair' | 'verify' | 'mutate';
@@ -351,5 +354,136 @@ export class ModernizationService {
       reason,
       expected_version: module.version,
     });
+  }
+}
+
+export interface ShadowStatus {
+  compared: number;
+  mismatches: number;
+  sample: number;
+  ready: boolean;
+  since: string | null;
+}
+
+export interface ShadowView {
+  status: ShadowStatus;
+  mismatches: { id: string; request_hash: string; diff: Mismatch; created_at: string }[];
+}
+
+export interface DashboardModule {
+  id: string;
+  program: string;
+  service: string | null;
+  state: ModuleState;
+  facade_mode: FacadeMode;
+  cases: number | null;
+  passed: number | null;
+  failed: number | null;
+  coverage_pct: number | null;
+  mutation_score: number | null;
+  run_id: string | null;
+  shadow_compared: number;
+  shadow_mismatches: number;
+}
+
+export interface ActivityEvent {
+  kind: 'job' | 'decision';
+  what: string;
+  outcome: string;
+  by: string | null;
+  seeded?: boolean;
+  at: string;
+}
+
+export interface Dashboard {
+  project: { id: string; name: string; source_kind: string };
+  modules: DashboardModule[];
+  modules_by_state: Partial<Record<ModuleState, number>>;
+  facade_modes: Partial<Record<FacadeMode, number>>;
+  rules: {
+    total: number;
+    by_state: Record<string, number>;
+    verified: number;
+    verified_pct: number | null;
+    decisions: number;
+    seeded_decisions: number;
+    human_decisions: number;
+  };
+  equivalence: { modules_verified: number; cases: number; identical: number };
+  ai: {
+    calls: number;
+    failed: number;
+    by_mode: Record<string, number>;
+    input_tokens: number;
+    output_tokens: number;
+    estimated_cost_usd: number;
+    note: string;
+  };
+  activity: ActivityEvent[];
+}
+
+export interface ReportSection {
+  heading: string;
+  paragraphs: string[];
+  tables: { columns: string[]; rows: string[][] }[];
+}
+
+export interface AssessmentReport {
+  title: string;
+  sections: ReportSection[];
+  limits: string;
+  markdown: string;
+}
+
+@Injectable({ providedIn: 'root' })
+export class PromotionService {
+  private readonly http = inject(HttpClient);
+
+  private module(id: string): string {
+    return `/api/v1/modules/${encodeURIComponent(id)}`;
+  }
+
+  dashboard(projectId: string): Observable<Dashboard> {
+    return this.http.get<Dashboard>(`/api/v1/projects/${encodeURIComponent(projectId)}/dashboard`);
+  }
+
+  report(projectId: string): Observable<AssessmentReport> {
+    return this.http.get<AssessmentReport>(
+      `/api/v1/projects/${encodeURIComponent(projectId)}/report`,
+    );
+  }
+
+  reportMarkdown(projectId: string): Observable<Blob> {
+    return this.http.get(`/api/v1/projects/${encodeURIComponent(projectId)}/report.md`, {
+      responseType: 'blob',
+    });
+  }
+
+  decide(
+    module: ModuleDetail,
+    decision: 'APPROVED' | 'REJECTED',
+    reason: string | null,
+  ): Observable<ModuleDetail> {
+    return this.http.post<ModuleDetail>(`${this.module(module.id)}/decision`, {
+      decision,
+      expected_version: module.version,
+      reason,
+    });
+  }
+
+  setMode(module: ModuleDetail, mode: FacadeMode, reason: string | null): Observable<ModuleDetail> {
+    return this.http.post<ModuleDetail>(`${this.module(module.id)}/facade-mode`, {
+      mode,
+      expected_version: module.version,
+      reason,
+    });
+  }
+
+  replay(moduleId: string): Observable<Job> {
+    return this.http.post<Job>(`${this.module(moduleId)}/shadow-replay`, null);
+  }
+
+  shadow(moduleId: string): Observable<ShadowView> {
+    return this.http.get<ShadowView>(`${this.module(moduleId)}/shadow`);
   }
 }

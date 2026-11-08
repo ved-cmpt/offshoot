@@ -289,3 +289,27 @@ select {
     transition: background-color 120ms ease;
   }
 }
+
+// Printing (the assessment report's PDF is the browser's print to PDF, ADR-042).
+@media print {
+  .no-print,
+  .skip-link,
+  .shell-header,
+  .demo-banner {
+    display: none !important;
+  }
+
+  body {
+    background: #ffffff;
+    color: #000000;
+  }
+
+  .panel {
+    break-inside: avoid;
+    border-color: #999999;
+  }
+
+  .table-scroll {
+    overflow: visible;
+  }
+}

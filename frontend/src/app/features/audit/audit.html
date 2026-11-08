@@ -1,0 +1,108 @@
+<h1 class="page-title">Audit log</h1>
+<p class="muted">
+  Append-only: every AI proposal, job and human decision, as stored. The database refuses changes to
+  it.
+</p>
+
+@if (!allowed()) {
+  <div class="state" role="alert">
+    <p>Only architects and admins can read the audit log.</p>
+  </div>
+} @else {
+  @let current = state();
+  <section class="filters" aria-label="Filter the audit log">
+    <label>
+      Action
+      <select (change)="filter('prefix', $any($event.target).value)">
+        <option value="" [selected]="prefix() === ''">All</option>
+        @for (value of prefixes(); track value) {
+          <option [value]="value" [selected]="prefix() === value">{{ value }}*</option>
+        }
+      </select>
+    </label>
+    <label>
+      Entity
+      <select (change)="filter('entityType', $any($event.target).value)">
+        <option value="" [selected]="entityType() === ''">All</option>
+        @if (current.kind === 'ready') {
+          @for (value of current.page.entity_types; track value) {
+            <option [value]="value" [selected]="entityType() === value">{{ value }}</option>
+          }
+        }
+      </select>
+    </label>
+  </section>
+
+  @switch (current.kind) {
+    @case ('loading') {
+      <p class="state" role="status">Loading the audit log…</p>
+    }
+    @case ('error') {
+      <div class="state state--error" role="alert">
+        <p>The audit log could not be loaded. {{ current.message }}</p>
+        <button class="button button--quiet" type="button" (click)="load()">Try again</button>
+      </div>
+    }
+    @case ('ready') {
+      @if (current.page.items.length) {
+        <p class="muted">{{ current.page.total }} entries.</p>
+        <div class="table-scroll" tabindex="0" role="region" aria-label="Audit entries">
+          <table class="data-table">
+            <thead>
+              <tr>
+                <th scope="col">When (UTC)</th>
+                <th scope="col">Action</th>
+                <th scope="col">Who</th>
+                <th scope="col">Entity</th>
+                <th scope="col">Details</th>
+              </tr>
+            </thead>
+            <tbody>
+              @for (entry of current.page.items; track entry.id) {
+                <tr>
+                  <td>{{ entry.occurred_at | date: 'medium' : 'UTC' }}</td>
+                  <th scope="row">
+                    <code>{{ entry.action }}</code>
+                  </th>
+                  <td>{{ entry.actor_name ?? 'system' }}</td>
+                  <td>
+                    @if (entry.entity_type) {
+                      {{ entry.entity_type }} <code>{{ entry.entity_id?.slice(0, 8) }}</code>
+                    }
+                  </td>
+                  <td>
+                    <pre>{{ entry.safe_metadata | json }}</pre>
+                  </td>
+                </tr>
+              }
+            </tbody>
+          </table>
+        </div>
+        <nav class="pager" aria-label="Audit pages">
+          <button
+            class="button button--quiet"
+            type="button"
+            [disabled]="offset() === 0"
+            (click)="goTo(offset() - pageSize)"
+          >
+            Newer
+          </button>
+          <span
+            >Entries {{ offset() + 1 }} to {{ offset() + current.page.items.length }} of
+            {{ current.page.total }}</span
+          >
+          <button
+            class="button button--quiet"
+            type="button"
+            [disabled]="offset() + pageSize >= current.page.total"
+            (click)="goTo(offset() + pageSize)"
+          >
+            Older
+          </button>
+        </nav>
+      } @else {
+        <p class="state">No entries match these filters.</p>
+      }
+    }
+  }
+}

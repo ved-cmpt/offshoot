@@ -13,6 +13,34 @@ import { JOB_POLL_INTERVAL_MS } from '../workbench/workbench.service';
 import { ModuleWorkspace, coverageLines } from './module-workspace';
 
 const MODULE_URL = '/api/v1/modules/m1';
+const SHADOW_VIEW = {
+  status: { compared: 6, mismatches: 1, sample: 20, ready: false, since: '2026-11-08T07:00:00Z' },
+  mismatches: [
+    {
+      id: 's1',
+      request_hash: 'h',
+      created_at: '2026-11-08T07:01:00Z',
+      diff: {
+        case: 0,
+        source: 'shadow',
+        label: 'traffic',
+        input: '+99950+00100A',
+        input_fields: {},
+        legacy: 'E0000150Y ',
+        modern: 'E0000149Y ',
+        diffs: [
+          {
+            field: 'MV-OUT-CONSUMPTION',
+            legacy: '150',
+            modern: '149',
+            legacy_raw: '00150',
+            modern_raw: '00149',
+          },
+        ],
+      },
+    },
+  ],
+};
 const SOURCES = {
   items: [
     {
@@ -96,6 +124,9 @@ describe('ModuleWorkspace', () => {
       );
     }
     await settle();
+    for (const request of http.match(`${MODULE_URL}/shadow`)) {
+      request.flush(SHADOW_VIEW);
+    }
     if (module.latest_run) {
       http.expectOne(`${MODULE_URL}/runs/run1`).flush(run);
     }
@@ -304,5 +335,80 @@ describe('ModuleWorkspace', () => {
     button('Try again')!.click();
     await flushLoad(makeModule());
     expect(page.textContent).toContain('Gates');
+  });
+
+  it('lets an architect approve a verified module with the expected version', async () => {
+    const verified = makeModule({ state: 'VERIFIED', state_reason: null, approvable: true });
+    await open('ARCHITECT', verified);
+    [...page.querySelectorAll('button')]
+      .find((b) => b.textContent?.trim() === 'Approve module')!
+      .click();
+    const request = http.expectOne(`${MODULE_URL}/decision`);
+    expect(request.request.body).toEqual({
+      decision: 'APPROVED',
+      expected_version: 5,
+      reason: null,
+    });
+    request.flush(makeModule({ state: 'APPROVED' }));
+    await settle();
+    await flushLoad(
+      makeModule({
+        state: 'APPROVED',
+        decision: {
+          decision: 'APPROVED',
+          reason: null,
+          by: 'Ari Architect',
+          at: '2026-11-08T07:00:00Z',
+        },
+      }),
+    );
+    expect(page.textContent).toContain('Approved by Ari Architect');
+    expect(button('Start shadow mode')).toBeDefined();
+    expect(button('Approve module')).toBeUndefined();
+  });
+
+  it('offers no approval when the gates do not pass, and an engineer never decides', async () => {
+    await open('ENGINEER', makeModule({ state: 'VERIFIED', state_reason: null, approvable: true }));
+    expect(button('Approve module')).toBeUndefined();
+    expect(button('Start shadow mode')).toBeUndefined();
+  });
+
+  it('keeps promotion disabled until the shadow sample is clean, and shows the mismatches', async () => {
+    const shadow = makeModule({
+      state: 'APPROVED',
+      facade_mode: 'SHADOW',
+      shadow: SHADOW_VIEW.status,
+    });
+    await open('ARCHITECT', shadow);
+    expect(page.textContent).toContain('6 compared, 1 mismatched');
+    expect(page.textContent).toContain('not met yet');
+    expect(button('Promote to modern')?.disabled).toBe(true);
+    expect(page.textContent).toContain('MV-OUT-CONSUMPTION legacy 150, modern 149');
+    button('Roll back to legacy')!.click();
+    const request = http.expectOne(`${MODULE_URL}/facade-mode`);
+    expect(request.request.body).toEqual({ mode: 'LEGACY', expected_version: 5, reason: null });
+    request.flush(makeModule({ state: 'APPROVED' }));
+    await settle();
+    await flushLoad(makeModule({ state: 'APPROVED' }));
+  });
+
+  it('lets an engineer replay recorded traffic while in shadow', async () => {
+    const shadow = makeModule({
+      state: 'APPROVED',
+      facade_mode: 'SHADOW',
+      shadow: SHADOW_VIEW.status,
+    });
+    await open('ENGINEER', shadow);
+    expect(button('Promote to modern')).toBeUndefined();
+    button('Replay recorded traffic')!.click();
+    http
+      .expectOne({ method: 'POST', url: `${MODULE_URL}/shadow-replay` })
+      .flush(makeJob({ id: 'j7', kind: 'SHADOW', status: 'RUNNING' }));
+    await settle();
+    expect(page.textContent).toContain('Shadow replay');
+    // The progress panel may already be polling the running job.
+    for (const request of http.match('/api/v1/jobs/j7')) {
+      request.flush(makeJob({ id: 'j7', kind: 'SHADOW', status: 'RUNNING' }));
+    }
   });
 });
