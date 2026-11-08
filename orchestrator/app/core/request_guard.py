@@ -31,6 +31,7 @@ class RequestGuardMiddleware:
         self.max_bytes = settings.max_request_bytes
         self.write_limit = settings.write_rate_limit_per_minute
         self.trusted_hops = settings.trusted_proxy_hops
+        self.client_ip_header = settings.client_ip_header
 
     async def __call__(self, scope: Scope, receive: Receive, send: Send) -> None:
         if scope["type"] != "http":
@@ -46,7 +47,7 @@ class RequestGuardMiddleware:
             return
 
         if method in MUTATING and path.startswith(API_PREFIX) and not path.startswith(EXEMPT_PREFIXES):
-            address = client_address(connection, self.trusted_hops)
+            address = client_address(connection, self.trusted_hops, self.client_ip_header)
             allowed, retry_after = write_limiter.allow(f"write:{address}", self.write_limit)
             if not allowed:
                 await _reply(

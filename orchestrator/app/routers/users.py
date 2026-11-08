@@ -12,11 +12,12 @@ or demote themselves, so the last way back in is never closed by accident.
 import uuid
 from typing import Annotated
 
-from fastapi import APIRouter, Depends, status
+from fastapi import APIRouter, Depends, Request, status
 from pydantic import BaseModel, ConfigDict, Field
 from sqlalchemy import func, select, update
 from sqlalchemy.exc import IntegrityError
 
+from app.core.client_ip import describe
 from app.core.deps import ADMIN_ONLY, AppSettings, DbSession, require_roles
 from app.core.errors import ApiError, not_found
 from app.core.security import hash_password
@@ -92,6 +93,14 @@ def _load(db: DbSession, user_id: str) -> User:
     if user is None:
         raise not_found("User not found.")
     return user
+
+
+@router.get("/me/address")
+def my_address(request: Request, _admin: Admin, settings: AppSettings) -> dict[str, object]:
+    """The caller's own forwarding headers and the address the rate limits would use for them,
+    so the operator can check the proxy settings of a deployment (ADR-048). It shows a request's
+    own headers back to the account that sent it, nothing about anyone else."""
+    return describe(request, settings.trusted_proxy_hops, settings.client_ip_header)
 
 
 @router.get("")

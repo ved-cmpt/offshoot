@@ -84,7 +84,7 @@ def _clear_cookie(response: Response, settings: Settings) -> None:
 
 
 def _enforce_login_rate_limit(request: Request, email: str, settings: Settings) -> None:
-    client_ip = client_address(request, settings.trusted_proxy_hops)
+    client_ip = client_address(request, settings.trusted_proxy_hops, settings.client_ip_header)
     # Per address and account, so that one attacker cannot lock a demo account for
     # everyone; and per address, so that one attacker cannot spray many accounts.
     checks = (

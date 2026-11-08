@@ -69,6 +69,36 @@ def test_the_client_address_trusts_only_the_configured_proxies(hops: int, forwar
     assert client_address(connection("10.0.0.9", forwarded), hops) == expected
 
 
+def test_a_header_the_edge_overwrites_wins_over_the_forwarded_chain() -> None:
+    request = HTTPConnection(
+        {
+            "type": "http",
+            "client": ("10.0.0.9", 1234),
+            "headers": [(b"x-forwarded-for", b"6.6.6.6, 10.1.1.1"), (b"cf-connecting-ip", b"198.51.100.7")],
+        }
+    )
+    assert client_address(request, 1, "cf-connecting-ip") == "198.51.100.7"
+    assert client_address(request, 1, "true-client-ip") == "10.1.1.1"  # Absent: the chain decides.
+    assert client_address(request, 0, "") == "10.0.0.9"
+
+
+def test_an_admin_sees_how_their_own_address_is_resolved(client: TestClient, make_user: UserFactory) -> None:
+    admin = bearer(login_as(client, make_user("ADMIN")))
+    body = client.get("/api/v1/admin/users/me/address", headers={**admin, "X-Forwarded-For": "203.0.113.5"}).json()
+    assert body["headers"] == {"x-forwarded-for": "203.0.113.5"}
+    assert body["x_forwarded_for_entries"] == 1
+    assert body["resolved"] == body["peer"]  # The test stack trusts no proxy.
+    viewer = bearer(login_as(client, make_user("VIEWER")))
+    assert client.get("/api/v1/admin/users/me/address", headers=viewer).status_code == 403
+
+
+def test_the_app_page_declares_utf8(fresh_app: Any, static_dir: Path) -> None:
+    page = fresh_app(static_dir=str(static_dir)).get("/")
+    assert page.headers["Content-Type"] == "text/html; charset=utf-8"
+    script = fresh_app(static_dir=str(static_dir)).get("/main-ABCDEFGH.js")
+    assert "charset=utf-8" in script.headers["Content-Type"]
+
+
 def test_a_plain_postgres_url_gets_the_psycopg_driver() -> None:
     settings = Settings(
         database_url="postgresql://user:pw@host.example/db?sslmode=require",  # type: ignore[arg-type]

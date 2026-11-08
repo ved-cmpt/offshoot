@@ -82,6 +82,8 @@ class Settings(BaseSettings):
     static_dir: str = ""
     # How many proxies in front of the app append to X-Forwarded-For. 0 trusts no header.
     trusted_proxy_hops: int = Field(default=0, ge=0, le=5)
+    # A header the platform's edge sets and overwrites, such as cf-connecting-ip. Wins when present.
+    client_ip_header: str = Field(default="", max_length=64, pattern=r"^[a-z0-9-]*$")
     # Mutating API requests per client address per minute, and the largest request body.
     write_rate_limit_per_minute: int = Field(default=60, ge=1)
     max_request_bytes: int = Field(default=2 * 1024 * 1024, ge=1024)
