@@ -36,6 +36,7 @@ legacy/billrite/out/*
 # E2E
 e2e/test-results/
 e2e/test-results-smoke/
+e2e/test-results-readme/
 e2e/playwright-report/
 
 # OS / editors
