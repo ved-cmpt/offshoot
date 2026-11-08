@@ -109,9 +109,50 @@ The local stack was then pointed back at its own database and checked.
 - `79dc8af`: Render Blueprint and the deployment docs.
 - Then the commit with this report.
 
+## Owner changes before deployment (same day)
+
+The owner asked for two changes before creating the Render service.
+
+**1. Fewer pull requests.** Dependabot now opens at most one grouped pull request per ecosystem a month (uv, npm, NuGet, Docker, GitHub Actions), with no semver-major upgrades and no Python past 3.12. All 14 Dependabot pull requests opened since the first push are closed: 8 by `gh pr close` with the comment "superseded by grouped monthly updates", and 6 that Dependabot had closed itself, which got the same comment.
+
+**2. Simple demo sign-in (ADR-050).**
+- **Accounts:** `viewer`, `engineer`, `architect` and `admin`, all with `demo1234`, with the same display names and roles. Sign-in takes a username or an email.
+- **Migration 0006** adds `users.username`. The seed moves existing demo accounts over by email (`updated=4` on the dev stack), and a second run changes nothing.
+- **Settings:** the four `DEMO_PASSWORD_*` settings are gone from the code, both Compose files, `.env.example` and `render.yaml`. The owner now enters only `DATABASE_URL` on Render.
+- **Admin user API (new):** list, create, change, set a password; no delete. In demo mode it refuses to create users, set any password, or change or disable a demo account (403 `DEMO_ACCOUNTS_LOCKED`). Outside demo mode an admin cannot lock themselves out.
+- **Unchanged:** Argon2id, the login rate limit and the audit log.
+
+**Re-run of Part A's verification**
+
+| Command | Exit | Result |
+|---|---|---|
+| `pytest` (whole suite) | 0 | **784 passed** (765 before; 21 new in `tests/test_users.py`, seed and config tests updated) |
+| `ruff check .`, `ruff format --check .`, `mypy` | 0 | clean, 115 files |
+| frontend lint, tests, build | 0 | clean, 163 passed |
+| `npx playwright test` (dev stack) | 0 | 18 passed |
+| smoke suite against the rebuilt production image | 0 | **13 passed** (2 new: the sign-in page's usernames, and the demo admin locked out of user changes); 120 MiB of 512 MiB |
+| `build-and-test`, `make billrun`, fingerprints | 0 | 26 passed; batch completes; 1311 current |
+| `evaluate_migration.py` | 0 | unchanged: 4 of 4 compiled, 3 of 4 first, 4 of 4 after 1 repair |
+| `pytest tests/legacy tests/modules/test_sandbox_security.py` after the runner fix below | 0 | 189 passed |
+
+**Neon re-seeded.**
+- **Migration:** `alembic upgrade head` ran to `0006`.
+- **First re-seed: wrong state.** It finished, but STMTGEN ended BLOCKED, because Stryker wrote no mutation report (`no_report`).
+- **Second re-seed: failed.** It stopped with `SANDBOX_MEMORY_LIMIT` and then `SANDBOX_TIMEOUT`, and its snapshot captured the broken state.
+- **Cause:** the bug below.
+- **Third re-seed: clean.** After the fix, and with the API worker off, it succeeded: 17 jobs, 4 modules migrated, the second seed changed nothing, and the snapshot holds 678 rows.
+- **Read-only check:** as the app role, `0006`; the four demo accounts by username, each active and Argon2id, with `demo1234` verifying; MTRVAL modern, RATECALC blocked at 484 of 500, LATEFEE in shadow, STMTGEN verified and awaiting approval, BILLRUN pending; DDL refused.
+
+**Bugs found and fixed**
+- **Zombie processes in the runners.** `dotnet-builder` had **454 zombie processes** against a `pids_limit` of 512. PID 1 was the Python API server, which never reaps the build tools' orphaned grandchildren, so after a long session every build failed with misleading memory or timeout errors.
+  - **Fix:** `init: true` on both runners, which puts `docker-init` at PID 1.
+  - **Check:** after a full local re-seed, 0 zombies and 22 processes.
+- **The Neon re-seed procedure** let the API's own worker thread run jobs at the same time as the seed. `docs/RUNBOOK.md` now sets `JOB_WORKER_ENABLED=false` in the override, and chains the steps with `&&` so that a failed seed is never captured.
+- **One smoke check** signed in as `viewer` an eleventh time within a minute and hit the per-account limit. It now checks the account through the admin listing.
+
 ## Owner actions
 
-1. Create the Render Blueprint and enter the five variables from `.env.render`. The click-by-click steps are in [`../DEPLOYMENT.md`](../DEPLOYMENT.md). Then reply "deployed <url>".
+1. Create the Render Blueprint and enter the one variable it asks for, `DATABASE_URL`, from `.env.render`. The click-by-click steps are in [`../DEPLOYMENT.md`](../DEPLOYMENT.md). Then reply "deployed <url>".
 2. Optional: run the slow suites once with `gh workflow run slow.yml` (about an hour of free minutes).
 
 ## How to try it

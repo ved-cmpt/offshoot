@@ -16,10 +16,11 @@ The same as Run 05: no AI-tool attribution anywhere (scan terms in the local-onl
 
 === THINGS RUN 05 LEARNED ===
 - The public demo never compiles or runs code (`EXECUTION_ENABLED=false`, ADR-047). Its data is a snapshot of a real local seed, restored daily by the service (ADR-048). Re-seeding Neon needs the local sandbox: follow `docs/RUNBOOK.md` exactly.
-- `.env.render` holds `NEON_DATABASE_URL` (owner), `NEON_APP_DATABASE_URL` (app role) and `RENDER_DEMO_PASSWORD_*`. Pass it with `docker run --env-file`; never source it in a shell (the URLs contain `&`). In Git Bash, prefix container paths with `MSYS_NO_PATHCONV=1`.
+- `.env.render` holds `NEON_DATABASE_URL` (owner) and `NEON_APP_DATABASE_URL` (app role). Pass it with `docker run --env-file`; never source it in a shell (the URLs contain `&`). In Git Bash, prefix container paths with `MSYS_NO_PATHCONV=1`.
+- The demo accounts are `viewer`, `engineer`, `architect` and `admin`, all with `demo1234` (ADR-050). In demo mode the admin user API refuses anything that could lock others out.
 - The Windows Python writes CRLF in text mode. Write edit scripts to the scratchpad with the Write tool and open files with `newline="\n"`; check with Python for `b"\r"` before committing.
 - The local database also holds the "BillRite live sample" project; browser tests open BillRite with `openBillRite` (exact name). Screenshots taken locally show that project in the list.
-- The smoke suite: `cd e2e; npx playwright test -c playwright.smoke.config.ts` with `E2E_BASE_URL=<url>` and `E2E_SKIP_RESET=1`, and the `DEMO_PASSWORD_*` variables set to the Render values (from `RENDER_DEMO_PASSWORD_*`).
+- The smoke suite: `cd e2e; npx playwright test -c playwright.smoke.config.ts` with `E2E_BASE_URL=<url>` and `E2E_SKIP_RESET=1`.
 - `gh` is authenticated as the owner with the `repo` and `workflow` scopes.
 
 === RUN 06 SCOPE ===

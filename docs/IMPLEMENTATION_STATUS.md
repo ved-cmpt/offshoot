@@ -16,6 +16,8 @@ Updated at every checkpoint. `[x]` means done and verified by a command that exi
 - [x] Neon: least-privilege login role, `alembic upgrade head`, seed, snapshot, read-only verification
 - [x] `render.yaml`, `docs/DEPLOYMENT.md` (owner steps and every variable), `docs/RUNBOOK.md`, `docs/API.md`
 - [x] CI on GitHub Actions green; `RUN_05.md`; scans; push
+- [x] Owner changes: Dependabot at most one grouped monthly pull request per ecosystem; the open ones closed
+- [x] Owner changes: username sign-in, demo accounts `viewer`/`engineer`/`architect`/`admin` with `demo1234`, user management locked in demo mode (ADR-050); Part A verification re-run; Neon re-seeded
 
 **Owner checkpoint:** create the Render Blueprint, enter the variables, wait for the first deploy, reply "deployed <url>".
 
@@ -37,7 +39,7 @@ Code and tests are the ground truth. Evidence is in [`RUN_REPORTS/RUN_02.md`](RU
 | Area | State |
 |---|---|
 | Compose stack | Postgres 17, orchestrator, Angular dev server, cobol-runner and dotnet-builder all reach healthy |
-| Runner isolation | Internal network, non-root, read-only root filesystem, no capabilities, CPU/memory/PID/time limits; executed code has networking disabled by a seccomp wrapper (ADR-009) |
+| Runner isolation | An init process as PID 1 (reaps orphaned build processes), internal network, non-root, read-only root filesystem, no capabilities, CPU/memory/PID/time limits; executed code has networking disabled by a seccomp wrapper (ADR-009) |
 | .NET toolchain | `dotnet-builder` has no network interface but loopback and serves a build, run and mutate API on a Unix socket; generated C# builds in a fixed template with a banned-API deny policy (ADR-030, ADR-031) |
 | Runner auth | Shared secret on both runner APIs, fail closed, never passed to executed code (ADR-032) |
 | Plan | Agent proposes services and risks; order from the call graph; measured estimate; architect approval creates modules (ADR-036) |
@@ -64,7 +66,7 @@ Code and tests are the ground truth. Evidence is in [`RUN_REPORTS/RUN_02.md`](RU
 | Production image | Root `Dockerfile`: API + Angular on one origin + worker, 378 MB, 92-96 MiB in use of 512 MiB, no code execution (ADR-047); `compose.prod.yaml` on port 8300 |
 | Hardening | Nonce CSP without `unsafe-inline`, HSTS, Secure cookies, proxy-aware client address, write rate limit, body cap, CSRF behind TLS (ADR-047, ADR-048, `SECURITY.md`) |
 | Demo safeguards | Banner, daily snapshot reset by the service itself, daily job cap, per-address write limit (ADR-048) |
-| Neon | Project "offshoot" (PostgreSQL 18.6): app role `offshoot_app`, migrations to `0005`, seeded through the local sandbox, snapshot stored, verified read-only |
+| Neon | Project "offshoot" (PostgreSQL 18.6): app role `offshoot_app`, migrations to `0006`, seeded through the local sandbox, snapshot stored, verified read-only |
 | CI | `ci.yml` per push, `slow.yml` weekly, Dependabot monthly (ADR-049) |
 | Angular | `/login`, protected shell, `/projects`, and `/projects/:id/` `inventory`, `sources/:file` `rules`, `plan`, `modules` and `modules/:mid`: self-hosted SVG call graph, layouts, dead code, line-numbered source with rule spans and copybook links, rule cards with verify, edit and reject by role, live job progress. Loading, empty, error and retry states; both themes; keyboard accessible; usable at 375 px |
 
