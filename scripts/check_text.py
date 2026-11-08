@@ -11,7 +11,7 @@ import subprocess
 import sys
 
 BINARY = (".png", ".jpg", ".gif", ".ico", ".woff", ".woff2", ".pdf", ".zip", ".mp4")
-REPLACEMENT = "�"
+REPLACEMENT = chr(0xFFFD)  # Spelled out, so this file passes its own check.
 
 
 def main() -> int:
