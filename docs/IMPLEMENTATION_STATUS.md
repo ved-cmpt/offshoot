@@ -23,12 +23,14 @@ Updated at every checkpoint. `[x]` means done and verified by a command that exi
 
 **Part B (Run 06 scope)**
 
-- [ ] Live smoke checklist and the Playwright smoke suite against the live URL, cold-start timing
-- [ ] Portfolio README with the live link, diagram, screenshots, the rounding story and the evaluation summary
-- [ ] CHANGELOG, tag and GitHub Release v1.0.0
-- [ ] `RUN_06.md`, scans, push
+- [x] Live smoke checklist and the Playwright smoke suite against the live URL (14 of 14), cold-start timing
+- [x] Owner report: the banner's em dash showed as a replacement character; root cause fixed, CI and smoke checks added, verified live
+- [x] Rate limits fixed on the live service: the client address comes from `CF-Connecting-IP` (measured)
+- [x] Portfolio README with the live link, diagram, screenshots, the rounding story and the evaluation summary; About box set
+- [x] CHANGELOG, tag and GitHub Release v1.0.0
+- [x] `RUN_06.md`, scans, push
 
-**Current state:** Run 05 of 6 is complete (Part A of the combined Run 05 + Run 06 session): evaluation with a capped live Gemini sample, CI, the production image, hardening, demo safeguards, the Neon database and the deployment files. The owner now creates the Render service; Run 06 verifies it live and releases v1.0.0. Evidence is in [`RUN_REPORTS/RUN_05.md`](RUN_REPORTS/RUN_05.md).
+**Current state:** all six runs are complete and v1.0.0 is released. The public demo is live at https://offshoot-go2y.onrender.com, verified with the smoke checklist (14 of 14). Evidence is in [`RUN_REPORTS/RUN_06.md`](RUN_REPORTS/RUN_06.md) and [`RUN_REPORTS/RUN_05.md`](RUN_REPORTS/RUN_05.md).
 
 **Rename (2026-11-08):** the project is now Offshoot (ADR-045), with behaviour unchanged. Display names and every identifier were renamed, as in the earlier rename (ADR-029): Compose project, network and volumes; database, owner role and app role (`APP_DB_ROLE`, default `offshoot_app`); Python and Angular packages; JWT issuer and audience; the CSRF header `X-Offshoot-CSRF` and the facade's `X-Offshoot-Route`; the .NET solution `modern/Offshoot.Modern.sln`, the `Offshoot.Facade` and `Offshoot.Placeholder` projects and the sandbox template (`Offshoot.Sandbox.slnx`, namespace `Offshoot.Generated`); the demo emails (`@demo.offshoot.dev`); and the folder `C:\Users\User\Desktop\offshoot`. Verified from a clean slate on 2026-11-08: all 6 services healthy, migrations to `0004`, seed twice (second run changed nothing), pytest 734 passed, ruff and mypy clean, frontend lint, 159 tests and build, .NET 26 tests, `make billrun`, the fingerprint check, the Playwright and axe suite 18 passed (screenshots recaptured), API login for all 4 roles with the new emails (issuer `offshoot`, audience `offshoot-api`), and a real-browser check that the sign-in page, banner and page titles show Offshoot. A local volume from before the rename needs `docker compose down -v` once.
 
@@ -72,12 +74,13 @@ Code and tests are the ground truth. Evidence is in [`RUN_REPORTS/RUN_02.md`](RU
 
 ## Not built yet
 
-The live deployment, its smoke verification, the portfolio README and the v1.0.0 release (Run 06).
+Nothing in the v1 scope. A demo video (Blueprint Section 18) was not recorded; the README's screenshots, captured from the live demo, stand in for it. Section 2.2 lists what v1 deliberately leaves out.
 
 ## Unverified
 
 - **Live Gemini beyond the sample.** Only MTRVAL and RATECALC extraction and one RATECALC migration have run live, once each. The live plan and a live repair never ran. Which schema keyword Gemini refused is unknown (ADR-046).
-- **Render.** Nothing is deployed yet. The image, the headers, the reset and the smoke suite are verified locally with `compose.prod.yaml`; whether Render puts exactly one proxy hop in front (`TRUSTED_PROXY_HOPS=1`) is checked in Run 06.
+- **The daily reset on Render.** It is tested and runs locally, but at the time of the release no 24 hours had passed on the live service. Its next run shows in the audit log as `demo.reset` with `mode: snapshot`.
+- **The weekly slow suites on GitHub** (`slow.yml`) have not run yet; they run on Mondays or with `gh workflow run slow.yml`.
 
 ## Known limits
 

@@ -4,7 +4,7 @@
 
 [![CI](https://github.com/ved-cmpt/offshoot/actions/workflows/ci.yml/badge.svg)](https://github.com/ved-cmpt/offshoot/actions/workflows/ci.yml)
 
-**Live demo: https://offshoot-go2y.onrender.com** (a free instance: the first visit after a quiet spell takes about a minute to wake up)
+**Live demo: https://offshoot-go2y.onrender.com** (a free instance: after 15 idle minutes it sleeps, and the first visit takes about 45 seconds to wake it)
 
 | Username | Password | Can |
 |---|---|---|

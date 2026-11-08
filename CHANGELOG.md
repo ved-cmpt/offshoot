@@ -4,6 +4,18 @@ All notable changes are recorded here. Dates are UTC.
 
 ## [Unreleased]
 
+## [1.0.0] - 2026-11-08
+
+The first release: the full workflow locally, and a live public demo at https://offshoot-go2y.onrender.com.
+
+### Run 06 (2026-11-08)
+
+- Deployed to Render (free web service, Oregon) on Neon Postgres, and verified live with the smoke checklist: 14 of 14.
+- Fixed the demo banner, which showed a replacement character instead of an em dash. The source file held a literal U+FFFD, left by a mis-decoded edit. `scripts/check_text.py` now fails CI on any tracked file with U+FFFD, invalid UTF-8 or CR line endings, and a smoke test reads every served script for it.
+- Fixed the rate limits on the live service. Behind Render the rightmost `X-Forwarded-For` entry changes per request, so the limits never fired. The client address now comes from `CF-Connecting-IP`, which Cloudflare sets and does not accept from clients (`CLIENT_IP_HEADER`). Admins can see how their own request's address is resolved.
+- The sign-in page's banner uses the same wording as the app's.
+- A portfolio README with the live link, the demo accounts, the rounding-defect story, the architecture, live screenshots and the evaluation.
+
 ### Run 05 (2026-11-08)
 
 - Capped live Gemini sample, recorded honestly in `docs/EVALUATION.md`: 20 live calls under a hard cap of 30 for the whole database. Gemini refused the structured response schema, so the schema now goes in the instructions (`GEMINI_SCHEMA_MODE=prompt`) and the strict contract is still enforced locally. Live rule precision 93.33% and recall 63.64% on MTRVAL and RATECALC; the live RATECALC migration compiled and matched 500 of 500 cases on the first attempt.

@@ -180,6 +180,8 @@ test('the architect approves the module awaiting approval, which the audit log r
   await expect(page.getByText(/Approved by /).first()).toBeVisible();
   await page.getByRole('link', { name: 'Audit log' }).click();
   await expect(page.getByRole('heading', { name: 'Audit log', level: 1 })).toBeVisible();
+  // A busy public log fills its first page with sign-ins, so filter to module decisions.
+  await page.getByLabel('Action').selectOption('module.');
   await expect(page.getByRole('region', { name: 'Audit entries' })).toContainText('module.');
   await expectAccessible(page, 'audit log (production)');
 });
