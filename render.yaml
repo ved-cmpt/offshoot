@@ -1,0 +1,59 @@
+# Render Blueprint for the public demo (ADR-047, docs/DEPLOYMENT.md). One free web service:
+# the API, the built Angular app and the job worker in one container, on Neon Postgres. It never
+# compiles or runs code, and it holds no database owner credentials: migrations, the seed and the
+# demo snapshot are run from the owner's machine.
+services:
+  - type: web
+    name: offshoot
+    runtime: docker
+    plan: free
+    region: oregon
+    branch: main
+    dockerfilePath: ./Dockerfile
+    dockerContext: .
+    autoDeployTrigger: commit
+    healthCheckPath: /healthz
+    envVars:
+      # --- Fixed settings of the public demo
+      - key: PORT
+        value: "10000"
+      - key: APP_ENV
+        value: production
+      - key: DEMO_MODE
+        value: "true"
+      - key: AI_MODE
+        value: mock
+      - key: EXECUTION_ENABLED
+        value: "false"
+      - key: COOKIE_SECURE
+        value: "true"
+      - key: CORS_ORIGINS
+        value: ""
+      - key: APP_DB_ROLE
+        value: offshoot_app
+      # Render's proxy appends the client's address to X-Forwarded-For (ADR-048).
+      - key: TRUSTED_PROXY_HOPS
+        value: "1"
+      - key: DEMO_AUTO_RESET_HOURS
+        value: "24"
+      - key: DEMO_DAILY_JOB_CAP
+        value: "200"
+      - key: WRITE_RATE_LIMIT_PER_MINUTE
+        value: "60"
+      - key: LOGIN_RATE_LIMIT_PER_MINUTE
+        value: "10"
+      # --- Secrets
+      - key: JWT_SECRET
+        generateValue: true
+      # The app role's connection on Neon, never the owner's. From .env.render.
+      - key: DATABASE_URL
+        sync: false
+      # Published on the sign-in page, but they must match what the seed stored. From .env.render.
+      - key: DEMO_PASSWORD_VIEWER
+        sync: false
+      - key: DEMO_PASSWORD_ENGINEER
+        sync: false
+      - key: DEMO_PASSWORD_ARCHITECT
+        sync: false
+      - key: DEMO_PASSWORD_ADMIN
+        sync: false
