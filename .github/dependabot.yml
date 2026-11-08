@@ -1,5 +1,6 @@
 # Monthly, grouped and few, so the free CI minutes go to real work (ADR-049). Every update
-# still has to pass CI, and versions are reviewed by hand before merging.
+# still has to pass CI, and versions are reviewed by hand before merging. Major upgrades, and
+# Python past 3.12 (Blueprint Section 2.4), are left to a deliberate decision.
 version: 2
 updates:
   - package-ecosystem: uv
@@ -7,6 +8,9 @@ updates:
     schedule:
       interval: monthly
     open-pull-requests-limit: 3
+    ignore:
+      - dependency-name: "*"
+        update-types: ["version-update:semver-major"]
     groups:
       python:
         patterns: ["*"]
@@ -15,6 +19,9 @@ updates:
     schedule:
       interval: monthly
     open-pull-requests-limit: 3
+    ignore:
+      - dependency-name: "*"
+        update-types: ["version-update:semver-major"]
     groups:
       angular:
         patterns: ["@angular/*", "@angular-devkit/*", "angular-eslint", "typescript"]
@@ -25,6 +32,9 @@ updates:
     schedule:
       interval: monthly
     open-pull-requests-limit: 1
+    ignore:
+      - dependency-name: "*"
+        update-types: ["version-update:semver-major"]
     groups:
       e2e:
         patterns: ["*"]
@@ -33,6 +43,9 @@ updates:
     schedule:
       interval: monthly
     open-pull-requests-limit: 3
+    ignore:
+      - dependency-name: "*"
+        update-types: ["version-update:semver-major"]
     groups:
       dotnet:
         patterns: ["*"]
@@ -41,6 +54,11 @@ updates:
     schedule:
       interval: monthly
     open-pull-requests-limit: 3
+    ignore:
+      - dependency-name: "*"
+        update-types: ["version-update:semver-major"]
+      - dependency-name: "python"
+        versions: [">= 3.13"]
   - package-ecosystem: github-actions
     directory: /
     schedule:

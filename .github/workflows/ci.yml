@@ -170,7 +170,10 @@ jobs:
     runs-on: ubuntu-24.04
     timeout-minutes: 5
     # The terms are a repository secret, so that no tracked file holds them (AGENTS.md).
-    if: github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository
+    # Dependabot's runs cannot read repository secrets, and its pull requests only change versions.
+    if: >-
+      github.actor != 'dependabot[bot]' &&
+      (github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository)
     steps:
       - uses: actions/checkout@v4
         with:
