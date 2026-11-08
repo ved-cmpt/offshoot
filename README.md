@@ -1,6 +1,6 @@
 # Offshoot
 
-**Status: in development (Run 04 of 6).** The whole workflow works locally in mock AI mode: inventory, rule extraction with human review, the plan, migration to C# in a network-less sandbox, golden-master equivalence with coverage, mutation testing and gates, human approval, and strangler-fig promotion through a YARP facade with shadow comparison. A dashboard, an assessment report and the audit log show the results. CI, the production image and deployment come next. Live Gemini is implemented but has never been called. See [`docs/IMPLEMENTATION_STATUS.md`](docs/IMPLEMENTATION_STATUS.md) for exactly what works today.
+**Status: Run 05 of 6 complete; deployment is next.** The whole workflow works locally in mock AI mode: inventory, rule extraction with human review, the plan, migration to C# in a network-less sandbox, golden-master equivalence with coverage, mutation testing and gates, human approval, and strangler-fig promotion through a YARP facade with shadow comparison. A capped live Gemini sample has been measured ([`docs/EVALUATION.md`](docs/EVALUATION.md)). CI runs on GitHub Actions, and a single production image is ready for a free Render service on Neon ([`docs/DEPLOYMENT.md`](docs/DEPLOYMENT.md)). See [`docs/IMPLEMENTATION_STATUS.md`](docs/IMPLEMENTATION_STATUS.md) for exactly what works today.
 
 Offshoot will be an AI-assisted legacy modernization workbench: it inventories a COBOL application, extracts business rules that a person verifies against the source, migrates modules to C#, and proves behavioural equivalence by running the real legacy program alongside the new code. The model proposes; deterministic tooling verifies; people approve.
 
@@ -27,7 +27,7 @@ To put the demo back to its seeded state: `docker compose exec orchestrator pyth
 
 ## AI modes
 
-`AI_MODE=mock` is the default. It uses recorded fixtures and needs no key and no network. To use Gemini, set `AI_MODE=gemini`, `GEMINI_API_KEY` and `GEMINI_MODEL` in `.env` and restart the orchestrator. Live mode has unit tests with a fake client only, and no live call has been made yet.
+`AI_MODE=mock` is the default. It uses recorded fixtures and needs no key and no network. To use Gemini, set `AI_MODE=gemini`, `GEMINI_API_KEY` and `GEMINI_MODEL` in `.env` and restart the orchestrator. Live calls are capped per project (`AI_PROJECT_CALL_BUDGET`) and for the whole database (`AI_LIVE_CALL_CAP`, default 30). The Run 05 sample and its results, including the failures, are in [`docs/EVALUATION.md`](docs/EVALUATION.md).
 
 All accounts and data are synthetic, and the demo passwords are published on the sign-in page. `.env.example` holds placeholder secrets that are fine for a local stack, and all ports bind to `127.0.0.1`. Change the secrets before exposing this anywhere else.
 
@@ -72,12 +72,33 @@ To measure rule extraction against the answer key, run this on the host against 
 python scripts/evaluate_rules.py --api http://localhost:8100
 ```
 
+## The production image
+
+One container serves the API and the built app on one origin, in mock mode, and never compiles or runs code (ADR-047). To run it locally with its own database, set `PROD_JWT_SECRET` in `.env` (32 or more random characters), then:
+
+```powershell
+docker compose -f compose.prod.yaml up --build -d
+docker compose -f compose.prod.yaml exec app alembic upgrade head
+```
+
+It needs the demo data as a snapshot of a seeded development stack, because it cannot run the seed itself:
+
+```powershell
+docker compose exec orchestrator python -m app.scripts.demo_snapshot capture
+docker compose exec orchestrator python -m app.scripts.demo_snapshot export /tmp/demo.json
+docker compose cp orchestrator:/tmp/demo.json .snapshots/demo.json
+docker compose -f compose.prod.yaml exec app python -m app.scripts.demo_snapshot import /snapshots/demo.json
+```
+
+Then open http://localhost:8300. The smoke checklist runs against it with `cd e2e; npx playwright test -c playwright.smoke.config.ts`.
+
 ## Project documents
 
 - [`AGENTS.md`](AGENTS.md): operating rules for coding agents
 - [`docs/ARCHITECTURE_DECISIONS.md`](docs/ARCHITECTURE_DECISIONS.md): decisions and deviations
 - [`docs/RUN_REPORTS/`](docs/RUN_REPORTS/): what each implementation run did and proved
 - [`docs/EVALUATION.md`](docs/EVALUATION.md): measured results, and their limits
+- [`docs/DEPLOYMENT.md`](docs/DEPLOYMENT.md), [`docs/RUNBOOK.md`](docs/RUNBOOK.md), [`docs/SECURITY.md`](docs/SECURITY.md) and [`docs/API.md`](docs/API.md)
 
 ## License
 

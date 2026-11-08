@@ -4,6 +4,18 @@ All notable changes are recorded here. Dates are UTC.
 
 ## [Unreleased]
 
+### Run 05 (2026-11-08)
+
+- Capped live Gemini sample, recorded honestly in `docs/EVALUATION.md`: 20 live calls under a hard cap of 30 for the whole database. Gemini refused the structured response schema, so the schema now goes in the instructions (`GEMINI_SCHEMA_MODE=prompt`) and the strict contract is still enforced locally. Live rule precision 93.33% and recall 63.64% on MTRVAL and RATECALC; the live RATECALC migration compiled and matched 500 of 500 cases on the first attempt.
+- A refused request (HTTP 400) is no longer retried and has its own code, `AI_REQUEST_REJECTED`; failures keep only status codes, enums and field paths, never provider text.
+- `scripts/evaluate_migration.py` measures compile, unit-test and equivalence rates and repairs from stored runs; `scripts/evaluate_rules.py` takes `--project` and `--programs`.
+- Production image (root `Dockerfile`): the API, the built Angular app on the same origin and the job worker in one 512 MB container that never compiles or runs code (`EXECUTION_ENABLED=false`, 403 `EXECUTION_DISABLED`). `compose.prod.yaml` runs it locally with its own Postgres.
+- Security hardening: a per-request nonce Content-Security-Policy with no `unsafe-inline`, HSTS and Secure cookies in production, a proxy-aware client address for rate limits, a per-address limit on mutating requests, a request body cap, and a CSRF origin check that works behind a TLS proxy.
+- Demo safeguards: a stored demo snapshot restored every 24 hours by the service itself, a daily job cap, and a banner that says no code runs on the public demo.
+- CI on GitHub Actions: lint, types, tests, builds, dependency audits for Python, npm and NuGet, a fresh-checkout Compose stack with the real sandbox, the COBOL characterization tests and the .NET solution, the production image, gitleaks and the attribution scan; the slow suites weekly. Dependabot monthly.
+- Deployment files: `render.yaml`, `docs/DEPLOYMENT.md`, `docs/RUNBOOK.md`, `docs/SECURITY.md`, `docs/API.md`. The Neon database is migrated and seeded from the owner's machine with a least-privilege app role.
+
+
 ### Renamed to Offshoot (2026-11-08)
 
 - The project is renamed from ParityForge to Offshoot, to avoid confusion with existing names, in display names and in every identifier: Compose project, database and roles (`APP_DB_ROLE` now defaults to `offshoot_app`), Python and Angular packages, JWT issuer and audience, the CSRF header (`X-Offshoot-CSRF`) and the facade route header (`X-Offshoot-Route`), the .NET solution, projects and namespaces (`Offshoot.Modern.sln`, `Offshoot.Facade`, the `Offshoot.Generated` sandbox template), and the demo account emails (now `@demo.offshoot.dev`). Screenshots recaptured. Behaviour is unchanged. Existing local stacks need `docker compose down -v` once (ADR-045).
