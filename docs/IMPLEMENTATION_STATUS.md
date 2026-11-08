@@ -14,10 +14,10 @@ Updated at every checkpoint. `[x]` means done and verified by a command that exi
 - [x] Equivalence harness (F08): seeded inputs, legacy via BRCALL, modern via dotnet-builder, field-level compare, coverage, mutation
 - [x] Gates (Section 7.2) evaluated server-side, with exceptions
 - [x] Rounding-defect story runs end to end in a test
-- [~] Tests: deny-policy fixtures, runaway loop, memory cap, network, gates, determinism, roles
-- [ ] Seed extended for Part A
-- [ ] Angular plan screen and basic module workspace
-- [ ] ADRs, EVALUATION.md, RUN_03.md, full verification, scans, push
+- [x] Tests: deny-policy fixtures, runaway loop, memory cap, network, gates, determinism, roles
+- [x] Seed extended for Part A
+- [x] Angular plan screen and basic module workspace
+- [x] ADRs, EVALUATION.md, RUN_03.md, full verification, scans, push
 
 **Part B (Run 04 scope)**
 
@@ -29,7 +29,7 @@ Updated at every checkpoint. `[x]` means done and verified by a command that exi
 - [ ] Playwright + axe suites in e2e/, screenshots
 - [ ] RUN_04.md, Run 05 prompt, full verification, scans, push
 
-**Current state:** Run 02 of 6 is complete. Run 03 is next.
+**Current state:** Run 03 of 6 is complete (Part A of the combined Run 03 + Run 04). Run 04 (Part B) is in progress. Evidence for Run 03 is in [`RUN_REPORTS/RUN_03.md`](RUN_REPORTS/RUN_03.md).
 
 **Rename (2026-11-07):** the project is now ParityForge (ADR-029). Display names and every identifier were renamed with behaviour unchanged: Compose project, database and roles (the app role name now comes from `APP_DB_ROLE`), Python and Angular packages, the CSRF header, the .NET solution and namespaces, and the demo emails (`@demo.parityforge.dev`). Verified from a clean slate on 2026-11-07: all 5 services healthy, migrations to `0002`, seed twice (second run changed nothing), pytest 562 passed, ruff and mypy clean, frontend lint, 124 tests and build, .NET 3 tests, `make billrun`, API login for all 4 roles, and a real-browser check of sign-in, inventory and rules. A local volume from before the rename needs `docker compose down -v` once.
 
@@ -41,7 +41,12 @@ Code and tests are the ground truth. Evidence is in [`RUN_REPORTS/RUN_02.md`](RU
 |---|---|
 | Compose stack | Postgres 17, orchestrator, Angular dev server, cobol-runner and dotnet-builder all reach healthy |
 | Runner isolation | Internal network, non-root, read-only root filesystem, no capabilities, CPU/memory/PID/time limits; executed code has networking disabled by a seccomp wrapper (ADR-009) |
-| .NET toolchain | Placeholder solution builds and tests inside `dotnet-builder` with networking disabled |
+| .NET toolchain | `dotnet-builder` has no network interface but loopback and serves a build, run and mutate API on a Unix socket; generated C# builds in a fixed template with a banned-API deny policy (ADR-030, ADR-031) |
+| Runner auth | Shared secret on both runner APIs, fail closed, never passed to executed code (ADR-032) |
+| Plan | Agent proposes services and risks; order from the call graph; measured estimate; architect approval creates modules (ADR-036) |
+| Migration | `migrate-v1` and `repair-v1`; fixtures for MTRVAL, RATECALC, LATEFEE, STMTGEN; sandbox build, analyzers, unit tests; repair loop of at most 3 (ADR-035) |
+| Equivalence | 500 seeded cases per module, real COBOL against real C#, exact field comparison, paragraph coverage, Stryker.NET mutation, reproducible reports (ADR-033) |
+| Gates | Server-side, configurable, exceptions with reasons in an append-only table (ADR-034) |
 | BillRite | 5 programs and 6 copybooks; the batch runs with `make billrun`; `BRCALL` works for each of the 4 modules |
 | BillRite data | Seeded generator; 199 customers and 599 reads over 3 billing periods, with all edge cases |
 | Answer key | `docs/BILLRITE_RULES.md`, with line references. Not reachable by the agent, and a test proves it (ADR-025) |
@@ -53,12 +58,12 @@ Code and tests are the ground truth. Evidence is in [`RUN_REPORTS/RUN_02.md`](RU
 | Rule decisions | Architect verifies or rejects, engineers edit. `expected_version` with 409 on stale. Every decision goes to `approvals` and `audit_logs`. A flagged rule cannot be verified until an edit fixes it. The model cannot decide anything |
 | Evaluation | Measured in mock mode from the host: see [`EVALUATION.md`](EVALUATION.md). These numbers measure the pipeline, not a model |
 | API | `/auth/*`, `/healthz`, `/readyz`, `/config`, `/projects`, `/projects/{id}/analyze`, `/inventory`, `/inventory/layouts`, `/graph`, `/sources`, `/sources/{fileId}`, `/jobs`, `/jobs/{id}`, `/programs/{program}/extract-rules`, `/rules`, `/rules/{id}`, `/rules/{id}/decision`, `/admin/audit` |
-| Seed | Idempotent: 4 demo users, BillRite with 12 source files, its inventory, 46 proposed rules, 32 clearly labelled demo decisions (ADR-024) |
-| Angular | `/login`, protected shell, `/projects`, and `/projects/:id/` `inventory`, `sources/:file` and `rules`: self-hosted SVG call graph, layouts, dead code, line-numbered source with rule spans and copybook links, rule cards with verify, edit and reject by role, live job progress. Loading, empty, error and retry states; both themes; keyboard accessible; usable at 375 px |
+| Seed | Idempotent: 4 demo users, BillRite, inventory, 46 rules with 44 labelled demo decisions, an approved plan, and four modules from real runs: RATECALC blocked by the rounding defect, the others verified (ADR-037). Guarded demo reset |
+| Angular | `/login`, protected shell, `/projects`, and `/projects/:id/` `inventory`, `sources/:file` `rules`, `plan`, `modules` and `modules/:mid`: self-hosted SVG call graph, layouts, dead code, line-numbered source with rule spans and copybook links, rule cards with verify, edit and reject by role, live job progress. Loading, empty, error and retry states; both themes; keyboard accessible; usable at 375 px |
 
 ## Not built yet
 
-Plan, migration, equivalence harness, facade, dashboard, report, CI, production image and deployment. `POST /projects` and uploads (F03) are also not built: projects come from the seed. Section 8.2's plan and modules arrive with the runs that build them (ADR-017).
+Module approval, the facade, uploads, dashboard, report and audit screens (Run 04, in progress); CI, production image and deployment (Runs 05 and 06).
 
 ## Unverified
 
@@ -69,10 +74,8 @@ Plan, migration, equivalence harness, facade, dashboard, report, CI, production 
 - Mock evaluation numbers come from hand-written fixtures and say nothing about a model's quality (ADR-025).
 - Span checks prove that citations exist, not that a claim is true. A rule can cite a real field from a copybook and still be wrong, which is why a person reviews every rule (ADR-026).
 - One worker thread runs jobs one at a time. A slow live extraction holds up other jobs (ADR-023).
-- The runner API has no authentication; the internal network is the boundary. Run 03 revisits this (ADR-013).
 - The login rate limit is per process and in memory (ADR-015). Run 05 must configure forwarded client addresses.
 - The local schema owner is a Postgres superuser, which could deliberately disable the audit triggers (ADR-014).
-- Stryker.NET has not been tried under `nonet` (ADR-016).
-- Sandbox timeouts and memory caps are configured and Docker reports them applied, but no test yet exercises them with runaway code. Run 03 owns those tests (Blueprint Section 14).
-- Playwright and axe are not in the repository yet (Run 04). Runs 01 and 02 checked the browser flows with a throwaway script.
+- Stryker.NET's MTP runner is marked preview by Stryker; reports list surviving mutants (ADR-030).
+- Mock migration numbers measure the pipeline, not a model (`EVALUATION.md`).
 - Starlette warns that using `httpx` with its test client is deprecated. It is a warning only.

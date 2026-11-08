@@ -70,6 +70,8 @@ The blueprint lists five copybooks. The four called programs each need a paramet
 
 Tests must run real COBOL from the orchestrator container, which holds no Docker socket. `cobol-runner` therefore has a small standard-library HTTP API on the internal network: `GET /healthz`, `POST /v1/brcall/{module}` (allowlisted modules), `POST /v1/billrun`, and `GET /v1/isolation-probe`. It accepts data records only, never commands or source. It has no authentication; the internal network is the boundary for now. Run 03 extends this into the full sandbox API and should revisit authentication and concurrency. `dotnet-builder` has no API yet: it idles, and `docker compose run --rm dotnet-builder build-and-test` drives it.
 
+**Run 03:** resolved by ADR-032 (authentication) and ADR-030 (the builder's API).
+
 ## ADR-014 Role sets and the least-privilege database role
 
 **Roles.** Section 1.3 says ADMIN "manages users and demo resets", while Section 9 uses "Engineer+". Guards therefore use explicit sets, not a hierarchy: every role can read; `ENGINEER` and `ARCHITECT` can run jobs; only `ARCHITECT` approves; `ARCHITECT` and `ADMIN` read the audit log; only `ADMIN` manages users. A test pins the whole matrix.
@@ -87,6 +89,8 @@ A sliding window per client address and account, plus a wider one per address, h
 ## ADR-016 xUnit v3 on Microsoft.Testing.Platform
 
 The blueprint asks for xUnit. VSTest talks to its test host over loopback TCP, which `nonet` blocks. xUnit v3 test projects are self-hosted executables, and on Microsoft.Testing.Platform (`modern/global.json`) `dotnet test` needs no TCP. Verified: `build-and-test` passes under `nonet`. Run 03 must check that Stryker.NET works in this mode; it may need a runner-side exception or a separate step.
+
+**Run 03:** resolved by ADR-030. Stryker.NET does not work under `nonet`; it runs offline in the network-less builder instead.
 
 ## ADR-017 What the seed covers in Run 01
 
@@ -190,3 +194,76 @@ The blueprint offers Monaco or CodeMirror, and Mermaid or ELK. A read-only viewe
 **Scope.** Display names (browser titles, sign-in page, banner, README, documents and the blueprint) and every identifier that carried the old name: the Compose project, and with it the network and volume names; the database, its owner role and the app role; the Python distribution name and the JWT issuer and audience defaults; the Angular package name, the local-storage theme key and the refresh lock name; the CSRF header, now `X-ParityForge-CSRF`, on both the API and the client; the .NET solution, projects and namespaces (`ParityForge.Modern.sln`, `ParityForge.Placeholder`); the demo account emails (`architect@demo.parityforge.dev` and so on); the test and scratch database names; and the `BRCALL` harness banner comment. BillRite, its programs and its copybooks are not renamed. There is no `render.yaml` yet. Behaviour is otherwise identical. One visible side effect: a theme choice saved in a browser under the old key is not carried over, so it falls back to the system preference once.
 
 **Database name and role: config, not a schema migration.** The database name and owner role are deployment config in `compose.yaml`. The app role name was a constant in migration `0001`, which interpolates it into its `GRANT` statements. It now comes from `APP_DB_ROLE` (default `parityforge_app`, validated as a plain lower-case identifier), which `compose.yaml` passes to both `db/init`, which creates the login, and the orchestrator, which uses it in `DATABASE_URL` and in the migration. No new migration was added and no table, column or constraint changed: the edit to `0001` only moves a name into config. This is safe because no database built from the old name survives anywhere: the owner ran `docker compose down -v`, and no hosted database exists yet (Neon arrives in Run 05). Anyone with a local volume from before the rename must run `docker compose down -v` once, because the Postgres image creates the database and roles only on first start.
+
+## ADR-030 dotnet-builder has no network at all; Stryker.NET runs offline (resolves ADR-016)
+
+**Context.** ADR-016 left open whether Stryker.NET works under `nonet`. It does not. Stryker 4.16.0 and 5.0.0 both construct the HTML reporter's live-update server, which opens a loopback TCP listener, even when only the JSON reporter is selected, and `nonet` refuses every `AF_INET` socket. The VSTest runner also talks to its host over loopback TCP. Evidence: both versions fail at `SseServer.FreeTcpPort` with `SocketException (13): Permission denied` under `nonet`, and both run to completion in a `--network none` container.
+
+**Decision.** `dotnet-builder` runs with `network_mode: none`, so its only interface is `lo` (a test asserts it). Its API is a standard-library HTTP server on a Unix socket in a tmpfs-backed named volume (`builder-socket`), mounted read-only into the orchestrator. Build, unit tests and harness runs still go through `nonet`. Mutation testing runs Stryker.NET 4.16.0 with its Microsoft Testing Platform runner and without `nonet`, because it needs loopback; in a container whose only interface is `lo`, loopback is all it can reach. Stryker is installed into the image at build time with `dotnet tool install --tool-path`, and every package is restored into the image, so nothing at run time needs the network. 4.16.0 is used because its MTP runner was verified here.
+
+**Consequences.** This runner is isolated more strongly than ADR-009's two layers: there is no route to the orchestrator or Postgres at all, with or without the filter. The isolation probe shows that unfiltered code can neither reach the internet nor resolve `orchestrator`. Stryker labels its MTP runner as preview, so each report lists the surviving mutants for a person to check. Coverage analysis is off, because it did not work under MTP; every mutant runs the whole equivalence suite, which is one test.
+
+## ADR-031 The sandbox template and the generated-code deny policy
+
+Generated code supplies `.cs` files only, under `src/` or `tests/`. Everything else is fixed by `runners/dotnet-builder/template/`: the project files, package versions with lock files, an offline `NuGet.config`, `TreatWarningsAsErrors`, the .NET analyzers at `AnalysisLevel=latest`, `AllowUnsafeBlocks=false`, and `Microsoft.CodeAnalysis.BannedApiAnalyzers` 5.0.0 with `BannedSymbols.txt`. The harness program and the equivalence test project are template code and are not subject to the deny list; the generated library and the generated tests are.
+
+The list bans types rather than whole namespaces where a namespace ban would also catch attributes the SDK writes into every assembly (`System.Reflection.AssemblyCompanyAttribute`, `System.Diagnostics.CodeAnalysis`). It covers process and debugger control, `System.Net` and its sub-namespaces, file system types, `Environment` and `AppContext`, the console, the reflection types that inspect or invoke members, `System.Reflection.Emit`, `System.Runtime.Loader`, `System.Runtime.InteropServices` (so `DllImport`), `Unsafe`, `Type`, `Activator`, threads and the GC. Unsafe code fails with CS0227. Nine hostile fixtures, one per category, are built in the real sandbox by `tests/modules/test_sandbox_security.py`, and each must fail with `POLICY_VIOLATION` (RS0030 or CS0227) on the hostile file.
+
+NuGet's restore-time vulnerability audit is off in the template (`NuGetAudit=false`): it needs nuget.org and becomes error NU1900 under warnings-as-errors. Versions are pinned by lock files; auditing them belongs in CI and Dependabot (Run 05).
+
+**Limits.** A deny list can miss a route nobody listed. The `nonet` filter, the container without a network, the memory and time limits and the scrubbed environment are the layers behind it. `dynamic` is not banned; it cannot reach a type by name without the banned reflection and `Type` APIs.
+
+## ADR-032 Runner authentication (resolves ADR-013)
+
+Both runner APIs require `X-Runner-Token` equal to `RUNNER_SHARED_SECRET` (at least 16 characters), compared in constant time. With the variable missing or short, a runner fails closed and answers 503 to every authenticated call. Only `/healthz` is open. The secret lives in `.env`, and `.env.example` holds a placeholder. Executed code never inherits it: children get a short allow-listed environment, and tests check that the secret is absent. Tests also check 401 for a missing, empty or wrong token on every endpoint of both runners.
+
+A caller may lower the builder's test and run time limits per request, never raise them. The orchestrator does so only when `SANDBOX_TEST_TIMEOUT_SECONDS` or `SANDBOX_RUN_TIMEOUT_SECONDS` is set, which the time-out tests use so that they do not wait a full minute.
+
+cobol-runner keeps its HTTP API on the internal `sandbox` network, because it executes only the bundled BillRite build and never accepts code. It gains `GET /v1/info` (the compiler version and a SHA-256 of every bundled source) and a `trace` option on `BRCALL`, which uses a second build compiled with `-ftrace` for paragraph coverage.
+
+## ADR-033 Equivalence harness inputs and reports
+
+**Total.** `EQUIVALENCE_CASES` (default 500) is the total per module, as Blueprint Section 7.1 says. It is made of every source in this order: PIC boundaries, date windows, copybook constants, verified rules (their examples, and each condition true and false), recorded BillRite data (at most 30% of the total), and seeded Hypothesis draws to fill the rest. The request asked for "seeded Hypothesis cases (500 per module)"; this reads it together with the blueprint's 500-case default as one total of 500 that Hypothesis completes, not 500 random cases on top. Duplicates are dropped in that order, and a rule-derived duplicate still credits its rule, so "rules exercised" is not understated.
+
+**Recorded data** comes from the bundled data files plus BILLFILE from a legacy batch run in the sandbox, mapped to each module's inputs exactly as BILLRUN's MOVE statements do (`services/harness/recorded.py`). A test replays recorded RATECALC inputs and checks the results against the billed amounts.
+
+**Dates.** A numeric field of length 6 whose name contains `DATE` is treated as YYMMDD and gets years 00, 49, 50, 51 and 99 with month and day edges. That is how the century window (pivot 50) is exercised.
+
+**Comparison** is per output field, from the parameter block in CALLREC: exact decimals at the declared scale, exact text including padding, and a record of the wrong length, or a `!EXCEPTION` marker from the harness, mismatches as a whole. There is no tolerance.
+
+**Coverage** is the distinct paragraphs entered, from GnuCOBOL's `-ftrace` log, over the program's paragraphs excluding `-EXIT` labels. Dead paragraphs count in the denominator, so RATECALC cannot reach 100%.
+
+**Reports** hold no timestamps or durations, so the same seed, artifact and runners give an identical report; a test runs a verification twice and compares the JSON byte for byte. Each report records the harness, generator and Hypothesis versions, the GnuCOBOL version and the source hashes, the .NET SDK, Stryker and template hashes, and the artifact's SHA-256. Mutation testing runs only when every case matched, because Stryker refuses a suite whose first run fails.
+
+Hypothesis moves from the dev group to the runtime dependencies, because the harness uses it outside tests.
+
+## ADR-034 Gates and exceptions
+
+Gates are evaluated in `services/gates.py` and nowhere else: BUILD (the build and analyzers succeeded with no errors), UNIT_TESTS (every generated test passed, and at least one ran), EQUIVALENCE (at least one case, and none failed), COVERAGE (at or above `COVERAGE_THRESHOLD`, default 85) and MUTATION (at or above `MUTATION_THRESHOLD`, default 70). A run stores its gates as evaluated. No endpoint sets a module state.
+
+An architect may record an exception that lowers the coverage or mutation threshold of one module, with a reason and `expected_version`. Build, unit tests and equivalence cannot be excepted. Exceptions go into a new append-only table, `gate_exceptions`: the app role can insert and read, never update or delete, and a test proves it. The latest exception per gate applies. Recording one re-evaluates the latest run of the current artifact at once, and moves the module between VERIFIED and BLOCKED if the outcome changes. The module detail shows the gates under today's thresholds.
+
+## ADR-035 Module lifecycle, jobs, and what cannot be executed
+
+- **States.** PENDING, then MIGRATING, then VERIFYING, then VERIFIED or BLOCKED. BUILD_FAILED when the repair budget is spent or a sandbox limit is hit. A repair starts from BLOCKED or BUILD_FAILED. `state_reason` holds a fixed code such as `EQUIVALENCE_FAILED` or `SANDBOX_TIMEOUT`.
+- **A migration queues its verification.** MIGRATE and REPAIR build and test in the sandbox and, when the artifact builds and its tests pass, queue a VERIFY job. Blueprint Section 3.1 treats them as one step for the engineer.
+- **Repair budget.** At most `REPAIR_MAX_ATTEMPTS` (3) repairs per migration lineage, counted as REPAIR artifacts since the latest MIGRATION artifact. Build and test failures are repaired automatically within the budget. A time-out or a memory limit is not repaired: the job fails at once (Blueprint Section 14). An equivalence failure is repaired only when a person asks, with the mismatch report as input.
+- **Job reuse.** PLAN, MIGRATE, REPAIR, VERIFY and MUTATE reuse only a queued or running job with the same input hash, so a person can deliberately run a verification again while two identical requests still cannot race. ANALYZE and EXTRACT keep the Run 02 behaviour.
+- **Lease.** `JOB_LEASE_SECONDS` now defaults to 1800, because a verification with mutation testing can take minutes.
+- **BILLRUN** is in the plan and gets a module, but cannot be migrated or verified in this version: BRCALL has no per-record entry for the batch driver (409 `MODULE_NOT_SUPPORTED`). It stays on legacy.
+- **Uploads are never executed.** Only a BUNDLED project can be migrated or verified, and only if every program and copybook hashes to what cobol-runner reports it built (`LEGACY_SOURCE_MISMATCH` otherwise). An uploaded project can be analyzed and its rules extracted, and nothing more (409 `UPLOAD_NOT_EXECUTABLE`).
+- **Migration needs verified rules.** Only VERIFIED rules go into `migrate-v1` and `repair-v1`. With none, migration is refused (409 `NO_VERIFIED_RULES`).
+
+## ADR-036 The plan
+
+The agent proposes services, risks and notes (`plan-v1`). The contract has no order and no estimate field, so a model cannot supply either. The order is a topological sort of the CALLS edges, callees first, with ties broken by the line of the first call site; for BillRite that gives MTRVAL, RATECALC, LATEFEE, STMTGEN, BILLRUN. The estimate is relative effort points from measured metrics (code lines, decisions, PERFORM THRU, GO TO, ROUNDED, REDEFINES, date functions, verified rules), stated in points rather than hours to avoid over-claiming. Risk signals come from the same analysis and are shown next to the agent's risks. The plan prompt holds analysis facts only, never source text. Each proposal is a new version, and only the latest can be decided, with `expected_version`. Approval creates one module per program in plan order. Approving a later plan updates the service and position of existing modules but keeps their state and history.
+
+## ADR-037 What the seed covers in Run 03 (extends ADR-024), and the demo reset
+
+The seed now also verifies RATECALC's unflagged rules, because migration needs verified rules. Its flagged rules, including the one built from the injection comment, stay undecided, so a visitor still has a real review to do. In mock mode the seed then proposes the plan, approves it as a labelled demo decision ("Demo seed decision, not a human review", with `seeded: true` in the audit entry), and migrates the four called programs through the real sandbox and harness. Their states and numbers therefore come from real runs: RATECALC ends BLOCKED with its banker's-rounding mismatches, and the other three end VERIFIED. Run 04 extends this to the mixed states of Section 8.2. A database seeded before Run 03 has no verified RATECALC rules, and the seed then leaves that module alone rather than override a person.
+
+`python -m app.scripts.reset_demo --confirm` is the guarded demo reset of Section 8.2. It refuses without `--confirm` and outside `DEMO_MODE`, deletes the bundled BillRite project and everything that hangs off it, and runs the seed again. Users, approvals and the append-only audit log stay, and the reset itself is audited. The browser suite runs it before every run, because its journeys change the project.
+
+## ADR-038 The browser suite (Playwright and axe)
+
+`e2e/` holds Playwright 1.64.1 and `@axe-core/playwright` 4.14.0, run from the host against the running stack (`cd e2e; npm ci; npx playwright install chromium; npx playwright test`). The global setup runs the demo reset, so the suite starts from the seeded state every time; `E2E_SKIP_RESET=1` skips it. Specs run in file order with one worker, because they change shared state. Accessibility checks use the WCAG 2.0 and 2.1 A and AA rules and fail on any serious or critical violation. Layout checks fail on any sideways page scroll. Screenshots go to `assets/screenshots/`.

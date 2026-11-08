@@ -1,5 +1,7 @@
 # Next agent prompt: Run 03
 
+> **Resume note (2026-11-08).** Run 03 is complete and pushed (`docs/RUN_REPORTS/RUN_03.md`). The combined Run 03 + Run 04 session continues with Part B (Run 04 scope); its checklist is at the top of `docs/IMPLEMENTATION_STATUS.md`. To resume after an interruption, read that checklist and continue the unchecked Part B items. The Run 03 instructions below are kept for reference until Part B replaces this file with the Run 05 prompt.
+
 Paste everything below this line.
 
 ---

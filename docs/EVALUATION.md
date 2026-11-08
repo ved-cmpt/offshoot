@@ -97,3 +97,38 @@ The method itself is tested on a synthetic key in `orchestrator/tests/agent/test
 | Live Gemini rule extraction: precision, recall, cost | Run 05 (owner-run, capped) |
 | Whether Gemini accepts the response schema | Run 05 (ADR-027) |
 | Migration: compile, test and equivalence rates, repair attempts | Run 03 onward |
+
+## Migration and verification in mock mode (Run 03)
+
+**Read this first.** The C# code being verified here comes from **recorded fixtures**, written by hand by an implementation agent, not from a model. The first RATECALC fixture rounds with `Math.Round` on purpose, so that the harness has a real defect to find. These numbers show that the sandbox, the harness and the gates work on real executions of the real COBOL and real compiled C#. **They say nothing about how well Gemini or any other model migrates code.** A capped live sample is planned for Run 05 and has not been run.
+
+### Results
+
+From the stored verification runs of a clean-slate seed (`docker compose down -v`, migrate, seed) on 2026-11-08, seed `20261107`, 500 cases per module. Every value below is in `verification_runs`; the same seed reproduces them exactly (ADR-033).
+
+| Module | First artifact | Unit tests | Identical cases | Paragraph coverage | Mutation score | State |
+|---|---|---|---|---|---|---|
+| MTRVAL | built | 8 of 8 | 500 of 500 | 100.00% | 78.75% (63 of 80 mutants detected) | VERIFIED |
+| RATECALC | built | 8 of 8 | **484 of 500** | 93.33% | not run (equivalence failed) | **BLOCKED** |
+| RATECALC after one repair | built | 11 of 11 | 500 of 500 | 93.33% | 79.49% | VERIFIED |
+| LATEFEE | built | 12 of 12 | 500 of 500 | 100.00% | 82.98% (78 of 94) | VERIFIED |
+| STMTGEN | built | 8 of 8 | 500 of 500 | 100.00% | 88.64% (78 of 88) | VERIFIED |
+
+| Measure (fixtures, not a model) | Value |
+|---|---|
+| Compile success on the first artifact | 4 of 4 modules |
+| Unit tests passing on the first artifact | 4 of 4 modules |
+| Equivalence 100% on the first attempt | 3 of 4 modules |
+| Equivalence 100% after repair | 4 of 4 modules |
+| Repair attempts used | 1 (RATECALC) of a budget of 3 |
+| Model-initiated approvals or state changes | 0: no endpoint or contract field allows one |
+
+**The RATECALC defect.** 16 of 500 cases differ, each by exactly one cent: 8 where the energy charge's tier sum ends in a half cent, and 8 more where only the 2.5% levy does. In every one the legacy value is the half-up one. The mismatched fields are `RC-OUT-ENERGY` (8), `RC-OUT-SUBTOTAL` (8), `RC-OUT-LEVY` (8) and `RC-OUT-TOTAL` (16). The fixture's own unit tests pass, because none of their examples lands on a midpoint; only the comparison with the real program shows the defect. RATECALC's coverage cannot reach 100%: its one dead paragraph, `8500-APPLY-WINTER-DISCOUNT`, is never performed.
+
+**Where the 500 cases came from** (RATECALC): 20 PIC boundaries, 48 copybook constants, 2 rule-derived (the other rule values duplicate constant cases and still credit their rules), 150 recorded BillRite inputs, 280 seeded Hypothesis draws. LATEFEE adds 111 date-window cases around the century pivot.
+
+**Sandbox attacks** (Section 14), each run in the real sandbox by `tests/modules/test_sandbox_security.py`: 9 of 9 hostile fixtures (process, HTTP client, socket, file system, environment, reflection emit, type by name, native call, unsafe code) fail the build with `POLICY_VIOLATION`; an infinite loop in unit tests and one during verification each end in `SANDBOX_TIMEOUT`; a 4 GB allocation ends in `SANDBOX_MEMORY_LIMIT`; nothing in any of these reaches a verification run.
+
+### Method
+
+`docker compose exec orchestrator python -m app.scripts.seed_demo` on a clean stack runs plan, migration and verification through the job queue, exactly as the API does. The tables are read back from `verification_runs` and `code_artifacts`. Mutation scores are Stryker.NET 4.16.0's, with the 500 equivalence cases as the test suite; its MTP runner is marked preview by Stryker, so each report lists its surviving mutants.

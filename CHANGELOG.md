@@ -4,6 +4,15 @@ All notable changes are recorded here. Dates are UTC.
 
 ## [Unreleased]
 
+### Run 03 (2026-11-08)
+
+- Runner APIs require a shared secret and fail closed without it. dotnet-builder has no network at all and serves a narrow build, run and mutate API on a Unix socket. Generated C# is built in a fixed template whose banned-API analyzer fails the build on processes, network, file system, environment, reflection, native or unsafe code.
+- Modernization plan: agent-proposed services and risks, migration order from the call graph, measured estimate, architect approval that creates the modules.
+- Migration to C# with `migrate-v1` and `repair-v1`, sandbox build and unit tests, and a repair loop of at most three attempts. Mock fixtures for MTRVAL, RATECALC, LATEFEE and STMTGEN, with a banker's-rounding RATECALC and its repair.
+- Equivalence harness: 500 seeded cases per module from PIC boundaries, dates, constants, rules, recorded BillRite data and Hypothesis; real COBOL against real compiled C#; exact field-level comparison; paragraph coverage from GnuCOBOL traces; Stryker.NET mutation testing offline; reproducible reports.
+- Server-side gates with recorded exceptions, and tests for the sandbox time and memory limits and network isolation.
+- Angular plan, modules and module workspace screens. Seed extended with the plan and real module runs; guarded demo reset. Playwright and axe suite in `e2e/`.
+
 ### Renamed (2026-11-07)
 
 - The project is renamed from its working name LegacyLens to ParityForge, in display names and in every identifier: Compose project, database and roles, Python and Angular packages, the CSRF header, the .NET solution and namespaces, and the demo account emails (now `@demo.parityforge.dev`). The app role name is now configured by `APP_DB_ROLE`. Behaviour is unchanged. Existing local stacks need `docker compose down -v` once (ADR-029).

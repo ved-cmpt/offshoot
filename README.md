@@ -1,6 +1,6 @@
 # ParityForge
 
-**Status: in development (Run 02 of 6).** The legacy application, sign-in, deterministic inventory and rule extraction with human review work, in mock AI mode. There is no migration, equivalence verification or dashboard yet. Live Gemini is implemented but has never been called. See [`docs/IMPLEMENTATION_STATUS.md`](docs/IMPLEMENTATION_STATUS.md) for exactly what works today.
+**Status: in development (Run 03 of 6).** The legacy application, sign-in, deterministic inventory, rule extraction with human review, the modernization plan, migration to C# in a network-less sandbox, and golden-master equivalence verification with coverage, mutation testing and gates all work, in mock AI mode. Approvals, the routing facade and the dashboard come next. Live Gemini is implemented but has never been called. See [`docs/IMPLEMENTATION_STATUS.md`](docs/IMPLEMENTATION_STATUS.md) for exactly what works today.
 
 ParityForge will be an AI-assisted legacy modernization workbench: it inventories a COBOL application, extracts business rules that a person verifies against the source, migrates modules to C#, and proves behavioural equivalence by running the real legacy program alongside the new code. The model proposes; deterministic tooling verifies; people approve.
 
@@ -21,7 +21,9 @@ docker compose exec orchestrator python -m app.scripts.seed_demo
 
 Then open http://localhost:4200 and pick a demo account. API health is at http://localhost:8100/api/v1/readyz.
 
-Open **BillRite** to browse the inventory and its call graph, read the source, and review rules. Sign in as the demo architect to verify or reject the undecided RATECALC rules. Rules in the other programs carry demo decisions made by the seed, labelled as not being human reviews.
+The seed runs the real pipeline, so it takes about a minute. Open **BillRite** to browse the inventory and its call graph, read the source and review rules, then open **Plan** and **Modules**. RATECALC is blocked: its first C# translation rounds to the even cent, and the harness found the cases where that differs from COBOL's half-up rounding. Sign in as the demo engineer and press **Repair** to watch the fix verified against all 500 cases. Seeded decisions are labelled as not being human reviews.
+
+To put the demo back to its seeded state: `docker compose exec orchestrator python -m app.scripts.reset_demo --confirm`.
 
 ## AI modes
 
@@ -49,6 +51,15 @@ docker compose exec frontend npm run lint
 docker compose exec frontend npm test
 docker compose exec frontend npm run build
 docker compose run --rm dotnet-builder build-and-test
+```
+
+Browser journeys and accessibility checks run from the host against the running stack. They reset the demo first:
+
+```powershell
+cd e2e
+npm ci
+npx playwright install chromium
+npx playwright test
 ```
 
 API tests create and remove their own `parityforge_test` database. The COBOL characterization tests run the real programs in `cobol-runner`.
