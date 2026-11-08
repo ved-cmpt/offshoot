@@ -22,7 +22,7 @@ jobs:
     runs-on: ubuntu-24.04
     timeout-minutes: 120
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - name: Environment
         run: |
           cp .env.example .env
@@ -37,7 +37,7 @@ jobs:
           docker compose exec -T orchestrator python -m app.scripts.seed_demo
       - name: The whole pytest suite
         run: docker compose exec -T orchestrator pytest
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@v7
         with:
           node-version: "24"
           cache: npm
@@ -65,7 +65,7 @@ jobs:
         run: npx playwright test -c playwright.smoke.config.ts
       - name: Reports on failure
         if: failure()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: playwright-reports
           path: |
