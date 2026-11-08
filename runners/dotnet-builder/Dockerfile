@@ -4,7 +4,7 @@ RUN apt-get update \
 COPY runners/common/nonet.c /tmp/nonet.c
 RUN gcc -O2 -Wall -Wextra -Werror -static -o /nonet /tmp/nonet.c -lseccomp
 
-FROM mcr.microsoft.com/dotnet/sdk:10.0.403@sha256:de4fe90a98845d75910b9769662465c84de1a934665c431279d1382b2bddc02b
+FROM mcr.microsoft.com/dotnet/sdk:10.0.403@sha256:212fe4cb74627d5adf9817a4088906ae3edff1bd853bb27565d4b46731efe61e
 ENV DOTNET_CLI_TELEMETRY_OPTOUT=1 \
     DOTNET_NOLOGO=1 \
     DOTNET_CLI_HOME=/tmp/dotnet-home \
