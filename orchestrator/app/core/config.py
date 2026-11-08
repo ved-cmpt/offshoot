@@ -40,8 +40,13 @@ class Settings(BaseSettings):
 
     gemini_api_key: SecretStr = SecretStr("")
     gemini_model: str = ""
+    # How the response schema reaches Gemini: as a structured schema, or written into the
+    # instructions (ADR-046). The strict contract is validated locally in both modes.
+    gemini_schema_mode: Literal["json_schema", "prompt"] = "prompt"
     ai_timeout_seconds: float = Field(default=60.0, gt=0, le=300)
     ai_project_call_budget: int = Field(default=50, ge=0)
+    # A hard cap on live model calls across the whole database, every project together (ADR-046).
+    ai_live_call_cap: int = Field(default=30, ge=0)
     ai_low_confidence_threshold: float = Field(default=0.6, ge=0, le=1)
     # Blueprint Section 3.4: the demo allows approving your own edit, with an audit flag.
     allow_self_approval: bool = True

@@ -283,11 +283,11 @@ def _request(url: str, data: dict[str, Any] | None = None, token: str | None = N
         return json.load(response)
 
 
-def fetch_rules(api: str, password: str) -> list[dict[str, Any]]:
+def fetch_rules(api: str, password: str, project_name: str = "BillRite") -> list[dict[str, Any]]:
     session = _request(f"{api}/api/v1/auth/login", {"email": VIEWER_EMAIL, "password": password})
     token = session["access_token"]
     projects = _request(f"{api}/api/v1/projects", token=token)["items"]
-    project = next(item for item in projects if item["name"] == "BillRite")
+    project = next(item for item in projects if item["name"] == project_name)
     rules: list[dict[str, Any]] = []
     while True:
         page = _request(f"{api}/api/v1/projects/{project['id']}/rules?limit=50&offset={len(rules)}", token=token)
@@ -314,6 +314,10 @@ def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     parser.add_argument("--api", default="http://localhost:8100")
     parser.add_argument("--rules-json", type=Path, help="Read rules from this file instead of the API.")
+    parser.add_argument("--project", default="BillRite", help="The project whose rules are measured.")
+    parser.add_argument(
+        "--programs", help="Comma-separated programs: measure recall against these programs' key rows only."
+    )
     parser.add_argument("--key", type=Path, default=DEFAULT_KEY)
     parser.add_argument("--threshold", type=float, default=DEFAULT_THRESHOLD)
     parser.add_argument("--json-out", type=Path)
@@ -346,9 +350,13 @@ def main() -> int:
         if not password:
             print("DEMO_PASSWORD_VIEWER is not set", file=sys.stderr)
             return 2
-        raw_rules = fetch_rules(args.api, password)
+        raw_rules = fetch_rules(args.api, password, args.project)
     rules = [to_extracted(raw) for raw in raw_rules]
     key = parse_key(key_text)
+    if args.programs:
+        wanted = {name.strip().upper() for name in args.programs.split(",") if name.strip()}
+        rules = [rule for rule in rules if rule.program in wanted]
+        key = [row for row in key if row.program in wanted]
     report = evaluate(rules, key, args.threshold).as_dict()
     report["sensitivity"] = {
         str(threshold): {

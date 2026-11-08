@@ -14,6 +14,8 @@ AI_RATE_LIMITED = "AI_RATE_LIMITED"
 AI_INVALID_OUTPUT = "AI_INVALID_OUTPUT"
 AI_AUTH = "AI_AUTH"
 AI_UNAVAILABLE = "AI_UNAVAILABLE"
+# The provider refused the request itself (HTTP 400). Retrying the same request cannot help.
+AI_REQUEST_REJECTED = "AI_REQUEST_REJECTED"
 AI_NOT_CONFIGURED = "AI_NOT_CONFIGURED"
 AI_BUDGET_EXCEEDED = "AI_BUDGET_EXCEEDED"
 
@@ -68,6 +70,7 @@ def get_agent_provider(settings: Settings) -> AgentProvider:
             api_key=settings.gemini_api_key.get_secret_value(),
             model=settings.gemini_model,
             timeout_seconds=settings.ai_timeout_seconds,
+            schema_mode=settings.gemini_schema_mode,
         )
     from app.services.agent.mock import MockAgent
 

@@ -20,6 +20,7 @@ from app.services.agent.provider import (
     AI_INVALID_OUTPUT,
     AI_NOT_CONFIGURED,
     AI_RATE_LIMITED,
+    AI_REQUEST_REJECTED,
     AI_TIMEOUT,
     AI_UNAVAILABLE,
     AgentError,
@@ -190,7 +191,7 @@ def test_the_budget_can_limit_it_to_one_attempt() -> None:
         (ApiFailure(401), AI_AUTH, 1),
         (ApiFailure(403), AI_AUTH, 1),
         (ApiFailure(400, "API key not valid"), AI_AUTH, 1),
-        (ApiFailure(400, "bad request"), AI_UNAVAILABLE, 2),
+        (ApiFailure(400, "bad request"), AI_REQUEST_REJECTED, 1),
         (ApiFailure(404), AI_UNAVAILABLE, 2),
         (ApiFailure(500), AI_UNAVAILABLE, 2),
         (ApiFailure(503), AI_UNAVAILABLE, 2),
@@ -221,6 +222,23 @@ def test_failure_text_never_leaves_the_adapter(caplog: pytest.LogCaptureFixture)
     assert error.__suppress_context__ is True
     assert SECRET not in repr(error.attempts)
     assert SECRET not in caplog.text
+
+
+def test_a_failure_keeps_only_its_status_codes_and_class_name() -> None:
+    failure = ApiFailure(429, "quota")
+    failure.status = "RESOURCE_EXHAUSTED"  # type: ignore[attr-defined]
+    odd = ApiFailure(400, "x")
+    odd.status = f"not an enum {SECRET}"  # type: ignore[attr-defined]
+    gemini, _client = agent([failure, odd, odd])
+    with pytest.raises(AgentError) as caught:
+        gemini.extract_rules(request(), 2)
+    details = [attempt.tokens["failure"] for attempt in caught.value.attempts]
+    assert details == [
+        {"error_type": "ApiFailure", "http_status": 429, "api_status": "RESOURCE_EXHAUSTED"},
+        {"error_type": "ApiFailure", "http_status": 400},
+    ]
+    assert caught.value.code == AI_REQUEST_REJECTED
+    assert SECRET not in repr(details)
 
 
 def test_the_key_does_not_appear_in_the_agents_repr_or_identity() -> None:
@@ -331,3 +349,93 @@ def test_identity_separates_prompt_versions() -> None:
     gemini, _client = agent([])
     assert gemini.identity("RATECALC") == f"gemini:{MODEL}:RATECALC"
     assert gemini.identity("RATECALC", "migrate-v1") != gemini.identity("RATECALC", "repair-v1")
+
+
+def test_a_refusal_keeps_only_the_schema_words_it_names() -> None:
+    gemini, _client = agent([ApiFailure(400, 'Unknown name "maxProperties" at response_json_schema')])
+    with pytest.raises(AgentError) as caught:
+        gemini.extract_rules(request(), 2)
+    detail = caught.value.attempts[0].tokens["failure"]
+    assert detail["schema_words"] == ["maxProperties", "response_json_schema"]
+    assert SECRET not in repr(detail)
+
+
+def _schema_keywords(node: object, named: bool = False) -> set[str]:
+    """Every keyword in a schema, skipping the property and definition names themselves."""
+    found: set[str] = set()
+    if isinstance(node, dict):
+        for key, value in node.items():
+            if not named:
+                found.add(key)
+            found |= _schema_keywords(value, named=key in ("properties", "$defs") and not named)
+    elif isinstance(node, list):
+        for item in node:
+            found |= _schema_keywords(item)
+    return found
+
+
+def test_the_provider_schema_keeps_structure_and_drops_unsupported_keywords() -> None:
+    from app.services.agent.contracts import MigrationOutput, PlanOutput, RuleExtractionOutput
+    from app.services.agent.gemini import PROVIDER_SCHEMA_KEYWORDS, provider_schema
+
+    for contract in (RuleExtractionOutput, PlanOutput, MigrationOutput):
+        full = contract.model_json_schema()
+        reduced = provider_schema(full)
+        assert set(reduced["$defs"]) == set(full["$defs"])
+        assert reduced["required"] == full["required"]
+        assert _schema_keywords(reduced) <= set(PROVIDER_SCHEMA_KEYWORDS)
+        assert "maxLength" in _schema_keywords(full)
+    rules = provider_schema(RuleExtractionOutput.model_json_schema())
+    assert "title" in rules["$defs"]["ExtractedRule"]["properties"]
+    assert "maxLength" not in rules["$defs"]["ExtractedRule"]["properties"]["title"]
+
+
+def test_a_refusal_keeps_structured_field_paths_but_not_messages() -> None:
+    failure = ApiFailure(400, "bad")
+    failure.details = {  # type: ignore[attr-defined]
+        "error": {
+            "message": f"quoted {SECRET}",
+            "details": [
+                {
+                    "@type": "type.googleapis.com/google.rpc.BadRequest",
+                    "fieldViolations": [
+                        {"field": "generation_config.response_json_schema", "description": f"text {SECRET}"},
+                        {"field": f"not a path {SECRET}"},
+                    ],
+                }
+            ],
+        }
+    }
+    gemini, _client = agent([failure])
+    with pytest.raises(AgentError) as caught:
+        gemini.extract_rules(request(), 2)
+    detail = caught.value.attempts[0].tokens["failure"]
+    assert detail["fields"] == ["type.googleapis.com/google.rpc.BadRequest", "generation_config.response_json_schema"]
+    assert SECRET not in repr(detail)
+
+
+def test_the_prompt_schema_mode_sends_no_structured_schema_and_writes_it_into_the_instructions() -> None:
+    from app.services.agent.gemini import CONFIG_FACTORIES, SCHEMA_CLOSE, SCHEMA_OPEN
+
+    structured = CONFIG_FACTORIES["json_schema"](request())
+    written = CONFIG_FACTORIES["prompt"](request())
+    assert structured.response_json_schema is not None
+    assert written.response_json_schema is None
+    assert written.response_mime_type == "application/json"
+    instructions = written.system_instruction
+    assert instructions.startswith(request().system_instructions)
+    schema = instructions.split(SCHEMA_OPEN, 1)[1].split(SCHEMA_CLOSE, 1)[0]
+    assert json.loads(schema) == request().response_schema
+
+
+def test_the_schema_mode_is_part_of_the_identity_and_prompt_is_the_default() -> None:
+    from app.core.config import get_settings
+    from app.services.agent.provider import get_agent_provider
+
+    assert GeminiAgent(SECRET, MODEL, 5.0, schema_mode="prompt").identity("MTRVAL") != GeminiAgent(
+        SECRET, MODEL, 5.0
+    ).identity("MTRVAL")
+    settings = get_settings().model_copy(update={"ai_mode": "gemini"})
+    provider = get_agent_provider(settings)
+    assert isinstance(provider, GeminiAgent)
+    assert provider.schema_mode == "prompt"

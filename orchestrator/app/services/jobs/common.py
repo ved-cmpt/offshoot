@@ -49,11 +49,20 @@ def live_calls_used(db: Session, project_id: uuid.UUID) -> int:
     )
 
 
+def live_calls_used_everywhere(db: Session) -> int:
+    return db.scalar(select(func.count()).select_from(AiCall).where(AiCall.mode != "mock")) or 0
+
+
 def attempts_allowed(db: Session, job: Job, provider: AgentProvider, settings: Settings, request: AgentRequest) -> int:
-    """Mock calls are free. Live calls count against the project's budget (ADR-026)."""
+    """Mock calls are free. Live calls count against the project's budget (ADR-026) and against
+    a cap for the whole database (ADR-046). Every attempt is one stored `ai_calls` row, and jobs
+    run one at a time, so neither limit can be overrun."""
     if provider.mode == "mock":
         return LIVE_ATTEMPTS_PER_CALL
-    remaining = settings.ai_project_call_budget - live_calls_used(db, job.project_id)
+    remaining = min(
+        settings.ai_project_call_budget - live_calls_used(db, job.project_id),
+        settings.ai_live_call_cap - live_calls_used_everywhere(db),
+    )
     if remaining <= 0:
         raise JobFailed(AI_BUDGET_EXCEEDED, request=request)
     return min(LIVE_ATTEMPTS_PER_CALL, remaining)

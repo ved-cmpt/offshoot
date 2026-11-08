@@ -786,6 +786,31 @@ def test_the_live_budget_stops_calls_per_project(
     assert provider.calls == 2
 
 
+def test_the_live_cap_stops_calls_across_every_project(
+    client: TestClient, db: Session, engineer: dict[str, str], monkeypatch: pytest.MonkeyPatch
+) -> None:
+    from app.services.jobs.common import live_calls_used_everywhere
+
+    first, second = make_project(db), make_project(db)
+    analyze(client, engineer, first.id)
+    analyze(client, engineer, second.id)
+    provider = CountingProvider()
+    monkeypatch.setattr(handlers, "get_agent_provider", lambda _settings: provider)
+    monkeypatch.setattr("app.routers.rules.get_agent_provider", lambda _settings: provider)
+    monkeypatch.setattr(get_settings(), "ai_mode", "gemini")
+    monkeypatch.setattr(get_settings(), "ai_project_call_budget", 1000)
+    # Three live calls left in the whole database, whatever each project's own budget says.
+    monkeypatch.setattr(get_settings(), "ai_live_call_cap", live_calls_used_everywhere(db) + 3)
+
+    assert extract(client, engineer, first.id, "RATECALC")["status"] == "SUCCEEDED"
+    assert provider.seen_attempts == 2
+    assert extract(client, engineer, second.id, "MTRVAL")["status"] == "SUCCEEDED"
+    assert provider.seen_attempts == 1
+    job = extract(client, engineer, second.id, "LATEFEE")
+    assert (job["status"], job["error_code"]) == ("FAILED", "AI_BUDGET_EXCEEDED")
+    assert provider.calls == 2
+
+
 def test_mock_mode_works_without_a_key(client: TestClient, db: Session, engineer: dict[str, str]) -> None:
     settings = get_settings()
     assert settings.ai_mode == "mock"

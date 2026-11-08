@@ -275,6 +275,7 @@ const REASON_TEXT: Record<string, string> = {
   LEGACY_SOURCE_MISMATCH: 'The project sources differ from the legacy program the runner executes.',
   AI_INVALID_OUTPUT: 'The agent returned output that broke its contract, so nothing was kept.',
   AI_UNAVAILABLE: 'The agent could not be reached.',
+  AI_REQUEST_REJECTED: 'The agent refused the request. Trying again will not help.',
 };
 
 export function describeReason(code: string | null): string {

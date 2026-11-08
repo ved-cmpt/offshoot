@@ -144,11 +144,11 @@ def read_sources(root: Path) -> dict[str, tuple[str, str]]:
     return found
 
 
-def seed_project(db: Session, owner: User, root: Path, result: SeedResult) -> Project:
-    project = db.scalar(select(Project).where(Project.name == BILLRITE_NAME, Project.source_kind == "BUNDLED"))
+def seed_project(db: Session, owner: User, root: Path, result: SeedResult, name: str = BILLRITE_NAME) -> Project:
+    project = db.scalar(select(Project).where(Project.name == name, Project.source_kind == "BUNDLED"))
     if project is None:
         project = Project(
-            name=BILLRITE_NAME,
+            name=name,
             description=BILLRITE_DESCRIPTION,
             source_kind="BUNDLED",
             status="IMPORTED",

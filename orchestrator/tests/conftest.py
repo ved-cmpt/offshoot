@@ -35,6 +35,8 @@ os.environ.update(
         "CORS_ORIGINS": "http://localhost:4200",
         "LOGIN_RATE_LIMIT_PER_MINUTE": "5",
         "LOGIN_RATE_LIMIT_IP_PER_MINUTE": "1000",
+        # Tests record fake live calls in a shared database; the cap has its own test.
+        "AI_LIVE_CALL_CAP": "1000000",
         "DEMO_PASSWORD_VIEWER": "test-viewer-pass",
         "DEMO_PASSWORD_ENGINEER": "test-engineer-pass",
         "DEMO_PASSWORD_ARCHITECT": "test-architect-pass",

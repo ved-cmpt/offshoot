@@ -261,6 +261,7 @@ const JOB_ERROR_TEXT: Record<string, string> = {
     'The AI provider returned output that failed validation, so nothing was stored.',
   AI_AUTH: 'The AI provider refused the configured key.',
   AI_UNAVAILABLE: 'The AI provider could not be reached.',
+  AI_REQUEST_REJECTED: 'The AI provider refused the request. Trying again will not help.',
   AI_NOT_CONFIGURED: 'Live AI mode is selected, but no key or model is configured.',
   AI_BUDGET_EXCEEDED: 'This project has used its AI call budget.',
   NO_PROGRAMS: 'This project has no COBOL programs to analyze.',
