@@ -1,5 +1,22 @@
+# Build contexts at the repository root: the runners, the facade, and the production image.
+# Everything else stays out, including .env and .env.* (secrets) and docs/ (the answer key).
 **
 !runners/**
 !modern/**
+!orchestrator/pyproject.toml
+!orchestrator/uv.lock
+!orchestrator/alembic.ini
+!orchestrator/alembic/**
+!orchestrator/app/**
+!frontend/**
+!legacy/billrite/src/**
+!legacy/billrite/copy/**
+!legacy/billrite/data/LAYOUTS.txt
 **/bin/
 **/obj/
+**/node_modules/
+**/.angular/
+**/dist/
+**/__pycache__/
+**/.env
+**/.env.*

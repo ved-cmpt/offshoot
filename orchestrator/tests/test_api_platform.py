@@ -256,7 +256,13 @@ def test_config_hides_demo_accounts_outside_demo_mode(client: TestClient) -> Non
         body = client.get("/api/v1/config").json()
     finally:
         app.dependency_overrides.clear()
-    assert body == {"demo_mode": False, "ai_mode": "mock", "demo_accounts": []}
+    assert body == {
+        "demo_mode": False,
+        "ai_mode": "mock",
+        "demo_accounts": [],
+        "execution_enabled": True,
+        "demo_reset_hours": 0,
+    }
 
 
 def test_config_never_exposes_secrets(client: TestClient) -> None:

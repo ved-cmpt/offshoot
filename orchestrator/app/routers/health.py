@@ -22,6 +22,8 @@ class PublicConfig(BaseModel):
     demo_mode: bool
     ai_mode: str
     demo_accounts: list[DemoAccount]
+    execution_enabled: bool
+    demo_reset_hours: float
 
 
 @router.get("/healthz")
@@ -54,4 +56,10 @@ def public_config(settings: AppSettings) -> PublicConfig:
         if settings.demo_mode
         else []
     )
-    return PublicConfig(demo_mode=settings.demo_mode, ai_mode=settings.ai_mode, demo_accounts=accounts)
+    return PublicConfig(
+        demo_mode=settings.demo_mode,
+        ai_mode=settings.ai_mode,
+        demo_accounts=accounts,
+        execution_enabled=settings.execution_enabled,
+        demo_reset_hours=settings.demo_auto_reset_hours if settings.demo_mode else 0,
+    )

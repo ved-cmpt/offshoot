@@ -38,6 +38,13 @@ export async function signIn(page: Page, role: Role): Promise<void> {
   await expect(page).toHaveURL(/\/projects$/);
 }
 
+/** Open the bundled BillRite project from the projects list, and wait until it is open:
+ * the list shows a Modules link for every project, so clicking on before it changes is ambiguous. */
+export async function openBillRite(page: Page): Promise<void> {
+  await page.getByRole('link', { name: 'BillRite', exact: true }).first().click();
+  await expect(page.getByRole('heading', { name: 'BillRite', level: 1, exact: true })).toBeVisible();
+}
+
 /** The BillRite project's id, through the UI's own API. */
 export async function billriteId(request: APIRequestContext, token: string): Promise<string> {
   const response = await request.get('/api/v1/projects', { headers: { Authorization: `Bearer ${token}` } });

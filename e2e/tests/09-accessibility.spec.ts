@@ -1,6 +1,6 @@
 import { Page, expect, test } from '@playwright/test';
 
-import { SCREENSHOTS, Theme, expectAccessible, expectNoSidewaysScroll, signIn, useTheme } from '../helpers';
+import { expectAccessible, expectNoSidewaysScroll, openBillRite, SCREENSHOTS, signIn, Theme, useTheme } from '../helpers';
 
 // Blueprint Section 10: zero serious or critical axe violations and no sideways scroll, on
 // every screen, in both themes, at desktop width and at 375 px.
@@ -15,7 +15,7 @@ const SCREENS: { name: string; open: (page: Page) => Promise<void> }[] = [
   {
     name: 'overview',
     open: async (page) => {
-      await page.getByRole('link', { name: 'BillRite' }).first().click();
+      await openBillRite(page);
       await expect(page.locator('.tile').first()).toBeVisible();
     },
   },

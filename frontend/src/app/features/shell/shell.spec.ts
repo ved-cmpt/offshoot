@@ -19,7 +19,11 @@ describe('Shell', () => {
     fixture.detectChanges();
   }
 
-  async function render(role: Role = 'ARCHITECT', demoMode = true): Promise<void> {
+  async function render(
+    role: Role = 'ARCHITECT',
+    demoMode = true,
+    extra: Record<string, unknown> = {},
+  ): Promise<void> {
     const auth = TestBed.inject(AuthService);
     const login = firstValueFrom(auth.login('a@b.co', 'x'));
     http.expectOne('/api/v1/auth/login').flush({
@@ -34,7 +38,7 @@ describe('Shell', () => {
     fixture.detectChanges();
     http
       .expectOne('/api/v1/config')
-      .flush({ demo_mode: demoMode, ai_mode: 'mock', demo_accounts: [] });
+      .flush({ demo_mode: demoMode, ai_mode: 'mock', demo_accounts: [], ...extra });
     await settle();
   }
 
@@ -70,6 +74,21 @@ describe('Shell', () => {
   it('shows the demo banner in demo mode only', async () => {
     await render('VIEWER', true);
     expect(page.querySelector('.demo-banner')).not.toBeNull();
+  });
+
+  it('says on the public demo that no code runs and that it resets daily', async () => {
+    await render('VIEWER', true, { execution_enabled: false, demo_reset_hours: 24 });
+    const banner = page.querySelector('.demo-banner')?.textContent ?? '';
+    expect(banner).toContain('simulated AI responses');
+    expect(banner).toContain('No code is compiled or run here');
+    expect(banner).toContain('resets every day');
+  });
+
+  it('keeps the banner short where code runs and nothing resets', async () => {
+    await render('VIEWER', true);
+    const banner = page.querySelector('.demo-banner')?.textContent ?? '';
+    expect(banner).not.toContain('No code is compiled');
+    expect(banner).not.toContain('resets');
   });
 
   it('hides the demo banner outside demo mode', async () => {

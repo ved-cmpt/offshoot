@@ -5,12 +5,13 @@ from collections.abc import Callable
 from typing import Annotated
 
 from fastapi import Depends, Request
+from sqlalchemy import func, select, text
 from sqlalchemy.orm import Session
 
 from app.core.config import Settings, get_settings
 from app.core.errors import ApiError, forbidden, unauthorized
 from app.core.security import decode_access_token
-from app.db.models import User
+from app.db.models import Job, User
 from app.db.session import get_db
 
 DbSession = Annotated[Session, Depends(get_db)]
@@ -67,6 +68,34 @@ def require_csrf_header(request: Request, settings: AppSettings) -> None:
     origin = request.headers.get("Origin")
     if origin is None:
         return
-    own_origin = f"{request.url.scheme}://{request.headers.get('host', '')}"
-    if origin != own_origin and origin not in settings.cors_origins:
+    host = request.headers.get("host", "")
+    # Behind a TLS-terminating proxy the app itself sees http, while the browser's origin is https.
+    own_origins = {f"{request.url.scheme}://{host}", *([f"https://{host}"] if settings.cookie_secure else [])}
+    if origin not in own_origins and origin not in settings.cors_origins:
         raise ApiError(403, "CSRF_ORIGIN", "This origin is not allowed.")
+
+
+def require_execution(settings: AppSettings) -> None:
+    """Guard for every endpoint that compiles or runs code (ADR-047)."""
+    if not settings.execution_enabled:
+        raise ApiError(
+            403,
+            "EXECUTION_DISABLED",
+            "This deployment does not compile or run code. Its results come from stored runs.",
+        )
+
+
+def require_job_quota(db: DbSession, settings: AppSettings) -> None:
+    """In demo mode, a cap on jobs in any 24 hours, so visitors cannot fill the database (ADR-048)."""
+    if not settings.demo_mode:
+        return
+    recent = db.scalar(
+        select(func.count()).select_from(Job).where(Job.created_at > func.now() - text("interval '1 day'"))
+    )
+    if (recent or 0) >= settings.demo_daily_job_cap:
+        raise ApiError(
+            429,
+            "DEMO_CAP_REACHED",
+            "The public demo has run its daily share of jobs. It resets daily; please come back later.",
+            {"Retry-After": "3600"},
+        )

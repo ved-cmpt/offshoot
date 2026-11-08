@@ -1,6 +1,6 @@
 import { expect, test } from '@playwright/test';
 
-import { SCREENSHOTS, signIn } from '../helpers';
+import { openBillRite, SCREENSHOTS, signIn } from '../helpers';
 
 const FACADE = process.env.E2E_FACADE_URL ?? 'http://localhost:8200';
 
@@ -9,7 +9,7 @@ const FACADE = process.env.E2E_FACADE_URL ?? 'http://localhost:8200';
 // facade then answers from the repaired C#: half-up rounding, as the COBOL does.
 test('the repaired module is approved, shadowed and promoted to modern', async ({ page, request }) => {
   await signIn(page, 'architect');
-  await page.getByRole('link', { name: 'BillRite' }).first().click();
+  await openBillRite(page);
   await page.getByRole('link', { name: 'Modules', exact: true }).click();
   await page.getByRole('link', { name: 'RATECALC' }).click();
   await expect(page.getByText('Verified and awaiting').first()).toBeVisible();

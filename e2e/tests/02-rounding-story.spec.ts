@@ -1,12 +1,12 @@
 import { expect, test } from '@playwright/test';
 
-import { SCREENSHOTS, signIn } from '../helpers';
+import { openBillRite, SCREENSHOTS, signIn } from '../helpers';
 
 // Blueprint Section 3.1, steps 6 and 7, in the browser: the banker's-rounding artifact is
 // blocked by real mismatches; an engineer repairs it; re-verification passes every case.
 test('the rounding defect is visible, repaired and re-verified', async ({ page }) => {
   await signIn(page, 'engineer');
-  await page.getByRole('link', { name: 'BillRite' }).first().click();
+  await openBillRite(page);
   await page.getByRole('link', { name: 'Modules', exact: true }).click();
   await page.getByRole('link', { name: 'RATECALC' }).click();
 

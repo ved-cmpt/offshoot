@@ -9,7 +9,15 @@ from pydantic import BaseModel, ConfigDict, Field
 from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
-from app.core.deps import ALL_ROLES, ARCHITECT_ONLY, ENGINEER_PLUS, AppSettings, DbSession, require_roles
+from app.core.deps import (
+    ALL_ROLES,
+    ARCHITECT_ONLY,
+    ENGINEER_PLUS,
+    AppSettings,
+    DbSession,
+    require_job_quota,
+    require_roles,
+)
 from app.core.errors import ApiError
 from app.db.models import Approval, InventoryItem, Plan, User
 from app.routers.inventory import JobOut, get_project_or_404, to_job_out
@@ -78,7 +86,9 @@ def _plan_out(db: Session, plan: Plan) -> PlanOut:
     )
 
 
-@router.post("/projects/{project_id}/plan", status_code=status.HTTP_202_ACCEPTED)
+@router.post(
+    "/projects/{project_id}/plan", status_code=status.HTTP_202_ACCEPTED, dependencies=[Depends(require_job_quota)]
+)
 def propose_plan(project_id: str, db: DbSession, user: Engineer, settings: AppSettings) -> JobOut:
     project = get_project_or_404(db, project_id)
     analyzed = db.scalar(

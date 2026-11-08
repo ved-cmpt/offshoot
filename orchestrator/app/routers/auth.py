@@ -5,6 +5,7 @@ import uuid
 from fastapi import APIRouter, Depends, Request, Response, status
 from pydantic import BaseModel, ConfigDict, Field
 
+from app.core.client_ip import client_address
 from app.core.config import Settings
 from app.core.deps import AppSettings, CurrentUser, DbSession, require_csrf_header
 from app.core.errors import ApiError
@@ -69,7 +70,7 @@ def _clear_cookie(response: Response, settings: Settings) -> None:
 
 
 def _enforce_login_rate_limit(request: Request, email: str, settings: Settings) -> None:
-    client_ip = request.client.host if request.client else "unknown"
+    client_ip = client_address(request, settings.trusted_proxy_hops)
     # Per address and account, so that one attacker cannot lock a demo account for
     # everyone; and per address, so that one attacker cannot spray many accounts.
     checks = (

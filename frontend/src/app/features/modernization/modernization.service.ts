@@ -246,6 +246,8 @@ export interface ModuleDetail extends ModuleSummary {
   shadow: ShadowStatus;
   decision: { decision: string; reason: string | null; by: string | null; at: string } | null;
   approvable: boolean;
+  /** False on the public demo, where no code is compiled or run (ADR-047). Absent means true. */
+  execution_enabled?: boolean;
 }
 
 export type ModuleAction = 'migrate' | 'repair' | 'verify' | 'mutate';

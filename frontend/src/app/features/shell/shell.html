@@ -3,7 +3,13 @@
 <header class="shell-header">
   @if (demoMode()) {
     <p class="demo-banner" role="note">
-      Demo: synthetic COBOL application and simulated AI responses.
+      Public demo � synthetic COBOL app, simulated AI responses.
+      @if (executionOff()) {
+        No code is compiled or run here: results come from stored runs.
+      }
+      @if (resetHours() > 0) {
+        It resets every {{ resetHours() === 24 ? 'day' : resetHours() + ' hours' }}.
+      }
     </p>
   }
   <div class="shell-header__inner">

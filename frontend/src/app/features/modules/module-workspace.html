@@ -46,7 +46,13 @@
     @if (canRun() && module.migratable) {
       <section class="panel" aria-labelledby="actions-title">
         <h2 id="actions-title">Actions</h2>
-        @if (actions().length) {
+        @if (module.execution_enabled === false) {
+          <p class="muted" data-testid="execution-off">
+            This public demo does not compile or run code, so migration, repair, verification and
+            mutation testing are turned off here. The results on this page come from stored runs of
+            the real sandbox. Run the project locally to try them.
+          </p>
+        } @else if (actions().length) {
           <div class="actions">
             @for (action of actions(); track action) {
               <button
@@ -229,7 +235,7 @@
           }
         </div>
       }
-      @if (canRun() && module.facade_mode === 'SHADOW') {
+      @if (canRun() && module.facade_mode === 'SHADOW' && module.execution_enabled !== false) {
         <button
           class="button button--quiet"
           type="button"

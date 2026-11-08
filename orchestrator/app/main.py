@@ -13,8 +13,11 @@ from starlette.exceptions import HTTPException as StarletteHTTPException
 from app.core.config import get_settings
 from app.core.errors import ApiError
 from app.core.middleware import SecurityMiddleware
+from app.core.request_guard import RequestGuardMiddleware
+from app.core.spa import mount_spa
 from app.db.session import get_session_factory
 from app.routers import admin, auth, facade_internal, health, insights, inventory, modules, plans, projects, rules
+from app.services.demo_reset import DemoResetScheduler
 from app.services.jobs.worker import JobWorker
 
 API_PREFIX = "/api/v1"
@@ -42,7 +45,16 @@ async def lifespan(_app: FastAPI) -> AsyncIterator[None]:
     worker = JobWorker(get_session_factory(), settings) if settings.job_worker_enabled else None
     if worker is not None:
         worker.start()
+    resets = (
+        DemoResetScheduler(get_session_factory(), settings)
+        if settings.demo_mode and settings.demo_auto_reset_hours > 0
+        else None
+    )
+    if resets is not None:
+        resets.start()
     yield
+    if resets is not None:
+        resets.stop()
     if worker is not None:
         worker.stop()
 
@@ -90,6 +102,9 @@ def create_app() -> FastAPI:
     app.include_router(api)
     # Unprefixed aliases, for platform health checks.
     app.include_router(health.router, include_in_schema=False)
+    if settings.static_dir:
+        # Last, because it answers every path the routers above do not.
+        mount_spa(app, settings.static_dir, https=settings.cookie_secure)
 
     app.add_middleware(
         CORSMiddleware,
@@ -99,6 +114,7 @@ def create_app() -> FastAPI:
         allow_headers=["Authorization", "Content-Type", "X-Offshoot-CSRF"],
         max_age=600,
     )
+    app.add_middleware(RequestGuardMiddleware, settings=settings)
     # Added last, so it is outermost and also covers CORS responses and failures.
     app.add_middleware(SecurityMiddleware, hsts=settings.cookie_secure)
     return app

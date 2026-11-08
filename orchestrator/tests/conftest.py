@@ -37,6 +37,10 @@ os.environ.update(
         "LOGIN_RATE_LIMIT_IP_PER_MINUTE": "1000",
         # Tests record fake live calls in a shared database; the cap has its own test.
         "AI_LIVE_CALL_CAP": "1000000",
+        # The suite makes thousands of jobs and writes from one address; these have their own tests.
+        "DEMO_DAILY_JOB_CAP": "1000000",
+        "WRITE_RATE_LIMIT_PER_MINUTE": "1000000",
+        "DEMO_AUTO_RESET_HOURS": "0",
         "DEMO_PASSWORD_VIEWER": "test-viewer-pass",
         "DEMO_PASSWORD_ENGINEER": "test-engineer-pass",
         "DEMO_PASSWORD_ARCHITECT": "test-architect-pass",
@@ -95,10 +99,11 @@ def db(migrated_db: None) -> Iterator[Session]:
 def client(migrated_db: None) -> Iterator[Any]:
     from fastapi.testclient import TestClient
 
-    from app.core.rate_limit import login_limiter
+    from app.core.rate_limit import login_limiter, write_limiter
     from app.main import app
 
     login_limiter.reset()
+    write_limiter.reset()
     with TestClient(app, base_url="http://localhost:8100") as test_client:
         yield test_client
 

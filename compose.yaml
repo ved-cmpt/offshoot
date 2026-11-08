@@ -54,6 +54,9 @@ services:
       COOKIE_SECURE: ${COOKIE_SECURE:-false}
       CORS_ORIGINS: ${CORS_ORIGINS:-http://localhost:4200}
       LOGIN_RATE_LIMIT_PER_MINUTE: ${LOGIN_RATE_LIMIT_PER_MINUTE:-10}
+      # Looser than the public demo's defaults, because the browser suite runs here (ADR-048).
+      WRITE_RATE_LIMIT_PER_MINUTE: ${WRITE_RATE_LIMIT_PER_MINUTE:-600}
+      DEMO_DAILY_JOB_CAP: ${DEMO_DAILY_JOB_CAP:-5000}
       DEMO_PASSWORD_VIEWER: ${DEMO_PASSWORD_VIEWER:?copy .env.example to .env}
       DEMO_PASSWORD_ENGINEER: ${DEMO_PASSWORD_ENGINEER:?copy .env.example to .env}
       DEMO_PASSWORD_ARCHITECT: ${DEMO_PASSWORD_ARCHITECT:?copy .env.example to .env}

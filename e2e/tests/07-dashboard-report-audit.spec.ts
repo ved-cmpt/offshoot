@@ -2,7 +2,7 @@ import { readFileSync } from 'node:fs';
 
 import { expect, test } from '@playwright/test';
 
-import { SCREENSHOTS, apiToken, billriteId, signIn } from '../helpers';
+import { apiToken, billriteId, openBillRite, SCREENSHOTS, signIn } from '../helpers';
 
 test('the overview shows the stored numbers', async ({ page, request }) => {
   const viewer = await apiToken(request, 'viewer');
@@ -12,7 +12,7 @@ test('the overview shows the stored numbers', async ({ page, request }) => {
   ).json();
 
   await signIn(page, 'viewer');
-  await page.getByRole('link', { name: 'BillRite' }).first().click();
+  await openBillRite(page);
   await expect(page).toHaveURL(/\/overview$/);
   const tiles = page.locator('.tile');
   await expect(tiles.nth(2)).toContainText(`${dashboard.equivalence.identical} of ${dashboard.equivalence.cases}`);
@@ -24,7 +24,7 @@ test('the overview shows the stored numbers', async ({ page, request }) => {
 
 test('the assessment report renders and downloads as Markdown', async ({ page }) => {
   await signIn(page, 'viewer');
-  await page.getByRole('link', { name: 'BillRite' }).first().click();
+  await openBillRite(page);
   await page.getByRole('link', { name: 'Report', exact: true }).click();
   await expect(page.getByRole('heading', { name: /As-Is/ })).toBeVisible();
   await expect(page.getByRole('heading', { name: /To-Be/ })).toBeVisible();

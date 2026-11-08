@@ -20,6 +20,10 @@ def database_url() -> str:
     url = config.get_main_option("sqlalchemy.url") or os.environ.get("MIGRATION_DATABASE_URL")
     if not url:
         raise RuntimeError("MIGRATION_DATABASE_URL is not set")
+    # Hosted databases such as Neon hand out plain postgresql:// URLs; the driver is psycopg 3.
+    for prefix in ("postgresql://", "postgres://"):
+        if url.startswith(prefix):
+            return "postgresql+psycopg://" + url[len(prefix) :]
     return url
 
 

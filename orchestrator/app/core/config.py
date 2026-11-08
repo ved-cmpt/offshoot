@@ -79,11 +79,38 @@ class Settings(BaseSettings):
     facade_project: str = "BillRite"
     shadow_sample_size: int = Field(default=20, ge=1, le=10000)
 
+    # Production and the public demo (ADR-047, ADR-048).
+    # False where no sandbox exists: migration, repair, verification, mutation and replay
+    # answer 403 EXECUTION_DISABLED, and the screens show stored runs instead.
+    execution_enabled: bool = True
+    # The built Angular app, served on the same origin as the API (ADR-007). Empty: no app.
+    static_dir: str = ""
+    # How many proxies in front of the app append to X-Forwarded-For. 0 trusts no header.
+    trusted_proxy_hops: int = Field(default=0, ge=0, le=5)
+    # Mutating API requests per client address per minute, and the largest request body.
+    write_rate_limit_per_minute: int = Field(default=60, ge=1)
+    max_request_bytes: int = Field(default=2 * 1024 * 1024, ge=1024)
+    # In demo mode: at most this many jobs in any 24 hours, across every project.
+    demo_daily_job_cap: int = Field(default=200, ge=1)
+    # In demo mode: restore the stored demo snapshot this often. 0 turns it off.
+    demo_auto_reset_hours: float = Field(default=0, ge=0, le=720)
+
     # Uploads (F03, Blueprint Section 11). Never executed; disabled in demo mode.
     upload_max_bytes: int = Field(default=1024 * 1024, ge=1024)
     upload_max_files: int = Field(default=40, ge=1)
     upload_max_file_bytes: int = Field(default=256 * 1024, ge=1024)
     upload_max_total_bytes: int = Field(default=2 * 1024 * 1024, ge=1024)
+
+    @field_validator("database_url", "migration_database_url", mode="before")
+    @classmethod
+    def use_the_psycopg_driver(cls, value: object) -> object:
+        """Hosted databases such as Neon hand out plain postgresql:// URLs."""
+        raw = value.get_secret_value() if isinstance(value, SecretStr) else value
+        if isinstance(raw, str):
+            for prefix in ("postgresql://", "postgres://"):
+                if raw.startswith(prefix):
+                    return "postgresql+psycopg://" + raw[len(prefix) :]
+        return value
 
     @field_validator("cors_origins", mode="before")
     @classmethod

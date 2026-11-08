@@ -15,6 +15,10 @@ export interface PublicConfig {
   demo_mode: boolean;
   ai_mode: string;
   demo_accounts: DemoAccount[];
+  /** False on the public demo: no code is compiled or run there (ADR-047). Absent means true. */
+  execution_enabled?: boolean;
+  /** Hours between automatic demo resets; 0 or absent means none. */
+  demo_reset_hours?: number;
 }
 
 @Injectable({ providedIn: 'root' })

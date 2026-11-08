@@ -14,7 +14,16 @@ from pydantic import BaseModel, ConfigDict, Field
 from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
-from app.core.deps import ALL_ROLES, ARCHITECT_ONLY, ENGINEER_PLUS, AppSettings, DbSession, require_roles
+from app.core.deps import (
+    ALL_ROLES,
+    ARCHITECT_ONLY,
+    ENGINEER_PLUS,
+    AppSettings,
+    DbSession,
+    require_execution,
+    require_job_quota,
+    require_roles,
+)
 from app.core.errors import ApiError, not_found
 from app.db.models import (
     Approval,
@@ -114,6 +123,8 @@ class ModuleDetail(ModuleSummary):
     shadow: ShadowOut
     decision: DecisionOut | None
     approvable: bool
+    # False where no sandbox exists (ADR-047): the screens then offer no code-running actions.
+    execution_enabled: bool
 
 
 class ArtifactDetail(ArtifactSummary):
@@ -249,6 +260,7 @@ def _detail(db: Session, module: Module, settings: AppSettings) -> ModuleDetail:
         if approval and module.state in ("APPROVED", "REJECTED")
         else None,
         approvable=module.state == "VERIFIED" and promotion.passing_verification(db, module, settings),
+        execution_enabled=settings.execution_enabled,
     )
 
 
@@ -364,7 +376,11 @@ def _enqueue(db: Session, module: Module, kind: str, input_hash: str, user: User
     return to_job_out(job, deduplicated=not created)
 
 
-@router.post("/modules/{module_id}/migrate", status_code=status.HTTP_202_ACCEPTED)
+@router.post(
+    "/modules/{module_id}/migrate",
+    status_code=status.HTTP_202_ACCEPTED,
+    dependencies=[Depends(require_execution), Depends(require_job_quota)],
+)
 def start_migration(module_id: str, db: DbSession, user: Engineer, settings: AppSettings) -> JobOut:
     module = load_module(db, module_id)
     _executable(db, module)
@@ -384,7 +400,11 @@ def start_migration(module_id: str, db: DbSession, user: Engineer, settings: App
     return _enqueue(db, module, "MIGRATE", input_hash, user, {})
 
 
-@router.post("/modules/{module_id}/repair", status_code=status.HTTP_202_ACCEPTED)
+@router.post(
+    "/modules/{module_id}/repair",
+    status_code=status.HTTP_202_ACCEPTED,
+    dependencies=[Depends(require_execution), Depends(require_job_quota)],
+)
 def start_repair(module_id: str, db: DbSession, user: Engineer, settings: AppSettings) -> JobOut:
     module = load_module(db, module_id)
     _executable(db, module)
@@ -406,7 +426,11 @@ class VerifyRequest(BaseModel):
     seed: int | None = Field(default=None, ge=0, le=2**62)
 
 
-@router.post("/modules/{module_id}/verify", status_code=status.HTTP_202_ACCEPTED)
+@router.post(
+    "/modules/{module_id}/verify",
+    status_code=status.HTTP_202_ACCEPTED,
+    dependencies=[Depends(require_execution), Depends(require_job_quota)],
+)
 def start_verification(
     module_id: str, db: DbSession, user: Engineer, settings: AppSettings, body: VerifyRequest | None = None
 ) -> JobOut:
@@ -420,7 +444,11 @@ def start_verification(
     return _enqueue(db, module, "VERIFY", verify_input_hash(module, artifact, seed), user, {"seed": seed})
 
 
-@router.post("/modules/{module_id}/mutate", status_code=status.HTTP_202_ACCEPTED)
+@router.post(
+    "/modules/{module_id}/mutate",
+    status_code=status.HTTP_202_ACCEPTED,
+    dependencies=[Depends(require_execution), Depends(require_job_quota)],
+)
 def start_mutation(module_id: str, db: DbSession, user: Engineer) -> JobOut:
     module = load_module(db, module_id)
     _executable(db, module)
@@ -503,7 +531,11 @@ class ShadowReplayRequest(BaseModel):
     count: int | None = Field(default=None, ge=1, le=500)
 
 
-@router.post("/modules/{module_id}/shadow-replay", status_code=status.HTTP_202_ACCEPTED)
+@router.post(
+    "/modules/{module_id}/shadow-replay",
+    status_code=status.HTTP_202_ACCEPTED,
+    dependencies=[Depends(require_execution), Depends(require_job_quota)],
+)
 def start_shadow_replay(
     module_id: str, db: DbSession, user: Engineer, settings: AppSettings, body: ShadowReplayRequest | None = None
 ) -> JobOut:

@@ -10,7 +10,7 @@ from pydantic import BaseModel
 from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
-from app.core.deps import ALL_ROLES, ENGINEER_PLUS, DbSession, require_roles
+from app.core.deps import ALL_ROLES, ENGINEER_PLUS, DbSession, require_job_quota, require_roles
 from app.core.errors import not_found
 from app.db.models import InventoryEdge, InventoryItem, Job, Project, Rule, SourceFile, User
 from app.services.analysis.source import copy_target, to_lines
@@ -68,7 +68,9 @@ def get_project_or_404(db: Session, project_id: str) -> Project:
     return project
 
 
-@router.post("/projects/{project_id}/analyze", status_code=status.HTTP_202_ACCEPTED)
+@router.post(
+    "/projects/{project_id}/analyze", status_code=status.HTTP_202_ACCEPTED, dependencies=[Depends(require_job_quota)]
+)
 def start_analysis(project_id: str, db: DbSession, user: Engineer) -> JobOut:
     project = get_project_or_404(db, project_id)
     job, created = queue.enqueue(db, project.id, "ANALYZE", analyze_input_hash(db, project.id), {}, user.id)

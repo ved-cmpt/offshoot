@@ -12,6 +12,7 @@ from tests.conftest import run_alembic
 
 TABLES = {
     "users",
+    "demo_snapshots",
     "refresh_tokens",
     "projects",
     "source_files",

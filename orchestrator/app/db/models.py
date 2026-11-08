@@ -460,3 +460,20 @@ class AuditLog(Base):
     entity_id: Mapped[str | None] = mapped_column(String(64))
     safe_metadata: Mapped[dict[str, Any]] = mapped_column(JSONB, nullable=False, server_default=text("'{}'::jsonb"))
     occurred_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False, server_default=func.now())
+
+
+class DemoSnapshot(Base):
+    """A stored copy of the seeded demo project, restored by the daily reset (ADR-048).
+
+    Where no sandbox exists the seed cannot run again, so the reset restores these rows instead.
+    User references are stored as emails and mapped back to ids on restore.
+    """
+
+    __tablename__ = "demo_snapshots"
+
+    id: Mapped[uuid.UUID] = uuid_pk()
+    project_name: Mapped[str] = mapped_column(String(120), nullable=False)
+    payload: Mapped[dict[str, Any]] = mapped_column(JSONB, nullable=False)
+    row_counts: Mapped[dict[str, Any]] = mapped_column(JSONB, nullable=False, server_default=text("'{}'::jsonb"))
+    captured_at: Mapped[datetime] = created_at_column()
+    last_restored_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))

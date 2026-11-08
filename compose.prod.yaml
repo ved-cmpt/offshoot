@@ -1,0 +1,79 @@
+# The production image, run locally with its own Postgres, the way the public demo runs
+# (ADR-047): one container, 512 MB, no runners, no facade, no code execution.
+#
+#   $env:PROD_JWT_SECRET = "<at least 32 random characters>"
+#   docker compose -f compose.prod.yaml up --build -d
+#   docker compose -f compose.prod.yaml exec app alembic upgrade head
+#   docker compose -f compose.prod.yaml exec app python -m app.scripts.demo_snapshot import /snapshots/demo.json
+#
+# The snapshot comes from a seeded development stack (docs/DEPLOYMENT.md). Open http://localhost:8300 (PROD_HOST_PORT; the container listens on 8080).
+name: offshoot-prod
+
+services:
+  postgres:
+    image: postgres:17.11-trixie@sha256:3b0cda93be7c8dba2ed484d19393d93845dc3dafb88973e248ba8e6d99d784e1
+    command: ["postgres", "-c", "timezone=UTC", "-c", "log_timezone=UTC"]
+    environment:
+      POSTGRES_DB: offshoot
+      POSTGRES_USER: offshoot
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?copy .env.example to .env}
+      APP_DB_ROLE: ${APP_DB_ROLE:-offshoot_app}
+      APP_DB_PASSWORD: ${APP_DB_PASSWORD:?copy .env.example to .env}
+    # No host port: only the app reaches it.
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+      - ./db/init:/docker-entrypoint-initdb.d:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U offshoot -d offshoot"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    user: "10000:10000"
+    read_only: true
+    cap_drop:
+      - ALL
+    security_opt:
+      - no-new-privileges:true
+    # The free web service's memory.
+    mem_limit: 512m
+    tmpfs:
+      - /tmp:uid=10000,gid=10000,mode=0700,size=64m
+    environment:
+      PORT: "8080"
+      APP_DB_ROLE: ${APP_DB_ROLE:-offshoot_app}
+      DATABASE_URL: postgresql+psycopg://${APP_DB_ROLE:-offshoot_app}:${APP_DB_PASSWORD}@postgres:5432/offshoot
+      MIGRATION_DATABASE_URL: postgresql+psycopg://offshoot:${POSTGRES_PASSWORD}@postgres:5432/offshoot
+      JWT_SECRET: ${PROD_JWT_SECRET:?set PROD_JWT_SECRET to at least 32 random characters}
+      COOKIE_SECURE: "true"
+      CORS_ORIGINS: ""
+      # Locally nothing sits in front of the container, so the peer address is the client.
+      TRUSTED_PROXY_HOPS: "0"
+      DEMO_AUTO_RESET_HOURS: ${DEMO_AUTO_RESET_HOURS:-24}
+      DEMO_PASSWORD_VIEWER: ${DEMO_PASSWORD_VIEWER:?copy .env.example to .env}
+      DEMO_PASSWORD_ENGINEER: ${DEMO_PASSWORD_ENGINEER:?copy .env.example to .env}
+      DEMO_PASSWORD_ARCHITECT: ${DEMO_PASSWORD_ARCHITECT:?copy .env.example to .env}
+      DEMO_PASSWORD_ADMIN: ${DEMO_PASSWORD_ADMIN:?copy .env.example to .env}
+    ports:
+      - "127.0.0.1:${PROD_HOST_PORT:-8300}:8080"
+    volumes:
+      - ./${PROD_SNAPSHOT_DIR:-.snapshots}:/snapshots:ro
+    depends_on:
+      postgres:
+        condition: service_healthy
+    healthcheck:
+      test:
+        - CMD
+        - python
+        - -c
+        - "import urllib.request; urllib.request.urlopen('http://localhost:8080/healthz', timeout=3)"
+      interval: 5s
+      timeout: 5s
+      retries: 30
+
+volumes:
+  postgres-data: {}

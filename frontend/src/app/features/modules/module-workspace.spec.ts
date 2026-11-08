@@ -200,6 +200,28 @@ describe('ModuleWorkspace', () => {
     expect(button('Migrate')).toBeUndefined();
   });
 
+  it('turns off every code-running action on the public demo and says why', async () => {
+    await open('ENGINEER', makeModule({ execution_enabled: false }));
+    expect(button('Repair')).toBeUndefined();
+    expect(button('Migrate')).toBeUndefined();
+    expect(page.querySelector('[data-testid="execution-off"]')?.textContent).toContain(
+      'does not compile or run code',
+    );
+  });
+
+  it('offers no traffic replay on the public demo, because the facade does not run there', async () => {
+    await open(
+      'ENGINEER',
+      makeModule({
+        state: 'APPROVED',
+        facade_mode: 'SHADOW',
+        shadow: SHADOW_VIEW.status,
+        execution_enabled: false,
+      }),
+    );
+    expect(button('Replay recorded traffic')).toBeUndefined();
+  });
+
   it('lets an engineer repair a blocked module and follows the verification it queues', async () => {
     await open('ENGINEER');
     expect(button('Repair')).toBeDefined();

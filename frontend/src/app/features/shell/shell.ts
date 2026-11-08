@@ -26,6 +26,8 @@ export class Shell {
   protected readonly theme = this.themeService.theme;
   protected readonly isSigningOut = signal(false);
   protected readonly demoMode = computed(() => this.config()?.demo_mode ?? false);
+  protected readonly executionOff = computed(() => this.config()?.execution_enabled === false);
+  protected readonly resetHours = computed(() => this.config()?.demo_reset_hours ?? 0);
   protected readonly canReadAudit = computed(() => {
     const role = this.user()?.role;
     return role === 'ARCHITECT' || role === 'ADMIN';

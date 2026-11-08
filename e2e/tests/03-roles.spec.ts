@@ -1,6 +1,6 @@
 import { expect, test } from '@playwright/test';
 
-import { apiToken, billriteId, moduleId, signIn } from '../helpers';
+import { apiToken, billriteId, moduleId, openBillRite, signIn } from '../helpers';
 
 // Blueprint Section 3.4: the server refuses, not only the hidden buttons.
 test.describe('Role denials', () => {
@@ -31,7 +31,7 @@ test.describe('Role denials', () => {
 
   test('a viewer sees no actions in the module workspace', async ({ page }) => {
     await signIn(page, 'viewer');
-    await page.getByRole('link', { name: 'BillRite' }).first().click();
+    await openBillRite(page);
     await page.getByRole('link', { name: 'Modules', exact: true }).click();
     await page.getByRole('link', { name: 'STMTGEN' }).click();
     await expect(page.getByRole('heading', { name: 'Gates' })).toBeVisible();

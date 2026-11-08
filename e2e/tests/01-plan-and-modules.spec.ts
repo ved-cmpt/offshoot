@@ -1,11 +1,11 @@
 import { expect, test } from '@playwright/test';
 
-import { SCREENSHOTS, signIn } from '../helpers';
+import { openBillRite, SCREENSHOTS, signIn } from '../helpers';
 
 test.describe('Plan and modules (Blueprint Section 3.1, steps 4 and 5)', () => {
   test('a viewer reads the approved plan in call-graph order and cannot decide it', async ({ page }) => {
     await signIn(page, 'viewer');
-    await page.getByRole('link', { name: 'BillRite' }).first().click();
+    await openBillRite(page);
     await page.getByRole('link', { name: 'Plan', exact: true }).click();
     await expect(page.getByRole('heading', { name: 'Version 1: Approved' })).toBeVisible();
     const steps = page.locator('.timeline li');
@@ -24,7 +24,7 @@ test.describe('Plan and modules (Blueprint Section 3.1, steps 4 and 5)', () => {
 
   test('the modules list shows each module with numbers from stored runs', async ({ page }) => {
     await signIn(page, 'viewer');
-    await page.getByRole('link', { name: 'BillRite' }).first().click();
+    await openBillRite(page);
     await page.getByRole('link', { name: 'Modules', exact: true }).click();
     const rows = page.locator('tbody tr');
     await expect(rows).toHaveCount(5);
