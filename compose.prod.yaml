@@ -54,10 +54,6 @@ services:
       # Locally nothing sits in front of the container, so the peer address is the client.
       TRUSTED_PROXY_HOPS: "0"
       DEMO_AUTO_RESET_HOURS: ${DEMO_AUTO_RESET_HOURS:-24}
-      DEMO_PASSWORD_VIEWER: ${DEMO_PASSWORD_VIEWER:?copy .env.example to .env}
-      DEMO_PASSWORD_ENGINEER: ${DEMO_PASSWORD_ENGINEER:?copy .env.example to .env}
-      DEMO_PASSWORD_ARCHITECT: ${DEMO_PASSWORD_ARCHITECT:?copy .env.example to .env}
-      DEMO_PASSWORD_ADMIN: ${DEMO_PASSWORD_ADMIN:?copy .env.example to .env}
     ports:
       - "127.0.0.1:${PROD_HOST_PORT:-8300}:8080"
     volumes:

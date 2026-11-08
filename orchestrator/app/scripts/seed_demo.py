@@ -95,13 +95,16 @@ class SeedResult:
 
 
 def seed_users(db: Session, settings: Settings, result: SeedResult) -> User:
+    """The published accounts, with their usernames and password (ADR-050). An account seeded
+    before usernames existed is found by its email and brought up to date."""
     admin: User | None = None
-    for account in demo_accounts(settings):
-        if not account.password:
-            raise ValueError(f"The demo password for {account.role} is not set")
+    for account in demo_accounts():
         user = db.scalar(select(User).where(User.email == account.email))
         if user is None:
+            user = db.scalar(select(User).where(User.username == account.username))
+        if user is None:
             user = User(
+                username=account.username,
                 email=account.email,
                 password_hash=hash_password(account.password),
                 display_name=account.display_name,
@@ -113,11 +116,15 @@ def seed_users(db: Session, settings: Settings, result: SeedResult) -> User:
             result.users_created += 1
             audit.record(db, "seed.user_created", entity_type="user", entity_id=user.id, metadata={"role": user.role})
         elif (
-            user.role != account.role
+            user.username != account.username
+            or user.email != account.email
+            or user.role != account.role
             or user.display_name != account.display_name
             or not user.active
             or not verify_password(user.password_hash, account.password)
         ):
+            user.username = account.username
+            user.email = account.email
             user.role = account.role
             user.display_name = account.display_name
             user.active = True

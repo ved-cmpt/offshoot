@@ -22,19 +22,24 @@
 
       <form [formGroup]="form" (ngSubmit)="submit()" novalidate>
         <div class="field">
-          <label for="email">Email</label>
+          <label for="username">Username</label>
           <input
-            id="email"
-            type="email"
-            formControlName="email"
+            id="username"
+            type="text"
+            formControlName="username"
             autocomplete="username"
-            [attr.aria-invalid]="form.controls.email.touched && form.controls.email.invalid"
+            autocapitalize="none"
+            spellcheck="false"
+            [attr.aria-invalid]="form.controls.username.touched && form.controls.username.invalid"
             [attr.aria-describedby]="
-              form.controls.email.touched && form.controls.email.invalid ? 'email-error' : null
+              form.controls.username.touched && form.controls.username.invalid
+                ? 'username-error'
+                : 'username-hint'
             "
           />
-          @if (form.controls.email.touched && form.controls.email.invalid) {
-            <p id="email-error" class="field__error">Enter your email address.</p>
+          <p id="username-hint" class="field__hint">Your username, or your email address.</p>
+          @if (form.controls.username.touched && form.controls.username.invalid) {
+            <p id="username-error" class="field__error">Enter your username.</p>
           }
         </div>
 
@@ -87,16 +92,13 @@
         } @else {
           <p class="panel__hint">Each account shows a different level of access.</p>
           <ul class="accounts">
-            @for (account of state.config.demo_accounts; track account.email) {
+            @for (account of state.config.demo_accounts; track account.username) {
               <li class="account">
                 <h3 class="account__role">{{ account.role }}</h3>
                 <p>{{ roleSummaries[account.role] }}</p>
                 <dl class="account__credentials">
-                  <dt>Email</dt>
-                  <!-- A break opportunity before the @ keeps long addresses readable. -->
-                  @let at =
-                    account.email.includes('@') ? account.email.indexOf('@') : account.email.length;
-                  <dd>{{ account.email.slice(0, at) }}<wbr />{{ account.email.slice(at) }}</dd>
+                  <dt>Username</dt>
+                  <dd>{{ account.username }}</dd>
                   <dt>Password</dt>
                   <dd>{{ account.password }}</dd>
                 </dl>

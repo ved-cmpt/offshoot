@@ -5,17 +5,16 @@ import { resolve } from 'node:path';
 export type Role = 'viewer' | 'engineer' | 'architect' | 'admin';
 export type Theme = 'light' | 'dark';
 
-// The published demo accounts (synthetic data only). Override through the environment
-// when a stack uses other passwords.
-const PASSWORDS: Record<Role, string> = {
-  viewer: process.env.DEMO_PASSWORD_VIEWER ?? 'demo-viewer-pass',
-  engineer: process.env.DEMO_PASSWORD_ENGINEER ?? 'demo-engineer-pass',
-  architect: process.env.DEMO_PASSWORD_ARCHITECT ?? 'demo-architect-pass',
-  admin: process.env.DEMO_PASSWORD_ADMIN ?? 'demo-admin-pass',
-};
+// The published demo accounts (synthetic data only, ADR-050): the role's name as the username,
+// and one password. DEMO_PASSWORD overrides it for a stack that uses another.
+const PASSWORD = process.env.DEMO_PASSWORD ?? 'demo1234';
 
-export function email(role: Role): string {
-  return `${role}@demo.offshoot.dev`;
+export function username(role: Role): string {
+  return role;
+}
+
+export function password(): string {
+  return PASSWORD;
 }
 
 export const SCREENSHOTS = resolve(__dirname, '..', 'assets', 'screenshots');
@@ -32,8 +31,8 @@ export async function useTheme(page: Page, theme: Theme): Promise<void> {
 
 export async function signIn(page: Page, role: Role): Promise<void> {
   await page.goto('/login');
-  await page.getByLabel('Email').fill(email(role));
-  await page.getByLabel('Password').fill(PASSWORDS[role]);
+  await page.getByLabel('Username').fill(username(role));
+  await page.getByLabel('Password').fill(PASSWORD);
   await page.getByRole('button', { name: 'Sign in', exact: true }).click();
   await expect(page).toHaveURL(/\/projects$/);
 }
@@ -57,7 +56,7 @@ export async function billriteId(request: APIRequestContext, token: string): Pro
 
 export async function apiToken(request: APIRequestContext, role: Role): Promise<string> {
   const response = await request.post('/api/v1/auth/login', {
-    data: { email: email(role), password: PASSWORDS[role] },
+    data: { username: username(role), password: PASSWORD },
   });
   expect(response.status()).toBe(200);
   return ((await response.json()) as { access_token: string }).access_token;

@@ -104,7 +104,7 @@ jobs:
           curl -fsS http://localhost:8100/api/v1/healthz
           curl -fsS http://localhost:8100/api/v1/readyz
           curl -fsS -H 'Content-Type: application/json' \
-            -d '{"email":"viewer@demo.offshoot.dev","password":"demo-viewer-pass"}' \
+            -d '{"username":"viewer","password":"demo1234"}' \
             http://localhost:8100/api/v1/auth/login > /dev/null
           curl -fsS -X POST -H 'Content-Type: application/json' \
             -d '{"customer_class":"R","month":10,"kwh":610}' http://localhost:8200/billing/rate

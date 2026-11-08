@@ -64,18 +64,18 @@ def test_second_run_changes_nothing_but_one_audit_entry(db: Session, seeded: Non
 
 
 def test_seed_creates_one_account_per_role_and_each_can_log_in(client: TestClient, db: Session, seeded: None) -> None:
-    accounts = demo_accounts(get_settings())
+    accounts = demo_accounts()
     assert sorted(account.role for account in accounts) == ["ADMIN", "ARCHITECT", "ENGINEER", "VIEWER"]
     for account in accounts:
-        response = client.post("/api/v1/auth/login", json={"email": account.email, "password": account.password})
+        response = client.post("/api/v1/auth/login", json={"username": account.username, "password": account.password})
         assert response.status_code == 200, account.role
         assert response.json()["user"]["role"] == account.role
         me = client.get("/api/v1/auth/me", headers=bearer(response.json()))
-        assert me.json()["email"] == account.email
+        assert (me.json()["email"], me.json()["username"]) == (account.email, account.username)
 
 
 def test_seed_repairs_a_changed_demo_account(db: Session, seeded: None) -> None:
-    account = demo_accounts(get_settings())[0]
+    account = demo_accounts()[0]
     user = db.scalar(select(User).where(User.email == account.email))
     assert user is not None
     user.role = "ADMIN"
@@ -126,22 +126,35 @@ def test_seed_writes_audit_entries_for_what_it_creates(db: Session, seeded: None
 
 def test_seed_never_stores_passwords_in_the_audit_log(db: Session, seeded: None) -> None:
     logged = " ".join(str(row) for row in db.scalars(select(AuditLog.safe_metadata)))
-    for account in demo_accounts(get_settings()):
+    for account in demo_accounts():
         assert account.password not in logged
 
 
-def test_seed_refuses_to_run_without_a_demo_password(db: Session, seeded: None) -> None:
-    from pydantic import SecretStr
+def test_seed_moves_an_older_demo_account_to_its_username_and_the_published_password(db: Session, seeded: None) -> None:
+    from app.core.security import hash_password, verify_password
+    from app.scripts.demo_accounts import DEMO_PASSWORD
 
-    settings = get_settings().model_copy(update={"demo_password_admin": SecretStr("")})
-    with pytest.raises(ValueError, match="ADMIN"):
-        run_seed(db, settings)
-    db.rollback()
+    account = demo_accounts()[1]
+    user = db.scalar(select(User).where(User.email == account.email))
+    assert user is not None
+    # As a database seeded before usernames existed left it.
+    user.username = None
+    user.password_hash = hash_password("an-older-demo-password")
+    db.commit()
+    result = run_seed(db, get_settings())
+    assert result.users_updated == 1
+    db.expire_all()
+    assert user.username == account.username
+    assert verify_password(user.password_hash, DEMO_PASSWORD)
+    assert user.password_hash.startswith("$argon2id$")
+    assert run_seed(db, get_settings()).users_updated == 0
 
 
 def test_project_list_shows_billrite_with_counts(client: TestClient, seeded: None) -> None:
-    account = demo_accounts(get_settings())[0]
-    session = client.post("/api/v1/auth/login", json={"email": account.email, "password": account.password}).json()
+    account = demo_accounts()[0]
+    session = client.post(
+        "/api/v1/auth/login", json={"username": account.username, "password": account.password}
+    ).json()
     items = client.get("/api/v1/projects", headers=bearer(session)).json()["items"]
     # Other tests add projects to this database, so look for it across every page.
     offset = 50

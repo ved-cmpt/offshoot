@@ -18,7 +18,7 @@ from pathlib import Path
 from typing import Any
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
-from evaluate_rules import VIEWER_EMAIL, load_env_value  # noqa: E402
+from evaluate_rules import DEMO_PASSWORD, VIEWER_USERNAME, load_env_value  # noqa: E402
 
 COMPILED = {"BUILT", "TESTS_FAILED"}
 
@@ -74,11 +74,8 @@ def main() -> int:
     parser.add_argument("--api", default="http://localhost:8100")
     parser.add_argument("--project", default="BillRite")
     args = parser.parse_args()
-    password = load_env_value("DEMO_PASSWORD_VIEWER")
-    if not password:
-        print("DEMO_PASSWORD_VIEWER is not set", file=sys.stderr)
-        return 2
-    token = _get(f"{args.api}/api/v1/auth/login", data={"email": VIEWER_EMAIL, "password": password})["access_token"]
+    password = load_env_value("DEMO_PASSWORD") or DEMO_PASSWORD
+    token = _get(f"{args.api}/api/v1/auth/login", data={"username": VIEWER_USERNAME, "password": password})["access_token"]
     project, offset = None, 0
     while project is None:
         page = _get(f"{args.api}/api/v1/projects?limit=50&offset={offset}", token)

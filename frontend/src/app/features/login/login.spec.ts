@@ -11,27 +11,47 @@ const CONFIG: PublicConfig = {
   demo_mode: true,
   ai_mode: 'mock',
   demo_accounts: [
-    { email: 'viewer@demo.dev', password: 'v-pass', display_name: 'Vera Viewer', role: 'VIEWER' },
     {
+      username: 'viewer',
+      email: 'viewer@demo.dev',
+      password: 'v-pass',
+      display_name: 'Vera Viewer',
+      role: 'VIEWER',
+    },
+    {
+      username: 'engineer',
       email: 'engineer@demo.dev',
       password: 'e-pass',
       display_name: 'Eli Engineer',
       role: 'ENGINEER',
     },
     {
+      username: 'architect',
       email: 'architect@demo.dev',
       password: 'a-pass',
       display_name: 'Ari Architect',
       role: 'ARCHITECT',
     },
-    { email: 'admin@demo.dev', password: 'd-pass', display_name: 'Ada Admin', role: 'ADMIN' },
+    {
+      username: 'admin',
+      email: 'admin@demo.dev',
+      password: 'd-pass',
+      display_name: 'Ada Admin',
+      role: 'ADMIN',
+    },
   ],
 };
 const SESSION = {
   access_token: 't',
   token_type: 'bearer',
   expires_in: 900,
-  user: { id: '1', email: 'viewer@demo.dev', display_name: 'Vera Viewer', role: 'VIEWER' },
+  user: {
+    id: '1',
+    username: 'viewer',
+    email: 'viewer@demo.dev',
+    display_name: 'Vera Viewer',
+    role: 'VIEWER',
+  },
 };
 
 describe('Login', () => {
@@ -109,7 +129,9 @@ describe('Login', () => {
     for (const [index, role] of ['VIEWER', 'ENGINEER', 'ARCHITECT', 'ADMIN'].entries()) {
       expect(cards[index].querySelector('h3')?.textContent).toBe(role);
     }
-    expect(cards[0].textContent).toContain('viewer@demo.dev');
+    expect(cards[0].querySelector('dl')?.textContent).toContain('Username');
+    expect(cards[0].querySelector('dl')?.textContent).toContain('viewer');
+    expect(cards[0].querySelector('dl')?.textContent).not.toContain('@');
     expect(cards[0].textContent).toContain('v-pass');
     expect(page.querySelector('.demo-banner')?.textContent).toContain('synthetic');
   });
@@ -124,7 +146,7 @@ describe('Login', () => {
   it('offers a retry when the demo accounts fail to load, and the form still works', async () => {
     await render(null);
     expect(page.querySelector('[role="alert"]')?.textContent).toContain('could not be loaded');
-    expect(page.querySelector('#email')).not.toBeNull();
+    expect(page.querySelector('#username')).not.toBeNull();
 
     buttonNamed('Try again').click();
     await settle();
@@ -135,7 +157,7 @@ describe('Login', () => {
 
   it('labels every form input', async () => {
     await render();
-    for (const id of ['email', 'password']) {
+    for (const id of ['username', 'password']) {
       expect(page.querySelector(`label[for="${id}"]`)).not.toBeNull();
       expect(page.querySelector(`#${id}`)).not.toBeNull();
     }
@@ -155,13 +177,13 @@ describe('Login', () => {
 
   it('submits the form, then goes to the projects page', async () => {
     await render();
-    setInput('email', 'viewer@demo.dev');
+    setInput('username', 'viewer');
     setInput('password', 'v-pass');
     page.querySelector('form')!.dispatchEvent(new Event('submit'));
     await settle();
 
     const request = http.expectOne('/api/v1/auth/login');
-    expect(request.request.body).toEqual({ email: 'viewer@demo.dev', password: 'v-pass' });
+    expect(request.request.body).toEqual({ username: 'viewer', password: 'v-pass' });
     expect(buttonNamed('Signing in').disabled).toBe(true);
     request.flush(SESSION);
     await settle();
@@ -183,7 +205,7 @@ describe('Login', () => {
     buttonNamed('Sign in as Ari Architect').click();
     await settle();
     const request = http.expectOne('/api/v1/auth/login');
-    expect(request.request.body).toEqual({ email: 'architect@demo.dev', password: 'a-pass' });
+    expect(request.request.body).toEqual({ username: 'architect', password: 'a-pass' });
     request.flush({ ...SESSION, user: { ...SESSION.user, role: 'ARCHITECT' } });
     await settle();
     expect(navigateByUrl).toHaveBeenCalledWith('/projects');
@@ -194,14 +216,16 @@ describe('Login', () => {
     page.querySelector('form')!.dispatchEvent(new Event('submit'));
     await settle();
     http.expectNone('/api/v1/auth/login');
-    expect(page.querySelector('#email-error')?.textContent).toContain('email');
+    expect(page.querySelector('#username-error')?.textContent).toContain('username');
     expect(page.querySelector('#password-error')?.textContent).toContain('password');
-    expect(page.querySelector('#email')?.getAttribute('aria-describedby')).toBe('email-error');
-    expect(page.querySelector('#email')?.getAttribute('aria-invalid')).toBe('true');
+    expect(page.querySelector('#username')?.getAttribute('aria-describedby')).toBe(
+      'username-error',
+    );
+    expect(page.querySelector('#username')?.getAttribute('aria-invalid')).toBe('true');
   });
 
   it.each([
-    [401, 'Email or password is incorrect.'],
+    [401, 'Username or password is incorrect.'],
     [429, 'Too many sign-in attempts.'],
   ])('shows the server message on a %i and allows another try', async (status, message) => {
     await render();

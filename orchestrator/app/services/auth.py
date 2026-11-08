@@ -5,7 +5,7 @@ import uuid
 from dataclasses import dataclass
 from datetime import UTC, datetime, timedelta
 
-from sqlalchemy import select, update
+from sqlalchemy import or_, select, update
 from sqlalchemy.orm import Session
 
 from app.core.config import Settings
@@ -31,8 +31,8 @@ class IssuedTokens:
     refresh_token: str
 
 
-def _email_fingerprint(email: str) -> str:
-    return hashlib.sha256(email.encode()).hexdigest()[:16]
+def _login_fingerprint(identifier: str) -> str:
+    return hashlib.sha256(identifier.encode()).hexdigest()[:16]
 
 
 def _issue(db: Session, user: User, family_id: uuid.UUID, settings: Settings) -> IssuedTokens:
@@ -49,9 +49,10 @@ def _issue(db: Session, user: User, family_id: uuid.UUID, settings: Settings) ->
     return IssuedTokens(user, access, expires_in, refresh)
 
 
-def login(db: Session, email: str, password: str, settings: Settings) -> IssuedTokens:
-    normalized = email.strip().lower()
-    user = db.scalar(select(User).where(User.email == normalized))
+def login(db: Session, identifier: str, password: str, settings: Settings) -> IssuedTokens:
+    """Sign in with a username or an email, compared in lower case (ADR-050)."""
+    normalized = identifier.strip().lower()
+    user = db.scalar(select(User).where(or_(User.username == normalized, User.email == normalized)))
     if user is None:
         burn_password_check(password)
         authenticated = False
@@ -65,10 +66,10 @@ def login(db: Session, email: str, password: str, settings: Settings) -> IssuedT
             actor_id=user.id if user else None,
             entity_type="user",
             entity_id=user.id if user else None,
-            metadata={"email_fingerprint": _email_fingerprint(normalized)},
+            metadata={"login_fingerprint": _login_fingerprint(normalized)},
         )
         db.commit()
-        raise unauthorized("Email or password is incorrect.", code="INVALID_CREDENTIALS")
+        raise unauthorized("Username or password is incorrect.", code="INVALID_CREDENTIALS")
 
     if password_needs_rehash(user.password_hash):
         user.password_hash = hash_password(password)

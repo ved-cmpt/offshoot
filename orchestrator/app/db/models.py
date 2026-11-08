@@ -87,6 +87,8 @@ class User(Base):
 
     id: Mapped[uuid.UUID] = uuid_pk()
     email: Mapped[str] = mapped_column(String(254), nullable=False, unique=True)
+    # A short sign-in name, lower case. Optional: anyone can still sign in with the email (ADR-050).
+    username: Mapped[str | None] = mapped_column(String(64), unique=True)
     password_hash: Mapped[str] = mapped_column(String(255), nullable=False)
     display_name: Mapped[str] = mapped_column(String(120), nullable=False)
     role: Mapped[str] = mapped_column(String(16), nullable=False)

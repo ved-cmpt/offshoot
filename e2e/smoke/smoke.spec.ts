@@ -1,6 +1,6 @@
 import { ConsoleMessage, Page, expect, test } from '@playwright/test';
 
-import { apiToken, billriteId, email, expectAccessible, moduleId, openBillRite, Role, signIn } from '../helpers';
+import { apiToken, billriteId, expectAccessible, moduleId, openBillRite, password, Role, signIn, username } from '../helpers';
 
 // Blueprint Section 15, smoke checklist: sign-in per role, inventory, a verified module, the
 // rounding-defect story, approval in the demo project, the audit log, headers and cookies. It
@@ -55,13 +55,23 @@ test('the refresh cookie is HttpOnly, Secure and SameSite=Strict, and only for t
   const token = await apiToken(request, 'viewer');
   expect(token.length).toBeGreaterThan(20);
   const login = await request.post('/api/v1/auth/login', {
-    data: { email: email('viewer'), password: process.env.DEMO_PASSWORD_VIEWER ?? 'demo-viewer-pass' },
+    data: { username: username('viewer'), password: password() },
   });
   const cookie = login.headersArray().find((header) => header.name.toLowerCase() === 'set-cookie')?.value ?? '';
   expect(cookie).toMatch(/HttpOnly/i);
   expect(cookie).toMatch(/Secure/i);
   expect(cookie).toMatch(/SameSite=strict/i);
   expect(cookie).toMatch(/Path=\/api\/v1\/auth/i);
+});
+
+test('the sign-in page lists the four usernames and the one published password', async ({ page }) => {
+  await page.goto('/login');
+  const cards = page.locator('.account');
+  await expect(cards).toHaveCount(4);
+  for (const role of ROLES) {
+    await expect(page.locator('.account__credentials').filter({ hasText: username(role) }).first()).toBeVisible();
+  }
+  await expect(page.locator('.account__credentials').first()).toContainText(password());
 });
 
 for (const role of ROLES) {
@@ -140,4 +150,33 @@ test('the architect approves the module awaiting approval, which the audit log r
   await expect(page.getByRole('heading', { name: 'Audit log', level: 1 })).toBeVisible();
   await expect(page.getByRole('region', { name: 'Audit entries' })).toContainText('module.');
   await expectAccessible(page, 'audit log (production)');
+});
+
+test('the demo admin cannot add users, change passwords or disable a demo account', async ({ request }) => {
+  const token = await apiToken(request, 'admin');
+  const headers = { Authorization: `Bearer ${token}` };
+  const users = (await (await request.get('/api/v1/admin/users', { headers })).json()) as {
+    id: string;
+    username: string | null;
+  }[];
+  const viewer = users.find((user) => user.username === 'viewer');
+  expect(viewer, 'the viewer account').toBeDefined();
+  const attempts = [
+    request.post('/api/v1/admin/users', {
+      headers,
+      data: { email: 'x@example.test', display_name: 'X', role: 'ADMIN', password: 'long-enough-1' },
+    }),
+    request.post(`/api/v1/admin/users/${viewer!.id}/password`, { headers, data: { password: 'long-enough-1' } }),
+    request.patch(`/api/v1/admin/users/${viewer!.id}`, { headers, data: { active: false } }),
+  ];
+  for (const response of await Promise.all(attempts)) {
+    expect(response.status()).toBe(403);
+    expect(((await response.json()) as { error: { code: string } }).error.code).toBe('DEMO_ACCOUNTS_LOCKED');
+  }
+  // Still active. (Checked here rather than by signing in, which the per-account limit would count.)
+  const after = (await (await request.get('/api/v1/admin/users', { headers })).json()) as {
+    username: string | null;
+    active: boolean;
+  }[];
+  expect(after.find((user) => user.username === 'viewer')?.active).toBe(true);
 });

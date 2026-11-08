@@ -60,10 +60,6 @@ services:
       # Looser than the public demo's defaults, because the browser suite runs here (ADR-048).
       WRITE_RATE_LIMIT_PER_MINUTE: ${WRITE_RATE_LIMIT_PER_MINUTE:-600}
       DEMO_DAILY_JOB_CAP: ${DEMO_DAILY_JOB_CAP:-5000}
-      DEMO_PASSWORD_VIEWER: ${DEMO_PASSWORD_VIEWER:?copy .env.example to .env}
-      DEMO_PASSWORD_ENGINEER: ${DEMO_PASSWORD_ENGINEER:?copy .env.example to .env}
-      DEMO_PASSWORD_ARCHITECT: ${DEMO_PASSWORD_ARCHITECT:?copy .env.example to .env}
-      DEMO_PASSWORD_ADMIN: ${DEMO_PASSWORD_ADMIN:?copy .env.example to .env}
       BILLRITE_PATH: /legacy/billrite
       COBOL_RUNNER_URL: http://cobol-runner:9000
       DOTNET_BUILDER_SOCKET: /run/builder/builder.sock

@@ -15,7 +15,6 @@ from datetime import UTC, datetime, timedelta
 from sqlalchemy.orm import Session, sessionmaker
 
 from app.core.config import Settings
-from app.scripts.demo_accounts import demo_accounts
 from app.scripts.seed_demo import SeedResult, seed_users
 from app.services import demo_snapshot
 
@@ -53,9 +52,8 @@ def reset_if_due(
 
 def ensure_demo_users(db: Session, settings: Settings) -> None:
     """The published accounts exist and are active, with today's passwords, before a restore."""
-    if all(account.password for account in demo_accounts(settings)):
-        seed_users(db, settings, SeedResult())
-        db.flush()
+    seed_users(db, settings, SeedResult())
+    db.flush()
 
 
 class DemoResetScheduler:

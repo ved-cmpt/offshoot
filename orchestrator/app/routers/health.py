@@ -12,6 +12,7 @@ router = APIRouter(tags=["health"])
 
 
 class DemoAccount(BaseModel):
+    username: str
     email: str
     password: str
     display_name: str
@@ -51,11 +52,7 @@ def readyz(db: DbSession, response: Response) -> dict[str, str]:
 @router.get("/config")
 def public_config(settings: AppSettings) -> PublicConfig:
     # Demo passwords are published on purpose, and only in demo mode.
-    accounts = (
-        [DemoAccount(**account.public()) for account in demo_accounts(settings) if account.password]
-        if settings.demo_mode
-        else []
-    )
+    accounts = [DemoAccount(**account.public()) for account in demo_accounts()] if settings.demo_mode else []
     return PublicConfig(
         demo_mode=settings.demo_mode,
         ai_mode=settings.ai_mode,

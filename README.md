@@ -19,7 +19,7 @@ docker compose exec orchestrator alembic upgrade head
 docker compose exec orchestrator python -m app.scripts.seed_demo
 ```
 
-Then open http://localhost:4200 and pick a demo account. API health is at http://localhost:8100/api/v1/readyz. The BillRite business API, behind the strangler facade, is at http://localhost:8200 (for example `POST /billing/rate` with `{"customer_class": "R", "month": 10, "kwh": 610}`).
+Then open http://localhost:4200 and pick a demo account: `viewer`, `engineer`, `architect` or `admin`, all with the password `demo1234`. API health is at http://localhost:8100/api/v1/readyz. The BillRite business API, behind the strangler facade, is at http://localhost:8200 (for example `POST /billing/rate` with `{"customer_class": "R", "month": 10, "kwh": 610}`).
 
 The seed runs the real pipeline, so it takes about a minute. Open **BillRite** to browse the inventory and its call graph, read the source and review rules, then open **Plan** and **Modules**. RATECALC is blocked: its first C# translation rounds to the even cent, and the harness found the cases where that differs from COBOL's half-up rounding. Sign in as the demo engineer and press **Repair** to watch the fix verified against all 500 cases, then as the demo architect approve it, start shadow mode, replay recorded traffic and promote it to modern. MTRVAL is already modern and LATEFEE is in shadow. Seeded decisions are labelled as not being human reviews.
 
@@ -29,7 +29,7 @@ To put the demo back to its seeded state: `docker compose exec orchestrator pyth
 
 `AI_MODE=mock` is the default. It uses recorded fixtures and needs no key and no network. To use Gemini, set `AI_MODE=gemini`, `GEMINI_API_KEY` and `GEMINI_MODEL` in `.env` and restart the orchestrator. Live calls are capped per project (`AI_PROJECT_CALL_BUDGET`) and for the whole database (`AI_LIVE_CALL_CAP`, default 30). The Run 05 sample and its results, including the failures, are in [`docs/EVALUATION.md`](docs/EVALUATION.md).
 
-All accounts and data are synthetic, and the demo passwords are published on the sign-in page. `.env.example` holds placeholder secrets that are fine for a local stack, and all ports bind to `127.0.0.1`. Change the secrets before exposing this anywhere else.
+All accounts and data are synthetic, and the demo accounts and their password are published on the sign-in page. In demo mode nobody, not even the demo admin, can add users, change passwords or disable a demo account (ADR-050). `.env.example` holds placeholder secrets that are fine for a local stack, and all ports bind to `127.0.0.1`. Change the secrets before exposing this anywhere else.
 
 The default host ports are 5433 (Postgres), 8100 (API), 4200 (Angular) and 8200 (facade). Change them in `.env`. If you change the database passwords after the first start, run `docker compose down -v` to reinitialize the database volume.
 

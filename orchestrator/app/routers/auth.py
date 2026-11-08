@@ -3,7 +3,7 @@
 import uuid
 
 from fastapi import APIRouter, Depends, Request, Response, status
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import BaseModel, ConfigDict, Field, model_validator
 
 from app.core.client_ip import client_address
 from app.core.config import Settings
@@ -21,22 +21,36 @@ REFRESH_COOKIE_PATH = "/api/v1/auth"
 
 
 class LoginRequest(BaseModel):
+    """A username or an email, and the password (ADR-050)."""
+
     model_config = ConfigDict(extra="forbid")
 
-    email: str = Field(min_length=3, max_length=254)
+    username: str | None = Field(default=None, min_length=1, max_length=254)
+    email: str | None = Field(default=None, min_length=3, max_length=254)
     # Capped so that a huge body cannot make Argon2 do pointless work.
     password: str = Field(min_length=1, max_length=256)
+
+    @model_validator(mode="after")
+    def needs_one_name(self) -> "LoginRequest":
+        if not (self.username or self.email):
+            raise ValueError("a username or an email is required")
+        return self
+
+    @property
+    def identifier(self) -> str:
+        return self.username or self.email or ""
 
 
 class UserOut(BaseModel):
     id: uuid.UUID
+    username: str | None
     email: str
     display_name: str
     role: str
 
     @classmethod
     def of(cls, user: User) -> "UserOut":
-        return cls(id=user.id, email=user.email, display_name=user.display_name, role=user.role)
+        return cls(id=user.id, username=user.username, email=user.email, display_name=user.display_name, role=user.role)
 
 
 class SessionOut(BaseModel):
@@ -90,8 +104,8 @@ def _enforce_login_rate_limit(request: Request, email: str, settings: Settings) 
 
 @router.post("/login")
 def login(body: LoginRequest, request: Request, response: Response, db: DbSession, settings: AppSettings) -> SessionOut:
-    _enforce_login_rate_limit(request, body.email, settings)
-    issued = auth_service.login(db, body.email, body.password, settings)
+    _enforce_login_rate_limit(request, body.identifier, settings)
+    issued = auth_service.login(db, body.identifier, body.password, settings)
     return _session_response(issued, response, settings)
 
 

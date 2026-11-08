@@ -48,7 +48,7 @@ export class Login implements OnInit {
   });
 
   protected readonly form = new FormGroup({
-    email: new FormControl('', { nonNullable: true, validators: [Validators.required] }),
+    username: new FormControl('', { nonNullable: true, validators: [Validators.required] }),
     password: new FormControl('', { nonNullable: true, validators: [Validators.required] }),
   });
 
@@ -72,19 +72,19 @@ export class Login implements OnInit {
       this.form.markAllAsTouched();
       return;
     }
-    const { email, password } = this.form.getRawValue();
-    this.signIn(email, password);
+    const { username, password } = this.form.getRawValue();
+    this.signIn(username, password);
   }
 
   protected useAccount(account: DemoAccount): void {
-    this.form.setValue({ email: account.email, password: account.password });
-    this.signIn(account.email, account.password);
+    this.form.setValue({ username: account.username, password: account.password });
+    this.signIn(account.username, account.password);
   }
 
-  private signIn(email: string, password: string): void {
+  private signIn(username: string, password: string): void {
     this.isSubmitting.set(true);
     this.errorMessage.set(null);
-    this.auth.login(email, password).subscribe({
+    this.auth.login(username, password).subscribe({
       next: () => {
         const returnUrl = this.route.snapshot.queryParamMap.get('returnUrl');
         void this.router.navigateByUrl(returnUrl ?? '/projects');

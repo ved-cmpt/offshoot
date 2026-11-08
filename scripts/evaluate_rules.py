@@ -25,7 +25,9 @@ from typing import Any
 DEFAULT_KEY = Path(__file__).resolve().parent.parent / "docs" / "BILLRITE_RULES.md"
 DEFAULT_ENV = Path(__file__).resolve().parent.parent / ".env"
 DEFAULT_SOURCES = Path(__file__).resolve().parent.parent / "legacy" / "billrite"
-VIEWER_EMAIL = "viewer@demo.offshoot.dev"
+VIEWER_USERNAME = "viewer"
+# The published demo password (ADR-050); DEMO_PASSWORD in the environment or .env overrides it.
+DEMO_PASSWORD = "demo1234"  # noqa: S105
 DEFAULT_THRESHOLD = 0.3
 SENSITIVITY = (0.2, 0.3, 0.4, 0.5)
 SHINGLE_WORDS = 8
@@ -284,7 +286,7 @@ def _request(url: str, data: dict[str, Any] | None = None, token: str | None = N
 
 
 def fetch_rules(api: str, password: str, project_name: str = "BillRite") -> list[dict[str, Any]]:
-    session = _request(f"{api}/api/v1/auth/login", {"email": VIEWER_EMAIL, "password": password})
+    session = _request(f"{api}/api/v1/auth/login", {"username": VIEWER_USERNAME, "password": password})
     token = session["access_token"]
     projects = _request(f"{api}/api/v1/projects", token=token)["items"]
     project = next(item for item in projects if item["name"] == project_name)
@@ -346,10 +348,7 @@ def main() -> int:
     if args.rules_json:
         raw_rules = json.loads(args.rules_json.read_text())
     else:
-        password = load_env_value("DEMO_PASSWORD_VIEWER")
-        if not password:
-            print("DEMO_PASSWORD_VIEWER is not set", file=sys.stderr)
-            return 2
+        password = load_env_value("DEMO_PASSWORD") or DEMO_PASSWORD
         raw_rules = fetch_rules(args.api, password, args.project)
     rules = [to_extracted(raw) for raw in raw_rules]
     key = parse_key(key_text)

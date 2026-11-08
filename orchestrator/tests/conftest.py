@@ -41,10 +41,6 @@ os.environ.update(
         "DEMO_DAILY_JOB_CAP": "1000000",
         "WRITE_RATE_LIMIT_PER_MINUTE": "1000000",
         "DEMO_AUTO_RESET_HOURS": "0",
-        "DEMO_PASSWORD_VIEWER": "test-viewer-pass",
-        "DEMO_PASSWORD_ENGINEER": "test-engineer-pass",
-        "DEMO_PASSWORD_ARCHITECT": "test-architect-pass",
-        "DEMO_PASSWORD_ADMIN": "test-admin-pass",
         # Tests run jobs themselves, one at a time. test_jobs.py drives the worker directly.
         "JOB_WORKER_ENABLED": "false",
         "AI_MODE": "mock",

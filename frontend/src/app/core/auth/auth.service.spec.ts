@@ -42,7 +42,7 @@ describe('AuthService', () => {
   it('holds the access token in memory and nowhere else after login', async () => {
     const login = firstValueFrom(auth.login('a@b.co', 'secret'));
     const request = http.expectOne('/api/v1/auth/login');
-    expect(request.request.body).toEqual({ email: 'a@b.co', password: 'secret' });
+    expect(request.request.body).toEqual({ username: 'a@b.co', password: 'secret' });
     request.flush(SESSION);
     await login;
 

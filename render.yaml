@@ -46,14 +46,6 @@ services:
       - key: JWT_SECRET
         generateValue: true
       # The app role's connection on Neon, never the owner's. From .env.render.
+      # The demo accounts (viewer, engineer, architect, admin / demo1234) need no variable (ADR-050).
       - key: DATABASE_URL
-        sync: false
-      # Published on the sign-in page, but they must match what the seed stored. From .env.render.
-      - key: DEMO_PASSWORD_VIEWER
-        sync: false
-      - key: DEMO_PASSWORD_ENGINEER
-        sync: false
-      - key: DEMO_PASSWORD_ARCHITECT
-        sync: false
-      - key: DEMO_PASSWORD_ADMIN
         sync: false

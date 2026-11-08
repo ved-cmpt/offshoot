@@ -24,7 +24,7 @@ MSYS_NO_PATHCONV=1 docker run --rm --env-file .env.render \
   sh -c 'DATABASE_URL="$NEON_APP_DATABASE_URL" JWT_SECRET=status-only-not-a-real-secret-0123456789 python -m app.scripts.demo_snapshot status'
 ```
 
-To reset at once, replace `status` with `restore` (it needs `DEMO_MODE=true`, the default) and add the four `DEMO_PASSWORD_*` values from `.env.render` as `-e DEMO_PASSWORD_VIEWER="$RENDER_DEMO_PASSWORD_VIEWER"` and so on inside the `sh -c`.
+To reset at once, replace `status` with `restore` (it needs `DEMO_MODE=true`, the default).
 
 ## Re-seeding Neon (needs the local sandbox)
 
@@ -38,16 +38,15 @@ services:
     environment:
       DATABASE_URL: ${NEON_APP_DATABASE_URL:?}
       MIGRATION_DATABASE_URL: ${NEON_DATABASE_URL:?}
-      DEMO_PASSWORD_VIEWER: ${RENDER_DEMO_PASSWORD_VIEWER:?}
-      DEMO_PASSWORD_ENGINEER: ${RENDER_DEMO_PASSWORD_ENGINEER:?}
-      DEMO_PASSWORD_ARCHITECT: ${RENDER_DEMO_PASSWORD_ARCHITECT:?}
-      DEMO_PASSWORD_ADMIN: ${RENDER_DEMO_PASSWORD_ADMIN:?}
+      # Only the seed runs jobs, so two mutation runs never share the builder.
+      JOB_WORKER_ENABLED: "false"
 YAML
 # 2. Recreate the orchestrator and the facade with it.
 docker compose --env-file .env --env-file .env.render -f compose.yaml -f /tmp/neon.override.yaml up -d orchestrator facade
 # 3. Seed, then store the snapshot the daily reset restores.
-docker compose exec -T orchestrator python -m app.scripts.reset_demo --confirm
-docker compose exec -T orchestrator python -m app.scripts.demo_snapshot capture
+# Never capture after a failed seed: a snapshot of a broken state would be restored daily.
+docker compose exec -T orchestrator python -m app.scripts.reset_demo --confirm \
+  && docker compose exec -T orchestrator python -m app.scripts.demo_snapshot capture
 # 4. Back to the local database.
 docker compose up -d orchestrator facade
 rm /tmp/neon.override.yaml
@@ -71,7 +70,7 @@ Never run `docker compose config` with the override in place: it prints the conn
 | Symptom | Likely cause | Action |
 |---|---|---|
 | `readyz` says `not_migrated` | A deploy brought a migration that was not run | Run the migration command in `DEPLOYMENT.md` |
-| Sign-in fails for every demo account | `DEMO_PASSWORD_*` on Render differ from the stored hashes and the service has not restarted since | Restart the service in Render; at start it brings the accounts up to its passwords |
+| Sign-in fails for every demo account | The accounts were changed in the database by hand (the API refuses it in demo mode, ADR-050) | Restart the service in Render; at start it restores `viewer`, `engineer`, `architect` and `admin` with `demo1234` |
 | Every module screen is empty | The snapshot was never stored, or the project was deleted | Re-seed (above) |
 | A visitor filled the job cap | Expected under load | Nothing; it frees itself, or restore the snapshot |
 | Neon storage close to the limit | Audit growth over months | Export what is needed and start a fresh Neon branch; the audit log cannot be trimmed by the app role, by design (ADR-014) |

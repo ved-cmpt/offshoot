@@ -23,7 +23,7 @@ Base path `/api/v1`. JSON in and out. The machine-readable schema is served at `
 
 | Method | Path | Who | Purpose |
 |---|---|---|---|
-| POST | `/auth/login` | anyone | Email and password; returns an access token and sets the refresh cookie. Rate-limited |
+| POST | `/auth/login` | anyone | `username` (or an email) and `password`; returns an access token and sets the refresh cookie. Rate-limited |
 | POST | `/auth/refresh` | cookie + CSRF header | Rotates the refresh token, returns a new access token |
 | POST | `/auth/logout` | cookie + CSRF header | Revokes the refresh token |
 | GET | `/auth/me` | signed in | The current user and role |
@@ -85,6 +85,17 @@ Base path `/api/v1`. JSON in and out. The machine-readable schema is served at `
 | GET | `/projects/{project_id}/report` | all | The assessment report as JSON |
 | GET | `/projects/{project_id}/report.md` | all | The same report as Markdown |
 | GET | `/admin/audit` | architect, admin | Page of the append-only audit log, filterable by action |
+
+## Users (admin)
+
+In demo mode the four write routes refuse anything that could lock others out with 403 `DEMO_ACCOUNTS_LOCKED`: creating users, setting any password, and changing or disabling a demo account (ADR-050). Users are never deleted.
+
+| Method | Path | Who | Purpose |
+|---|---|---|---|
+| GET | `/admin/users` | admin | Every user, with username, role, active flag and whether it is a demo account |
+| POST | `/admin/users` | admin | Create a user (username optional, email, display name, role, password of 8 or more characters) |
+| PATCH | `/admin/users/{user_id}` | admin | Change display name, role or active flag; 409 `SELF_LOCKOUT` for your own account |
+| POST | `/admin/users/{user_id}/password` | admin | Set a password; revokes that user's sessions |
 
 ## Internal
 

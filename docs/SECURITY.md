@@ -42,6 +42,8 @@ Live Gemini held against the injection comment in the Run 05 sample; the defence
 | CSRF: a custom header on cookie endpoints, plus an Origin check; behind a TLS proxy the service's own `https` origin is accepted | ADR-018, ADR-047 |
 | Login rate limit per address and account, and per address | ADR-015 |
 | Production refuses placeholder secrets and insecure cookies at start | `core/config.py` |
+| Sign-in by username or email; the demo accounts share the published password `demo1234`, and in demo mode no account can be created, have its password set, or (for a demo account) be changed or disabled (403 `DEMO_ACCOUNTS_LOCKED`) | ADR-050, `tests/test_users.py` |
+| Users are never deleted, only deactivated; an admin cannot deactivate or demote themselves | ADR-014, ADR-050 |
 
 ## HTTP
 

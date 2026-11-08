@@ -1,45 +1,43 @@
-"""The published demo accounts. Passwords come from settings."""
+"""The published demo accounts (ADR-050).
+
+Short usernames and one simple password, shown on the sign-in page. They are not secrets: the
+demo holds synthetic data only, and in demo mode no account can be changed, disabled or added
+(`app/routers/users.py`), so a visitor cannot lock the others out.
+"""
 
 from dataclasses import dataclass
 
-from app.core.config import Settings
+# Published on purpose. Argon2id still hashes it like any other password.
+DEMO_PASSWORD = "demo1234"  # noqa: S105
 
 
 @dataclass(frozen=True)
 class DemoUser:
+    username: str
     email: str
     password: str
     display_name: str
     role: str
 
     def public(self) -> dict[str, str]:
-        return {"email": self.email, "password": self.password, "display_name": self.display_name, "role": self.role}
+        return {
+            "username": self.username,
+            "email": self.email,
+            "password": self.password,
+            "display_name": self.display_name,
+            "role": self.role,
+        }
 
 
-def demo_accounts(settings: Settings) -> list[DemoUser]:
-    return [
-        DemoUser(
-            "viewer@demo.offshoot.dev",
-            settings.demo_password_viewer.get_secret_value(),
-            "Vera Viewer",
-            "VIEWER",
-        ),
-        DemoUser(
-            "engineer@demo.offshoot.dev",
-            settings.demo_password_engineer.get_secret_value(),
-            "Eli Engineer",
-            "ENGINEER",
-        ),
-        DemoUser(
-            "architect@demo.offshoot.dev",
-            settings.demo_password_architect.get_secret_value(),
-            "Ari Architect",
-            "ARCHITECT",
-        ),
-        DemoUser(
-            "admin@demo.offshoot.dev",
-            settings.demo_password_admin.get_secret_value(),
-            "Ada Admin",
-            "ADMIN",
-        ),
-    ]
+DEMO_USERS = (
+    DemoUser("viewer", "viewer@demo.offshoot.dev", DEMO_PASSWORD, "Vera Viewer", "VIEWER"),
+    DemoUser("engineer", "engineer@demo.offshoot.dev", DEMO_PASSWORD, "Eli Engineer", "ENGINEER"),
+    DemoUser("architect", "architect@demo.offshoot.dev", DEMO_PASSWORD, "Ari Architect", "ARCHITECT"),
+    DemoUser("admin", "admin@demo.offshoot.dev", DEMO_PASSWORD, "Ada Admin", "ADMIN"),
+)
+DEMO_EMAILS = frozenset(user.email for user in DEMO_USERS)
+DEMO_USERNAMES = frozenset(user.username for user in DEMO_USERS)
+
+
+def demo_accounts(_settings: object = None) -> list[DemoUser]:
+    return list(DEMO_USERS)

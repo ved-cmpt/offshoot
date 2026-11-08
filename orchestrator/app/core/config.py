@@ -31,11 +31,6 @@ class Settings(BaseSettings):
     login_rate_limit_per_minute: int = Field(default=10, ge=1)
     login_rate_limit_ip_per_minute: int = Field(default=60, ge=1)
 
-    demo_password_viewer: SecretStr = SecretStr("")
-    demo_password_engineer: SecretStr = SecretStr("")
-    demo_password_architect: SecretStr = SecretStr("")
-    demo_password_admin: SecretStr = SecretStr("")
-
     billrite_path: str = "/legacy/billrite"
 
     gemini_api_key: SecretStr = SecretStr("")

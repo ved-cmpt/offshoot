@@ -13,6 +13,8 @@ All notable changes are recorded here. Dates are UTC.
 - Security hardening: a per-request nonce Content-Security-Policy with no `unsafe-inline`, HSTS and Secure cookies in production, a proxy-aware client address for rate limits, a per-address limit on mutating requests, a request body cap, and a CSRF origin check that works behind a TLS proxy.
 - Demo safeguards: a stored demo snapshot restored every 24 hours by the service itself, a daily job cap, and a banner that says no code runs on the public demo.
 - CI on GitHub Actions: lint, types, tests, builds, dependency audits for Python, npm and NuGet, a fresh-checkout Compose stack with the real sandbox, the COBOL characterization tests and the .NET solution, the production image, gitleaks and the attribution scan; the slow suites weekly. Dependabot monthly.
+- Simpler demo sign-in: usernames `viewer`, `engineer`, `architect` and `admin` with the password `demo1234` (an email still works). Admins get a user management API; in demo mode it refuses anything that could lock others out. The per-role demo password settings are gone (ADR-050).
+- Dependabot opens at most one grouped pull request per ecosystem a month, without major upgrades.
 - Deployment files: `render.yaml`, `docs/DEPLOYMENT.md`, `docs/RUNBOOK.md`, `docs/SECURITY.md`, `docs/API.md`. The Neon database is migrated and seeded from the owner's machine with a least-privilege app role.
 
 

@@ -22,7 +22,9 @@ Run 05 prepared the Neon project "offshoot" (AWS us-west-2) from this machine, u
 2. Ran `alembic upgrade head` as the owner: revisions 0001 to 0005, with the app role's grants.
 3. Ran the demo seed through the local sandbox and facade, then stored the demo snapshot.
 
-`.env.render` now also holds `NEON_APP_DATABASE_URL` (the app role's connection) and four `RENDER_DEMO_PASSWORD_*` values. Those are the values Render needs. Never commit that file, and never paste its values anywhere but Render's environment screen.
+`.env.render` now also holds `NEON_APP_DATABASE_URL`, the app role's connection: the one value Render needs from you. Never commit that file, and never paste its values anywhere but Render's environment screen.
+
+The demo accounts are `viewer`, `engineer`, `architect` and `admin`, all with the password `demo1234` (ADR-050). They are fixed in code and need no variable.
 
 ## Owner steps: create the service
 
@@ -31,20 +33,10 @@ Run 05 prepared the Neon project "offshoot" (AWS us-west-2) from this machine, u
 3. Under **Connect a repository**, pick **GitHub**, allow Render to read `ved-cmpt/offshoot` if asked (the repository can stay private), and select it.
 4. Set **Branch** to `main`. Render reads `render.yaml` and lists one service, **offshoot** (web service, Docker, Free, Oregon).
 5. Give the Blueprint a name, for example `offshoot`.
-6. Render asks for the variables marked `sync: false`. Enter each one from `.env.render` (open it in a text editor; copy the part after the first `=`):
-
-   | Render variable | Value comes from (in `.env.render`) | Secret |
-   |---|---|---|
-   | `DATABASE_URL` | `NEON_APP_DATABASE_URL` | Yes |
-   | `DEMO_PASSWORD_VIEWER` | `RENDER_DEMO_PASSWORD_VIEWER` | No: published on the sign-in page |
-   | `DEMO_PASSWORD_ENGINEER` | `RENDER_DEMO_PASSWORD_ENGINEER` | No: published on the sign-in page |
-   | `DEMO_PASSWORD_ARCHITECT` | `RENDER_DEMO_PASSWORD_ARCHITECT` | No: published on the sign-in page |
-   | `DEMO_PASSWORD_ADMIN` | `RENDER_DEMO_PASSWORD_ADMIN` | No: published on the sign-in page |
-
-   Do not use `NEON_DATABASE_URL`: that is the owner's connection, and the service must not hold it.
+6. Render asks for the one variable marked `sync: false`, **`DATABASE_URL`**. Open `.env.render` in a text editor and copy the value of **`NEON_APP_DATABASE_URL`** (everything after the first `=`). It is a secret. Do not use `NEON_DATABASE_URL`: that is the owner's connection, and the service must not hold it.
 7. Click **Apply** (or **Deploy Blueprint**). The first build takes several minutes: it installs the Angular toolchain, builds the app and then the Python image.
 8. Open the service, wait until the status is **Live**, and copy its URL (`https://<name>.onrender.com`).
-9. Check it: `https://<name>.onrender.com/healthz` answers `{"status":"ok"}`, `/api/v1/readyz` answers `{"status":"ready"}`, and the sign-in page lists the four demo accounts.
+9. Check it: `https://<name>.onrender.com/healthz` answers `{"status":"ok"}`, `/api/v1/readyz` answers `{"status":"ready"}`, and the sign-in page lists `viewer`, `engineer`, `architect` and `admin` with the password `demo1234`.
 
 ## Every environment variable on Render
 
@@ -54,7 +46,6 @@ All of them are in `render.yaml`. The fixed ones need no action.
 |---|---|---|---|
 | `DATABASE_URL` | the app role's Neon connection | **Yes** | owner (step 6) |
 | `JWT_SECRET` | random 256-bit value | **Yes** | Render (`generateValue`) |
-| `DEMO_PASSWORD_VIEWER`, `_ENGINEER`, `_ARCHITECT`, `_ADMIN` | from `.env.render` | No (published) | owner (step 6) |
 | `PORT` | `10000` | No | `render.yaml` |
 | `APP_ENV` | `production` (refuses placeholder secrets and insecure cookies) | No | `render.yaml` |
 | `DEMO_MODE` | `true` (banner, published accounts, uploads off) | No | `render.yaml` |
@@ -69,7 +60,7 @@ All of them are in `render.yaml`. The fixed ones need no action.
 | `WRITE_RATE_LIMIT_PER_MINUTE` | `60` | No | `render.yaml` |
 | `LOGIN_RATE_LIMIT_PER_MINUTE` | `10` | No | `render.yaml` |
 
-`GEMINI_API_KEY`, `MIGRATION_DATABASE_URL`, `RUNNER_SHARED_SECRET` and `FACADE_SHARED_SECRET` are deliberately absent.
+`GEMINI_API_KEY`, `MIGRATION_DATABASE_URL`, `RUNNER_SHARED_SECRET` and `FACADE_SHARED_SECRET` are deliberately absent, and the demo accounts need no variable (ADR-050).
 
 ## After a change to the database schema
 

@@ -10,6 +10,7 @@ export type Role = 'VIEWER' | 'ENGINEER' | 'ARCHITECT' | 'ADMIN';
 
 export interface User {
   id: string;
+  username?: string | null;
   email: string;
   display_name: string;
   role: Role;
@@ -42,8 +43,9 @@ export class AuthService {
     return this.accessToken;
   }
 
-  login(email: string, password: string): Observable<User> {
-    return this.http.post<Session>(`${AUTH_API}/login`, { email, password }).pipe(
+  /** A username or an email (ADR-050). */
+  login(username: string, password: string): Observable<User> {
+    return this.http.post<Session>(`${AUTH_API}/login`, { username, password }).pipe(
       tap((session) => this.adopt(session)),
       map((session) => session.user),
     );

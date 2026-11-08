@@ -16,7 +16,19 @@ from app.core.middleware import SecurityMiddleware
 from app.core.request_guard import RequestGuardMiddleware
 from app.core.spa import mount_spa
 from app.db.session import get_session_factory
-from app.routers import admin, auth, facade_internal, health, insights, inventory, modules, plans, projects, rules
+from app.routers import (
+    admin,
+    auth,
+    facade_internal,
+    health,
+    insights,
+    inventory,
+    modules,
+    plans,
+    projects,
+    rules,
+    users,
+)
 from app.services.demo_reset import DemoResetScheduler
 from app.services.jobs.worker import JobWorker
 
@@ -99,6 +111,7 @@ def create_app() -> FastAPI:
     api.include_router(facade_internal.router)
     api.include_router(insights.router)
     api.include_router(admin.router)
+    api.include_router(users.router)
     app.include_router(api)
     # Unprefixed aliases, for platform health checks.
     app.include_router(health.router, include_in_schema=False)

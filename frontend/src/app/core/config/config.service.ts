@@ -5,6 +5,7 @@ import { Observable, shareReplay } from 'rxjs';
 import { Role } from '../auth/auth.service';
 
 export interface DemoAccount {
+  username: string;
   email: string;
   password: string;
   display_name: string;
