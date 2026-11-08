@@ -4,11 +4,11 @@ Paste everything below this line.
 
 ---
 
-You are the implementation agent for ParityForge. This is RUN 05 of 6. Work fully unattended until the run is complete. Do not stop to ask questions: make the most reasonable decision, record it as an ADR, and continue. Stop only for something irreversible or that only the owner can do (accounts, secrets, payments), and list those under "Owner actions" in the run report.
+You are the implementation agent for Offshoot. This is RUN 05 of 6. Work fully unattended until the run is complete. Do not stop to ask questions: make the most reasonable decision, record it as an ADR, and continue. Stop only for something irreversible or that only the owner can do (accounts, secrets, payments), and list those under "Owner actions" in the run report.
 
 === READ FIRST ===
 1. `docs/IMPLEMENTATION_BLUEPRINT.md` completely, especially Sections 2.4, 6.5, 11, 12, 13 (Run 05), 14, 15 and 18.
-2. `AGENTS.md`, `docs/PROJECT_CONTEXT.md`, `docs/IMPLEMENTATION_STATUS.md` (its checklist), `docs/ARCHITECTURE_DECISIONS.md` (ADR-030 to ADR-044 are new since Run 02), `docs/EVALUATION.md`, `docs/RUN_REPORTS/RUN_03.md` and `docs/RUN_REPORTS/RUN_04.md`.
+2. `AGENTS.md`, `docs/PROJECT_CONTEXT.md`, `docs/IMPLEMENTATION_STATUS.md` (its checklist), `docs/ARCHITECTURE_DECISIONS.md` (ADR-030 to ADR-045 are new since Run 02; ADR-045 is the rename to Offshoot), `docs/EVALUATION.md`, `docs/RUN_REPORTS/RUN_03.md` and `docs/RUN_REPORTS/RUN_04.md`.
 3. Inspect the repository and report its actual state. Code and tests are the ground truth.
 
 === PERMANENT RULES ===
@@ -22,6 +22,7 @@ You are the implementation agent for ParityForge. This is RUN 05 of 6. Work full
 - Keep the phase checklist at the top of `docs/IMPLEMENTATION_STATUS.md` current at every checkpoint.
 
 === THINGS EARLIER RUNS LEARNED ===
+- The project was renamed to Offshoot before this run (ADR-045). The folder is `C:\Users\User\Desktop\offshoot`, the remote is `https://github.com/ved-cmpt/offshoot`, the Compose project, database and owner role are `offshoot`, the app role is `offshoot_app`, the .NET solution is `modern/Offshoot.Modern.sln`, generated code uses the `Offshoot.Generated` namespace, and the demo accounts are `viewer|engineer|architect|admin@demo.offshoot.dev`.
 - The Bash tool's heredocs break on apostrophes, and Python edit scripts written through a heredoc turn `\\n` into real newlines. Write scripts to the scratchpad with the Write tool and run them; replace text with exact-match helpers that write LF.
 - dotnet-builder has `network_mode: none` and a Unix-socket API in the `builder-socket` volume (ADR-030). Stryker.NET 4.16.0 runs there without `nonet`. A template change needs `docker compose build dotnet-builder`, and new NuGet packages need lock files restored on the host first.
 - The facade (ADR-039) reads routes every 2 s. Python's runner servers need a `Content-Length`; send buffered JSON to them.

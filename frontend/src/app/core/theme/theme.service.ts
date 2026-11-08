@@ -2,7 +2,7 @@ import { DOCUMENT, Injectable, inject, signal } from '@angular/core';
 
 export type Theme = 'light' | 'dark';
 
-const STORAGE_KEY = 'parityforge-theme';
+const STORAGE_KEY = 'offshoot-theme';
 
 @Injectable({ providedIn: 'root' })
 export class ThemeService {

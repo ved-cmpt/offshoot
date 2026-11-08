@@ -69,7 +69,7 @@ describe('AuthService', () => {
     const refreshed = firstValueFrom(auth.refresh());
     await flushMicrotasks();
     const request = http.expectOne('/api/v1/auth/refresh');
-    expect(request.request.headers.get('X-ParityForge-CSRF')).toBe('1');
+    expect(request.request.headers.get('X-Offshoot-CSRF')).toBe('1');
     request.flush({ ...SESSION, access_token: 'access-2' });
     await expect(refreshed).resolves.toBe('access-2');
     expect(auth.token).toBe('access-2');
@@ -122,7 +122,7 @@ describe('AuthService', () => {
 
     const logout = firstValueFrom(auth.logout());
     const request = http.expectOne('/api/v1/auth/logout');
-    expect(request.request.headers.get('X-ParityForge-CSRF')).toBe('1');
+    expect(request.request.headers.get('X-Offshoot-CSRF')).toBe('1');
     request.flush(null, { status: 204, statusText: 'No Content' });
     await logout;
     expect(auth.token).toBeNull();

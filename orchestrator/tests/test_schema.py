@@ -236,7 +236,7 @@ def test_app_role_cannot_change_the_schema(app_engine: Engine, statement: str) -
 
 def test_migration_runs_down_and_back_up_on_a_clean_database() -> None:
     owner_url = os.environ["MIGRATION_DATABASE_URL"]
-    scratch = f"parityforge_scratch_{uuid.uuid4().hex[:8]}"
+    scratch = f"offshoot_scratch_{uuid.uuid4().hex[:8]}"
     maintenance = create_engine(
         make_url(owner_url).set(database="postgres").render_as_string(hide_password=False),
         isolation_level="AUTOCOMMIT",

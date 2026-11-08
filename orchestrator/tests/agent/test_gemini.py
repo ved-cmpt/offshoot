@@ -312,7 +312,7 @@ def test_a_migration_response_is_validated_against_its_contract() -> None:
     "change",
     [
         {"files": [{"path": "src/../Program.cs", "content": "x"}]},
-        {"files": [{"path": "Generated/ParityForge.Generated.csproj", "content": "<Project />"}]},
+        {"files": [{"path": "Generated/Offshoot.Generated.csproj", "content": "<Project />"}]},
         {"files": [{"path": "src/Run.sh", "content": "id"}]},
         {"files": []},
         {"approved": True},

@@ -6,7 +6,7 @@ export const routes: Routes = [
   {
     path: 'login',
     canActivate: [guestGuard],
-    title: 'Sign in - ParityForge',
+    title: 'Sign in - Offshoot',
     loadComponent: () => import('./features/login/login').then((m) => m.Login),
   },
   {
@@ -17,12 +17,12 @@ export const routes: Routes = [
       { path: '', pathMatch: 'full', redirectTo: 'projects' },
       {
         path: 'projects',
-        title: 'Projects - ParityForge',
+        title: 'Projects - Offshoot',
         loadComponent: () => import('./features/projects/projects').then((m) => m.Projects),
       },
       {
         path: 'admin/audit',
-        title: 'Audit log - ParityForge',
+        title: 'Audit log - Offshoot',
         loadComponent: () => import('./features/audit/audit').then((m) => m.AuditLog),
       },
       {
@@ -33,43 +33,43 @@ export const routes: Routes = [
           { path: '', pathMatch: 'full', redirectTo: 'overview' },
           {
             path: 'overview',
-            title: 'Overview - ParityForge',
+            title: 'Overview - Offshoot',
             loadComponent: () => import('./features/overview/overview').then((m) => m.Overview),
           },
           {
             path: 'report',
-            title: 'Assessment report - ParityForge',
+            title: 'Assessment report - Offshoot',
             loadComponent: () => import('./features/report/report').then((m) => m.ReportPage),
           },
           {
             path: 'inventory',
-            title: 'Inventory - ParityForge',
+            title: 'Inventory - Offshoot',
             loadComponent: () => import('./features/inventory/inventory').then((m) => m.Inventory),
           },
           {
             path: 'sources/:file',
-            title: 'Source - ParityForge',
+            title: 'Source - Offshoot',
             loadComponent: () =>
               import('./features/sources/source-viewer').then((m) => m.SourceViewer),
           },
           {
             path: 'rules',
-            title: 'Rules - ParityForge',
+            title: 'Rules - Offshoot',
             loadComponent: () => import('./features/rules/rules').then((m) => m.Rules),
           },
           {
             path: 'plan',
-            title: 'Plan - ParityForge',
+            title: 'Plan - Offshoot',
             loadComponent: () => import('./features/plan/plan').then((m) => m.PlanPage),
           },
           {
             path: 'modules',
-            title: 'Modules - ParityForge',
+            title: 'Modules - Offshoot',
             loadComponent: () => import('./features/modules/module-list').then((m) => m.ModuleList),
           },
           {
             path: 'modules/:mid',
-            title: 'Module - ParityForge',
+            title: 'Module - Offshoot',
             loadComponent: () =>
               import('./features/modules/module-workspace').then((m) => m.ModuleWorkspace),
           },

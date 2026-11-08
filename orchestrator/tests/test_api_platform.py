@@ -195,7 +195,7 @@ def test_cors_allows_the_configured_origin_with_credentials(client: TestClient) 
         headers={
             "Origin": "http://localhost:4200",
             "Access-Control-Request-Method": "POST",
-            "Access-Control-Request-Headers": "X-ParityForge-CSRF",
+            "Access-Control-Request-Headers": "X-Offshoot-CSRF",
         },
     )
     assert response.status_code == 200

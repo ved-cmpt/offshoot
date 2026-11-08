@@ -21,8 +21,8 @@ class Settings(BaseSettings):
 
     jwt_secret: SecretStr = Field(min_length=32)
     jwt_algorithm: Literal["HS256"] = "HS256"
-    jwt_issuer: str = "parityforge"
-    jwt_audience: str = "parityforge-api"
+    jwt_issuer: str = "offshoot"
+    jwt_audience: str = "offshoot-api"
     access_token_ttl_seconds: int = Field(default=900, ge=60, le=3600)
     refresh_token_ttl_seconds: int = Field(default=604800, ge=3600)
 

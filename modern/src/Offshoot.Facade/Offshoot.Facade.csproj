@@ -1,13 +1,13 @@
 <Project Sdk="Microsoft.NET.Sdk.Web">
   <!-- The strangler-fig routing facade (Blueprint Sections 4.1, 7.3 and 9, ADR-039). -->
   <PropertyGroup>
-    <RootNamespace>ParityForge.Facade</RootNamespace>
+    <RootNamespace>Offshoot.Facade</RootNamespace>
     <InvariantGlobalization>true</InvariantGlobalization>
   </PropertyGroup>
   <ItemGroup>
     <PackageReference Include="Yarp.ReverseProxy" Version="2.3.0" />
   </ItemGroup>
   <ItemGroup>
-    <InternalsVisibleTo Include="ParityForge.Facade.Tests" />
+    <InternalsVisibleTo Include="Offshoot.Facade.Tests" />
   </ItemGroup>
 </Project>

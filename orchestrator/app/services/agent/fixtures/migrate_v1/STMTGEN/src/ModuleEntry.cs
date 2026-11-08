@@ -1,4 +1,4 @@
-namespace ParityForge.Generated;
+namespace Offshoot.Generated;
 
 /// <summary>
 /// The record entry point: an SG-INPUT record (82 bytes) in, an SG-OUTPUT record

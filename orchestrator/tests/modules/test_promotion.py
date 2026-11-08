@@ -267,7 +267,7 @@ class FakeFacade(httpx.BaseTransport):
             return httpx.Response(200, json={"version": "v", "modules": {"MTRVAL": "SHADOW"}})
         self.paths.append(request.url.path)
         report(self.client, modern=self.modern or LEGACY)
-        return httpx.Response(200, json={"status": "E00"}, headers={"X-ParityForge-Route": "shadow"})
+        return httpx.Response(200, json={"status": "E00"}, headers={"X-Offshoot-Route": "shadow"})
 
 
 def test_replay_sends_recorded_traffic_and_the_reports_fill_the_sample(

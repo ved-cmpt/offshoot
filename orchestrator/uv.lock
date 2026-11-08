@@ -576,7 +576,7 @@ wheels = [
 ]
 
 [[package]]
-name = "parityforge-orchestrator"
+name = "offshoot-orchestrator"
 version = "0.1.0"
 source = { virtual = "." }
 dependencies = [

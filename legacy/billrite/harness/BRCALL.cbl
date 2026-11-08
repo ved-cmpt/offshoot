@@ -2,7 +2,7 @@
        PROGRAM-ID. BRCALL.
       ******************************************************************
       * PROGRAM:   BRCALL                                              *
-      * SYSTEM:    PARITYFORGE TEST HARNESS, NOT PART OF BILLRITE      *
+      * SYSTEM:    OFFSHOOT TEST HARNESS, NOT PART OF BILLRITE         *
       * PURPOSE:   CALL ONE BILLRITE MODULE ONE RECORD AT A TIME.      *
       *                                                                *
       * USAGE:     BRCALL MTRVAL|RATECALC|LATEFEE|STMTGEN              *

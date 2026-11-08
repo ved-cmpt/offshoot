@@ -1,6 +1,6 @@
 using System.Globalization;
 
-namespace ParityForge.Generated;
+namespace Offshoot.Generated;
 
 /// <summary>One statement's values, field for field the SG-INPUT group.</summary>
 public sealed record StatementInput(

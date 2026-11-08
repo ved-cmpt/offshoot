@@ -5,6 +5,6 @@
     <OutputType>Exe</OutputType>
   </PropertyGroup>
   <ItemGroup>
-    <ProjectReference Include="../Generated/ParityForge.Generated.csproj" />
+    <ProjectReference Include="../Generated/Offshoot.Generated.csproj" />
   </ItemGroup>
 </Project>

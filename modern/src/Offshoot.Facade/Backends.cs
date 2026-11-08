@@ -3,7 +3,7 @@ using System.Net.Sockets;
 using System.Text.Json;
 using System.Text.Json.Serialization;
 
-namespace ParityForge.Facade;
+namespace Offshoot.Facade;
 
 /// <summary>
 /// A buffered JSON body. The runners' standard-library servers need a Content-Length,

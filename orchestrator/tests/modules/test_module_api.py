@@ -112,7 +112,7 @@ def test_a_verified_module_cannot_be_migrated_or_repaired_again(
         assert error_code(response) == (409, "INVALID_STATE")
 
 
-BROKEN = """namespace ParityForge.Generated;
+BROKEN = """namespace Offshoot.Generated;
 
 public static class Broken
 {

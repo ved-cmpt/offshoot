@@ -4,6 +4,10 @@ All notable changes are recorded here. Dates are UTC.
 
 ## [Unreleased]
 
+### Renamed to Offshoot (2026-11-08)
+
+- The project is renamed from ParityForge to Offshoot, to avoid confusion with existing names, in display names and in every identifier: Compose project, database and roles (`APP_DB_ROLE` now defaults to `offshoot_app`), Python and Angular packages, JWT issuer and audience, the CSRF header (`X-Offshoot-CSRF`) and the facade route header (`X-Offshoot-Route`), the .NET solution, projects and namespaces (`Offshoot.Modern.sln`, `Offshoot.Facade`, the `Offshoot.Generated` sandbox template), and the demo account emails (now `@demo.offshoot.dev`). Screenshots recaptured. Behaviour is unchanged. Existing local stacks need `docker compose down -v` once (ADR-045).
+
 ### Run 04 (2026-11-08)
 
 - Module approval and rejection by an architect, refused without a passing verification under today's thresholds.

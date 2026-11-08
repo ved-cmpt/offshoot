@@ -9,7 +9,7 @@ while ((line = Console.In.ReadLine()) is not null)
     string result;
     try
     {
-        result = ParityForge.Generated.ModuleEntry.Process(line);
+        result = Offshoot.Generated.ModuleEntry.Process(line);
     }
 #pragma warning disable CA1031 // Any failure of generated code is reported as data.
     catch (Exception ex)

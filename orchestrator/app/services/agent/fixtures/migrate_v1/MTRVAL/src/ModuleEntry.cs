@@ -1,4 +1,4 @@
-namespace ParityForge.Generated;
+namespace Offshoot.Generated;
 
 /// <summary>
 /// The record entry point: an MV-INPUT record (13 bytes) in, an MV-OUTPUT record

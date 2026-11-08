@@ -135,4 +135,4 @@ class FakeFacade(httpx.BaseTransport):
         record = "E00" + "0" * (OUTPUT_LENGTHS[program] - 3)
         body = {"program": program, "input": "replayed", "legacy": record, "modern": record}
         self.client.post("/api/v1/internal/facade/shadow", json=body, headers=FACADE_TOKEN)
-        return httpx.Response(200, json={"status": "E00"}, headers={"X-ParityForge-Route": "shadow"})
+        return httpx.Response(200, json={"status": "E00"}, headers={"X-Offshoot-Route": "shadow"})

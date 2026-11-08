@@ -1,7 +1,7 @@
 using System.Text.Json;
 using Xunit;
 
-namespace ParityForge.Equivalence.Tests;
+namespace Offshoot.Equivalence.Tests;
 
 /// <summary>Every recorded legacy case, replayed against the generated module.</summary>
 public sealed class EquivalenceTests
@@ -21,7 +21,7 @@ public sealed class EquivalenceTests
         Assert.NotEmpty(cases);
         foreach (var item in cases)
         {
-            Assert.Equal(item.Expected, ParityForge.Generated.ModuleEntry.Process(item.Input));
+            Assert.Equal(item.Expected, Offshoot.Generated.ModuleEntry.Process(item.Input));
         }
     }
 }

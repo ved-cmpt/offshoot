@@ -5,7 +5,7 @@
 
 ## State found
 
-An empty Git repository on branch `main` with no commits, remote `origin` set to `https://github.com/ved-cmpt/parityforge.git` (empty), and one untracked file, `docs/IMPLEMENTATION_BLUEPRINT.md`. Local-only agent paths were already listed in `.git/info/exclude`. Host tools: Docker 29.6.2, Compose 5.3.1, Node 24.18, Python 3.12.10, uv 0.13.7, .NET SDK 10.0.300.
+An empty Git repository on branch `main` with no commits, remote `origin` set to `https://github.com/ved-cmpt/offshoot.git` (empty), and one untracked file, `docs/IMPLEMENTATION_BLUEPRINT.md`. Local-only agent paths were already listed in `.git/info/exclude`. Host tools: Docker 29.6.2, Compose 5.3.1, Node 24.18, Python 3.12.10, uv 0.13.7, .NET SDK 10.0.300.
 
 ## Verified work
 
@@ -63,7 +63,7 @@ I also looked at screenshots of the main screens in both themes and at phone wid
 
 ### Hardening, as Docker reports it
 
-`docker inspect` on both runners: user `10001:10001`, read-only root filesystem, `CapDrop=[ALL]`, `no-new-privileges`, PID limit 512, no published ports, only network `parityforge_sandbox`, which has `internal=true`. Limits are 1 CPU and 512 MB for `cobol-runner`, and 2 CPUs and 2 GB for `dotnet-builder`.
+`docker inspect` on both runners: user `10001:10001`, read-only root filesystem, `CapDrop=[ALL]`, `no-new-privileges`, PID limit 512, no published ports, only network `offshoot_sandbox`, which has `internal=true`. Limits are 1 CPU and 512 MB for `cobol-runner`, and 2 CPUs and 2 GB for `dotnet-builder`.
 
 ### Scans
 
@@ -173,7 +173,7 @@ Your local `.env` is a plain copy of `.env.example`, with placeholder secrets. T
 The stack is running and seeded right now, so you can open http://localhost:4200 immediately. To start from nothing, in PowerShell:
 
 ```powershell
-cd C:\Users\User\Desktop\parityforge
+cd C:\Users\User\Desktop\offshoot
 docker compose down -v
 Copy-Item .env.example .env
 docker compose up --build -d

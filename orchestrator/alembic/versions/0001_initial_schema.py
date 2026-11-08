@@ -21,7 +21,7 @@ depends_on: str | Sequence[str] | None = None
 
 # The least-privilege login the API uses. It is deployment config, not schema: the
 # name comes from APP_DB_ROLE and must match the role db/init creates (ADR-029).
-APP_ROLE = os.environ.get("APP_DB_ROLE", "parityforge_app")
+APP_ROLE = os.environ.get("APP_DB_ROLE", "offshoot_app")
 if not re.fullmatch(r"[a-z_][a-z0-9_]{0,62}", APP_ROLE):
     raise ValueError("APP_DB_ROLE must be a lower-case SQL identifier")
 

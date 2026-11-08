@@ -1,7 +1,7 @@
-using ParityForge.Generated;
+using Offshoot.Generated;
 using Xunit;
 
-namespace ParityForge.Generated.Tests;
+namespace Offshoot.Generated.Tests;
 
 public sealed class MeterReadValidatorTests
 {

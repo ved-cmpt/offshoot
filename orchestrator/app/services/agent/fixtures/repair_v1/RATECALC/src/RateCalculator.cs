@@ -1,4 +1,4 @@
-namespace ParityForge.Generated;
+namespace Offshoot.Generated;
 
 /// <summary>The tariff for one customer class (copybook RATES).</summary>
 public sealed record Tariff(

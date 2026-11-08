@@ -1,4 +1,4 @@
-namespace ParityForge.Placeholder;
+namespace Offshoot.Placeholder;
 
 /// <summary>
 /// Placeholder until Run 03 adds the migrated services. It uses the rounding mode

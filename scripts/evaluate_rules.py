@@ -25,7 +25,7 @@ from typing import Any
 DEFAULT_KEY = Path(__file__).resolve().parent.parent / "docs" / "BILLRITE_RULES.md"
 DEFAULT_ENV = Path(__file__).resolve().parent.parent / ".env"
 DEFAULT_SOURCES = Path(__file__).resolve().parent.parent / "legacy" / "billrite"
-VIEWER_EMAIL = "viewer@demo.parityforge.dev"
+VIEWER_EMAIL = "viewer@demo.offshoot.dev"
 DEFAULT_THRESHOLD = 0.3
 SENSITIVITY = (0.2, 0.3, 0.4, 0.5)
 SHINGLE_WORDS = 8

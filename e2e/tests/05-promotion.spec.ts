@@ -33,7 +33,7 @@ test('the repaired module is approved, shadowed and promoted to modern', async (
       const response = await request.post(`${FACADE}/billing/rate`, {
         data: { customer_class: 'R', month: 10, kwh: 610 },
       });
-      return response.headers()['x-parityforge-route'];
+      return response.headers()['x-offshoot-route'];
     }, { timeout: 30_000 })
     .toBe('modern');
   const answer = await request.post(`${FACADE}/billing/rate`, { data: { customer_class: 'R', month: 10, kwh: 610 } });

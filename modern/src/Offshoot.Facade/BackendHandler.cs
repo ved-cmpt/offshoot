@@ -1,6 +1,6 @@
 using System.Text.Json;
 
-namespace ParityForge.Facade;
+namespace Offshoot.Facade;
 
 public sealed record BackendResult(int Status, object Body, string Route);
 

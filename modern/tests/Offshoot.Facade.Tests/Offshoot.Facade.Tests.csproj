@@ -8,6 +8,6 @@
     <PackageReference Include="Microsoft.AspNetCore.Mvc.Testing" Version="10.0.14" />
   </ItemGroup>
   <ItemGroup>
-    <ProjectReference Include="..\..\src\ParityForge.Facade\ParityForge.Facade.csproj" />
+    <ProjectReference Include="..\..\src\Offshoot.Facade\Offshoot.Facade.csproj" />
   </ItemGroup>
 </Project>

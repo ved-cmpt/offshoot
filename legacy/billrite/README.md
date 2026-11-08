@@ -1,6 +1,6 @@
 # BillRite
 
-An original, synthetic 1990s-style utility billing batch system for the fictional Town of Northgate. It exists so that ParityForge has a legacy application to modernize. All code, names and data are invented.
+An original, synthetic 1990s-style utility billing batch system for the fictional Town of Northgate. It exists so that Offshoot has a legacy application to modernize. All code, names and data are invented.
 
 ## Layout
 

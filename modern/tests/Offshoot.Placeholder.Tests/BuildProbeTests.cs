@@ -1,7 +1,7 @@
-using ParityForge.Placeholder;
+using Offshoot.Placeholder;
 using Xunit;
 
-namespace ParityForge.Placeholder.Tests;
+namespace Offshoot.Placeholder.Tests;
 
 public class BuildProbeTests
 {

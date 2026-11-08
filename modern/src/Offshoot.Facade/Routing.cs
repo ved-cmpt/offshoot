@@ -1,6 +1,6 @@
 using Yarp.ReverseProxy.Configuration;
 
-namespace ParityForge.Facade;
+namespace Offshoot.Facade;
 
 /// <summary>The latest route table, shared by the YARP configuration and the backend handler.</summary>
 public sealed class RouteState

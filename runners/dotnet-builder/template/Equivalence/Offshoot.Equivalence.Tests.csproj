@@ -9,7 +9,7 @@
     <PackageReference Include="xunit.v3.mtp-v2" Version="4.0.2" />
   </ItemGroup>
   <ItemGroup>
-    <ProjectReference Include="../Generated/ParityForge.Generated.csproj" />
+    <ProjectReference Include="../Generated/Offshoot.Generated.csproj" />
   </ItemGroup>
   <ItemGroup>
     <None Include="cases.jsonl" CopyToOutputDirectory="PreserveNewest" Condition="Exists('cases.jsonl')" />

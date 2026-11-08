@@ -1,0 +1,5 @@
+<Solution>
+  <Project Path="Generated/Offshoot.Generated.csproj" />
+  <Project Path="Generated.Tests/Offshoot.Generated.Tests.csproj" />
+  <Project Path="Harness/Offshoot.Harness.csproj" />
+</Solution>

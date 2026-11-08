@@ -30,7 +30,7 @@ SOCKET = "/run/builder/builder.sock"
 
 
 def hostile_body(body: str) -> str:
-    return f"""namespace ParityForge.Generated;
+    return f"""namespace Offshoot.Generated;
 
 public static class Hostile
 {{
@@ -59,7 +59,7 @@ ATTACKS: dict[str, str] = {
     ),
     "type_by_name": hostile_body('_ = System.Type.GetType("System.IO.File");'),
     "unsafe": hostile_body("unsafe { var value = 1; var pointer = &value; _ = *pointer; }"),
-    "native": """namespace ParityForge.Generated;
+    "native": """namespace Offshoot.Generated;
 
 public static class Hostile
 {
@@ -71,7 +71,7 @@ public static class Hostile
 """,
 }
 
-RUNAWAY = """namespace ParityForge.Generated;
+RUNAWAY = """namespace Offshoot.Generated;
 
 public static class Spin
 {
@@ -87,10 +87,10 @@ public static class Spin
 }
 """
 
-RUNAWAY_TEST = """using ParityForge.Generated;
+RUNAWAY_TEST = """using Offshoot.Generated;
 using Xunit;
 
-namespace ParityForge.Generated.Tests;
+namespace Offshoot.Generated.Tests;
 
 public sealed class SpinTests
 {
@@ -101,7 +101,7 @@ public sealed class SpinTests
 
 MEMORY_TEST = """using Xunit;
 
-namespace ParityForge.Generated.Tests;
+namespace Offshoot.Generated.Tests;
 
 public sealed class MemoryTests
 {
@@ -303,7 +303,7 @@ def test_the_builder_health_check_needs_no_token() -> None:
 
 @pytest.mark.parametrize(
     "path",
-    ["src/../Program.cs", "Generated/ParityForge.Generated.csproj", "src/Thing.csproj", "/etc/passwd", "tests/a/b.cs"],
+    ["src/../Program.cs", "Generated/Offshoot.Generated.csproj", "src/Thing.csproj", "/etc/passwd", "tests/a/b.cs"],
 )
 def test_the_builder_refuses_files_outside_the_allowlist(builder: DotnetBuilder, path: str) -> None:
     with pytest.raises(SandboxError) as caught:

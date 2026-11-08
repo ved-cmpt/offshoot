@@ -1,4 +1,4 @@
-namespace ParityForge.Generated;
+namespace Offshoot.Generated;
 
 /// <summary>
 /// The record entry point: an LF-INPUT record (29 bytes) in, an LF-OUTPUT record

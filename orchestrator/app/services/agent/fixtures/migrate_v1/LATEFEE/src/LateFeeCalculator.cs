@@ -1,4 +1,4 @@
-namespace ParityForge.Generated;
+namespace Offshoot.Generated;
 
 /// <summary>The assessed account, field for field the LF-OUTPUT group.</summary>
 public sealed record LateFeeResult(

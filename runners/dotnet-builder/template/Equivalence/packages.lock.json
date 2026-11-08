@@ -121,7 +121,7 @@
           "xunit.v3.runner.common": "[4.0.2]"
         }
       },
-      "parityforge.generated": {
+      "offshoot.generated": {
         "type": "Project"
       }
     }

@@ -512,7 +512,7 @@ def run_shadow(db: Session, job: Job, settings: Settings) -> dict[str, Any]:
                 response = client.post(path, json=body)
             except httpx.HTTPError:
                 raise JobFailed("FACADE_UNAVAILABLE") from None
-            route = response.headers.get("X-ParityForge-Route", "unknown")
+            route = response.headers.get("X-Offshoot-Route", "unknown")
             routes[route] = routes.get(route, 0) + 1
             if response.status_code == HTTP_OK:
                 answered += 1

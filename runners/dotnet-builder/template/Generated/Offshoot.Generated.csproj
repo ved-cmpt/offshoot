@@ -2,6 +2,6 @@
   <!-- Holds the generated module code: the sandbox copies the artifact's src/*.cs here. -->
   <Import Project="../Policy.props" />
   <PropertyGroup>
-    <RootNamespace>ParityForge.Generated</RootNamespace>
+    <RootNamespace>Offshoot.Generated</RootNamespace>
   </PropertyGroup>
 </Project>

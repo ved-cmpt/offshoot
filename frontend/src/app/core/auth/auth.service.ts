@@ -3,8 +3,8 @@ import { Injectable, computed, inject, signal } from '@angular/core';
 import { Observable, finalize, firstValueFrom, from, map, shareReplay, tap } from 'rxjs';
 
 export const AUTH_API = '/api/v1/auth';
-const CSRF_HEADERS = { 'X-ParityForge-CSRF': '1' };
-const REFRESH_LOCK = 'parityforge-refresh';
+const CSRF_HEADERS = { 'X-Offshoot-CSRF': '1' };
+const REFRESH_LOCK = 'offshoot-refresh';
 
 export type Role = 'VIEWER' | 'ENGINEER' | 'ARCHITECT' | 'ADMIN';
 

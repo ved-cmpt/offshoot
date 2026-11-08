@@ -19,25 +19,25 @@ class DemoUser:
 def demo_accounts(settings: Settings) -> list[DemoUser]:
     return [
         DemoUser(
-            "viewer@demo.parityforge.dev",
+            "viewer@demo.offshoot.dev",
             settings.demo_password_viewer.get_secret_value(),
             "Vera Viewer",
             "VIEWER",
         ),
         DemoUser(
-            "engineer@demo.parityforge.dev",
+            "engineer@demo.offshoot.dev",
             settings.demo_password_engineer.get_secret_value(),
             "Eli Engineer",
             "ENGINEER",
         ),
         DemoUser(
-            "architect@demo.parityforge.dev",
+            "architect@demo.offshoot.dev",
             settings.demo_password_architect.get_secret_value(),
             "Ari Architect",
             "ARCHITECT",
         ),
         DemoUser(
-            "admin@demo.parityforge.dev",
+            "admin@demo.offshoot.dev",
             settings.demo_password_admin.get_secret_value(),
             "Ada Admin",
             "ADMIN",

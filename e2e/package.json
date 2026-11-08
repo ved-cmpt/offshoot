@@ -1,8 +1,8 @@
 {
-  "name": "parityforge-e2e",
+  "name": "offshoot-e2e",
   "version": "0.0.0",
   "private": true,
-  "description": "Browser journeys and accessibility checks against the running ParityForge stack.",
+  "description": "Browser journeys and accessibility checks against the running Offshoot stack.",
   "scripts": {
     "test": "playwright test"
   },

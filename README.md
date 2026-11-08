@@ -1,10 +1,10 @@
-# ParityForge
+# Offshoot
 
 **Status: in development (Run 04 of 6).** The whole workflow works locally in mock AI mode: inventory, rule extraction with human review, the plan, migration to C# in a network-less sandbox, golden-master equivalence with coverage, mutation testing and gates, human approval, and strangler-fig promotion through a YARP facade with shadow comparison. A dashboard, an assessment report and the audit log show the results. CI, the production image and deployment come next. Live Gemini is implemented but has never been called. See [`docs/IMPLEMENTATION_STATUS.md`](docs/IMPLEMENTATION_STATUS.md) for exactly what works today.
 
-ParityForge will be an AI-assisted legacy modernization workbench: it inventories a COBOL application, extracts business rules that a person verifies against the source, migrates modules to C#, and proves behavioural equivalence by running the real legacy program alongside the new code. The model proposes; deterministic tooling verifies; people approve.
+Offshoot will be an AI-assisted legacy modernization workbench: it inventories a COBOL application, extracts business rules that a person verifies against the source, migrates modules to C#, and proves behavioural equivalence by running the real legacy program alongside the new code. The model proposes; deterministic tooling verifies; people approve.
 
-This project was previously developed under the working name LegacyLens.
+This project was previously developed under the working names LegacyLens and ParityForge.
 
 The full specification is in [`docs/IMPLEMENTATION_BLUEPRINT.md`](docs/IMPLEMENTATION_BLUEPRINT.md).
 
@@ -64,7 +64,7 @@ npx playwright install chromium
 npx playwright test
 ```
 
-API tests create and remove their own `parityforge_test` database. The COBOL characterization tests run the real programs in `cobol-runner`.
+API tests create and remove their own `offshoot_test` database. The COBOL characterization tests run the real programs in `cobol-runner`.
 
 To measure rule extraction against the answer key, run this on the host against a seeded stack. It never runs in a container, because the agent must not be able to reach the key. [`docs/EVALUATION.md`](docs/EVALUATION.md) explains the method and what the numbers do and do not show.
 

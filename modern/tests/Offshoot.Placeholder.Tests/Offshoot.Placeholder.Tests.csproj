@@ -1,6 +1,4 @@
 <Project Sdk="Microsoft.NET.Sdk">
-  <!-- Holds the generated unit tests: the sandbox copies the artifact's tests/*.cs here. -->
-  <Import Project="../Policy.props" />
   <PropertyGroup>
     <OutputType>Exe</OutputType>
     <IsPackable>false</IsPackable>
@@ -9,6 +7,6 @@
     <PackageReference Include="xunit.v3.mtp-v2" Version="4.0.2" />
   </ItemGroup>
   <ItemGroup>
-    <ProjectReference Include="../Generated/ParityForge.Generated.csproj" />
+    <ProjectReference Include="..\..\src\Offshoot.Placeholder\Offshoot.Placeholder.csproj" />
   </ItemGroup>
 </Project>

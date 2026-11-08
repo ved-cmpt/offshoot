@@ -1,4 +1,4 @@
-namespace ParityForge.Generated;
+namespace Offshoot.Generated;
 
 /// <summary>
 /// The record entry point: an RC-INPUT record (8 bytes) in, an RC-OUTPUT record

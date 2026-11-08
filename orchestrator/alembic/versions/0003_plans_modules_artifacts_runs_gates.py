@@ -21,7 +21,7 @@ down_revision: str | None = "0002"
 branch_labels: str | Sequence[str] | None = None
 depends_on: str | Sequence[str] | None = None
 
-APP_ROLE = os.environ.get("APP_DB_ROLE", "parityforge_app")
+APP_ROLE = os.environ.get("APP_DB_ROLE", "offshoot_app")
 if not re.fullmatch(r"[a-z_][a-z0-9_]{0,62}", APP_ROLE):
     raise ValueError("APP_DB_ROLE must be a lower-case SQL identifier")
 

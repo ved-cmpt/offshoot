@@ -30,9 +30,9 @@ COPY runners/dotnet-builder/build-and-test /usr/local/bin/build-and-test
 COPY modern/ /tmp/restore/
 COPY runners/dotnet-builder/template/ /opt/template/
 RUN chmod 0755 /usr/local/bin/build-and-test \
-    && dotnet restore /tmp/restore/ParityForge.Modern.sln --locked-mode \
-    && dotnet restore /opt/template/ParityForge.Sandbox.slnx --locked-mode \
-    && dotnet restore /opt/template/Equivalence/ParityForge.Equivalence.Tests.csproj --locked-mode \
+    && dotnet restore /tmp/restore/Offshoot.Modern.sln --locked-mode \
+    && dotnet restore /opt/template/Offshoot.Sandbox.slnx --locked-mode \
+    && dotnet restore /opt/template/Equivalence/Offshoot.Equivalence.Tests.csproj --locked-mode \
     && dotnet tool install dotnet-stryker --version 4.16.0 --tool-path /opt/stryker \
     && find /opt/template -type d \( -name obj -o -name bin \) -prune -exec rm -rf {} + \
     && rm -rf /tmp/restore /tmp/dotnet-home /tmp/nuget-http /tmp/nuget-scratch \

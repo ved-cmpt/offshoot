@@ -229,7 +229,7 @@ def _tail(text: str, root: Path) -> str:
     return _relative(text, root)[-OUTPUT_TAIL:]
 
 
-def restore_and_build(root: Path, project: str = "ParityForge.Sandbox.slnx") -> dict[str, Any]:
+def restore_and_build(root: Path, project: str = "Offshoot.Sandbox.slnx") -> dict[str, Any]:
     restore = run(
         ["dotnet", "restore", project, "--locked-mode", "--source", PACKAGES],
         root,
@@ -262,7 +262,7 @@ def restore_and_build(root: Path, project: str = "ParityForge.Sandbox.slnx") -> 
 
 
 def unit_tests(root: Path, timeout: int = TEST_TIMEOUT) -> dict[str, Any]:
-    exe = root / "Generated.Tests" / "bin" / "Release" / "net10.0" / "ParityForge.Generated.Tests"
+    exe = root / "Generated.Tests" / "bin" / "Release" / "net10.0" / "Offshoot.Generated.Tests"
     result = run([str(exe)], exe.parent, timeout, RUN_MEMORY_MB)
     result["stdout"] = ANSI.sub("", result["stdout"])
     summary = TEST_SUMMARY.search(result["stdout"])
@@ -339,7 +339,7 @@ def run_artifact(payload: dict[str, Any]) -> dict[str, Any]:
         with _cache_lock:
             cached = _cache[digest]
     result = run(
-        [str(cached / "ParityForge.Harness")],
+        [str(cached / "Offshoot.Harness")],
         cached,
         run_timeout,
         RUN_MEMORY_MB,
@@ -414,7 +414,7 @@ def mutate_artifact(payload: dict[str, Any]) -> dict[str, Any]:
                 "".join(json.dumps(case) + "\n" for case in cases), encoding="utf-8"
             )
             restore = run(
-                ["dotnet", "restore", "Equivalence/ParityForge.Equivalence.Tests.csproj", "--locked-mode", "--source", PACKAGES],
+                ["dotnet", "restore", "Equivalence/Offshoot.Equivalence.Tests.csproj", "--locked-mode", "--source", PACKAGES],
                 root,
                 BUILD_TIMEOUT,
                 BUILD_MEMORY_MB,
@@ -424,7 +424,7 @@ def mutate_artifact(payload: dict[str, Any]) -> dict[str, Any]:
             output = root / "stryker-output"
             config = {
                 "stryker-config": {
-                    "project": "ParityForge.Generated.csproj",
+                    "project": "Offshoot.Generated.csproj",
                     "test-runner": "mtp",
                     "reporters": ["json", "cleartext"],
                     "coverage-analysis": "off",

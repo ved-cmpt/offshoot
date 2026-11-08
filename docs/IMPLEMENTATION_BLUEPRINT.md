@@ -1,4 +1,4 @@
-# ParityForge
+# Offshoot
 ## End-to-End Implementation Blueprint & Coding-Agent Handoff
 
 **Version:** 1.0
@@ -26,7 +26,7 @@ Governments are acting on this now. For example, the Government of Alberta has a
 
 ## 1.2 Proposed solution
 
-**ParityForge** is a portfolio-grade, AI-assisted legacy modernization workbench. It takes a legacy COBOL application and:
+**Offshoot** is a portfolio-grade, AI-assisted legacy modernization workbench. It takes a legacy COBOL application and:
 
 1. **Inventories it** with deterministic static analysis: programs, copybooks, paragraphs, data layouts, files, call graph and dead code.
 2. **Extracts business rules** in plain English with an AI agent. Every rule links to the exact source lines; a reviewer verifies or rejects each rule.
@@ -99,7 +99,7 @@ The same workflow must run locally with `AI_MODE=mock`, no API key and no networ
 
 - Budget is **$0**: Gemini free tier (optional), free hosting (Render + Neon), open-source tooling only (GnuCOBOL, .NET SDK, Python, Angular).
 - The owner develops on **Windows 11** with Docker Desktop (WSL2), Node 24, Python 3.12, uv, Git and the .NET 8 or 10 SDK (container-first; the host SDK is optional).
-- Project folder: `C:\Users\User\Desktop\parityforge`.
+- Project folder: `C:\Users\User\Desktop\offshoot`.
 - The public demo runs in **mock AI mode**; live Gemini is shown in the demo video and documented in the evaluation.
 
 ## 2.4 Project invariants
@@ -397,7 +397,7 @@ UX standards: loading/empty/error/retry states everywhere; job progress with liv
 # 12. Repository layout and local setup
 
 ```text
-parityforge/
+offshoot/
   README.md  LICENSE  CHANGELOG.md  AGENTS.md  .gitignore  .gitattributes  .env.example
   compose.yaml  compose.e2e.yaml  compose.prod.yaml  render.yaml
   .github/workflows/ci.yml  .github/dependabot.yml
@@ -409,7 +409,7 @@ parityforge/
   runners/cobol-runner/   Dockerfile  runner API (small, internal)
   runners/dotnet-builder/ Dockerfile  build/test/mutate scripts
   orchestrator/   pyproject.toml uv.lock alembic/ app/{core,db,routers,services/{analysis,agent,jobs,harness,sandbox,reports}} tests/
-  modern/         ParityForge.Modern.sln  src/{MeterService,BillingService,StatementService,Facade}  tests/
+  modern/         Offshoot.Modern.sln  src/{MeterService,BillingService,StatementService,Facade}  tests/
   frontend/       Angular workspace (src/app/{core,shared,features/*}) tests
   e2e/            Playwright + axe suites, demo recording
   assets/         screenshots/ demo/
@@ -463,7 +463,7 @@ Each run follows the proven method: unattended autopilot prompt, checkpoints wit
 
 # 15. Deployment (free tier)
 
-- **Database:** a new Neon free project (`parityforge`), non-expiring, least-privilege app role, migrations run from the owner's machine.
+- **Database:** a new Neon free project (`offshoot`), non-expiring, least-privilege app role, migrations run from the owner's machine.
 - **App:** Render free web service (Docker) running the orchestrator + built Angular (same origin). Sandboxed execution in production: the public demo runs **verification of bundled, pre-approved artifacts and the recorded mock pipeline**; the cobol-runner and dotnet-builder capabilities required for live re-verification are packaged so that untrusted user code is never executed publicly (`DEMO_MODE=true` disables uploads and live migration of new code). Document the exact topology chosen (single image with internal runners vs separate free services) in an ADR, keeping within Render's shared 750 free instance-hours per month (IknowServiceAI uses the same workspace).
 - **Facade + modern services:** packaged in the same image for the demo (separate processes or in-process hosting) or a second free service if hours allow; ADR decides.
 - **Demo safeguards:** daily auto-reset, volume caps, banner ("Public demo — synthetic COBOL app, simulated AI responses"), mock AI.
@@ -527,4 +527,4 @@ Each run follows the proven method: unattended autopilot prompt, checkpoints wit
 
 ---
 
-**End of specification.** The next action is **Run 01**. Nothing in this blueprint claims that ParityForge has been built, deployed or published.
+**End of specification.** The next action is **Run 01**. Nothing in this blueprint claims that Offshoot has been built, deployed or published.

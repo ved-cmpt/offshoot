@@ -1,6 +1,6 @@
 using System.Globalization;
 
-namespace ParityForge.Generated;
+namespace Offshoot.Generated;
 
 /// <summary>Reads and writes the fixed-width records of the CALLREC parameter blocks.</summary>
 internal static class FixedWidth

@@ -1,4 +1,4 @@
-namespace ParityForge.Generated;
+namespace Offshoot.Generated;
 
 /// <summary>The validated read, field for field the MV-OUTPUT group.</summary>
 public sealed record MeterReadResult(string Status, int ConsumptionKwh, bool Rollover, bool Estimated)

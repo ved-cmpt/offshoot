@@ -42,7 +42,7 @@ Rules for your answer:
 
 TARGET_CONTRACT = """\
 Target contract, fixed by the build sandbox:
-- C# for .NET 10. Namespace ParityForge.Generated. Nullable and implicit usings are on and
+- C# for .NET 10. Namespace Offshoot.Generated. Nullable and implicit usings are on and
   every warning is an error.
 - Provide `public static class ModuleEntry` with `public static string Process(string record)`.
   It receives one input record laid out as the INPUT fields below and returns one output

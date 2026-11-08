@@ -6,10 +6,10 @@ using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging.Abstractions;
-using ParityForge.Facade;
+using Offshoot.Facade;
 using Xunit;
 
-namespace ParityForge.Facade.Tests;
+namespace Offshoot.Facade.Tests;
 
 public sealed class FakeLegacy : ILegacyBackend
 {
@@ -268,7 +268,7 @@ public sealed class PipelineTests : IClassFixture<FacadeAppFactory>
         inside.Headers.Host = "127.0.0.1:8081";
         var response = await client.SendAsync(inside, TestContext.Current.CancellationToken);
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
-        Assert.Equal("legacy", response.Headers.GetValues("X-ParityForge-Route").Single());
+        Assert.Equal("legacy", response.Headers.GetValues("X-Offshoot-Route").Single());
         var json = await response.Content.ReadFromJsonAsync<JsonElement>(TestContext.Current.CancellationToken);
         Assert.Equal("55.91", json.GetProperty("energy").GetString());
     }

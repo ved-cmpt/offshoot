@@ -51,7 +51,7 @@ def create_app() -> FastAPI:
     settings = get_settings()
     app = FastAPI(
         lifespan=lifespan,
-        title="ParityForge orchestrator",
+        title="Offshoot orchestrator",
         version="0.1.0",
         docs_url=None,
         redoc_url=None,
@@ -96,7 +96,7 @@ def create_app() -> FastAPI:
         allow_origins=settings.cors_origins,
         allow_credentials=True,
         allow_methods=["GET", "POST", "PATCH", "OPTIONS"],
-        allow_headers=["Authorization", "Content-Type", "X-ParityForge-CSRF"],
+        allow_headers=["Authorization", "Content-Type", "X-Offshoot-CSRF"],
         max_age=600,
     )
     # Added last, so it is outermost and also covers CORS responses and failures.

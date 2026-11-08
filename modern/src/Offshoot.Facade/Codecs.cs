@@ -2,7 +2,7 @@ using System.Globalization;
 using System.Text;
 using System.Text.Json;
 
-namespace ParityForge.Facade;
+namespace Offshoot.Facade;
 
 /// <summary>A request the facade refuses before any backend sees it.</summary>
 public sealed class RequestError(string message) : Exception(message);

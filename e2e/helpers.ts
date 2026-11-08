@@ -15,7 +15,7 @@ const PASSWORDS: Record<Role, string> = {
 };
 
 export function email(role: Role): string {
-  return `${role}@demo.parityforge.dev`;
+  return `${role}@demo.offshoot.dev`;
 }
 
 export const SCREENSHOTS = resolve(__dirname, '..', 'assets', 'screenshots');
@@ -23,7 +23,7 @@ export const SCREENSHOTS = resolve(__dirname, '..', 'assets', 'screenshots');
 export async function useTheme(page: Page, theme: Theme): Promise<void> {
   await page.addInitScript((value) => {
     try {
-      window.localStorage.setItem('parityforge-theme', value);
+      window.localStorage.setItem('offshoot-theme', value);
     } catch {
       // Storage blocked: the default theme applies.
     }
