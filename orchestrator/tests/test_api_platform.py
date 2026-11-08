@@ -100,7 +100,10 @@ def test_every_role_can_list_projects(client: TestClient, db: Session, make_user
     session = login_as(client, make_user(role))
     response = client.get("/api/v1/projects", headers=bearer(session))
     assert response.status_code == 200
-    assert name in [item["name"] for item in response.json()["items"]]
+    # Tests share one database, so the newest project can be past the first page.
+    total = response.json()["total"]
+    last = client.get("/api/v1/projects", params={"offset": max(total - 50, 0)}, headers=bearer(session)).json()
+    assert name in [item["name"] for item in last["items"]]
 
 
 def test_project_detail(client: TestClient, db: Session, make_user: UserFactory) -> None:

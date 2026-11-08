@@ -1,0 +1,17 @@
+{
+  "notes": "Repaired RATECALC. COMPUTE ROUNDED is half-up, so the energy charge and the levy now round midpoints away from zero, as the failure report showed.",
+  "rules_covered": [
+    "Customer class check",
+    "Billing month check",
+    "Usage must be numeric",
+    "Residential tariff values",
+    "Commercial tariff values",
+    "Standard first block size",
+    "Summer first block size",
+    "Splitting usage across the tiers",
+    "Energy charge rounding",
+    "Minimum charge",
+    "Municipal levy",
+    "Current charge total"
+  ]
+}

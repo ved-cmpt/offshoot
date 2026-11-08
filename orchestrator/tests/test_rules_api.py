@@ -281,7 +281,7 @@ def test_the_injection_comment_changes_nothing_about_the_outcome(
     captured: list[str] = []
 
     class Recording(MockAgent):
-        def extract_rules(self, request: Any, max_attempts: int) -> AgentResult:
+        def extract_rules(self, request: Any, max_attempts: int) -> AgentResult[RuleExtractionOutput]:
             captured.append(request.user_prompt)
             return super().extract_rules(request, max_attempts)
 
@@ -715,7 +715,7 @@ class FailingProvider:
     def identity(self, program: str) -> str:
         return f"failing:{program}"
 
-    def extract_rules(self, request: Any, max_attempts: int) -> AgentResult:
+    def extract_rules(self, request: Any, max_attempts: int) -> AgentResult[RuleExtractionOutput]:
         attempts = [Attempt("FAILED", "m", 5, AI_RATE_LIMITED) for _ in range(max_attempts)]
         raise AgentError(AI_RATE_LIMITED, attempts)
 
@@ -727,7 +727,7 @@ class CountingProvider(FailingProvider):
     def identity(self, program: str) -> str:
         return f"counting:{uuid.uuid4()}"
 
-    def extract_rules(self, request: Any, max_attempts: int) -> AgentResult:
+    def extract_rules(self, request: Any, max_attempts: int) -> AgentResult[RuleExtractionOutput]:
         self.calls += 1
         self.seen_attempts = max_attempts
         output = RuleExtractionOutput(rules=[])

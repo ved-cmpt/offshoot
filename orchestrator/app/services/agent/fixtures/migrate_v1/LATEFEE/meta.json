@@ -1,0 +1,16 @@
+{
+  "notes": "Translated LATEFEE. Two-digit years use the fixed century window from RATES; the fee rounds half-up and is then clamped.",
+  "rules_covered": [
+    "Balance and credit are numeric",
+    "Bill date must be a real date",
+    "Due date may be zero",
+    "Century window for two-digit years",
+    "Counting days overdue",
+    "Thirty day grace period",
+    "Late fee amount and limits",
+    "Senior waiver",
+    "Senior waiver",
+    "Applying account credit",
+    "Credit does not reduce current charges"
+  ]
+}

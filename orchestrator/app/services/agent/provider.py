@@ -3,8 +3,10 @@
 from dataclasses import dataclass, field
 from typing import Any, Protocol
 
+from pydantic import BaseModel
+
 from app.core.config import Settings
-from app.services.agent.contracts import RuleExtractionOutput
+from app.services.agent.contracts import MigrationOutput, PlanOutput, RuleExtractionOutput
 from app.services.agent.prompts import AgentRequest
 
 AI_TIMEOUT = "AI_TIMEOUT"
@@ -28,8 +30,8 @@ class Attempt:
 
 
 @dataclass(frozen=True)
-class AgentResult:
-    output: RuleExtractionOutput
+class AgentResult[OutputT: BaseModel]:
+    output: OutputT
     attempts: list[Attempt]
 
 
@@ -45,11 +47,17 @@ class AgentError(Exception):
 class AgentProvider(Protocol):
     mode: str
 
-    def identity(self, program: str) -> str:
+    def identity(self, program: str, prompt_version: str = "rules-v1") -> str:
         """What determines this provider's answer, for the job's input hash."""
         ...
 
-    def extract_rules(self, request: AgentRequest, max_attempts: int) -> AgentResult: ...
+    def extract_rules(self, request: AgentRequest, max_attempts: int) -> AgentResult[RuleExtractionOutput]: ...
+
+    def propose_plan(self, request: AgentRequest, max_attempts: int) -> AgentResult[PlanOutput]: ...
+
+    def migrate(self, request: AgentRequest, max_attempts: int) -> AgentResult[MigrationOutput]:
+        """Answer a migrate-v1 or a repair-v1 request. Both return a complete file set."""
+        ...
 
 
 def get_agent_provider(settings: Settings) -> AgentProvider:

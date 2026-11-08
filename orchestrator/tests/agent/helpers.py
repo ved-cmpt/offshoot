@@ -27,9 +27,13 @@ COPIES = {
 }
 
 
-def make_project(db: Session) -> Project:
-    """A fresh project with the real BillRite sources, so tests stay independent of each other."""
-    project = Project(name=f"Test {uuid.uuid4().hex}", source_kind="UPLOAD", status="IMPORTED")
+def make_project(db: Session, source_kind: str = "UPLOAD") -> Project:
+    """A fresh project with the real BillRite sources, so tests stay independent of each other.
+
+    BUNDLED marks it as the bundled BillRite, which the runners may execute. The default,
+    UPLOAD, can be analysed and extracted but never executed.
+    """
+    project = Project(name=f"Test {uuid.uuid4().hex}", source_kind=source_kind, status="IMPORTED")
     db.add(project)
     db.flush()
     for path, (kind, content) in read_sources(BILLRITE).items():
@@ -37,6 +41,7 @@ def make_project(db: Session) -> Project:
             SourceFile(
                 project_id=project.id,
                 path=path,
+                # Unique per project, so the analysis job of one test never answers another's.
                 sha256=uuid.uuid4().hex,
                 kind=kind,
                 line_count=len(content.splitlines()),

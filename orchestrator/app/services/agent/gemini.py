@@ -12,8 +12,9 @@ from concurrent.futures import TimeoutError as FutureTimeout
 from typing import Any
 
 import httpx
+from pydantic import BaseModel
 
-from app.services.agent.contracts import RuleExtractionOutput
+from app.services.agent.contracts import MigrationOutput, PlanOutput, RuleExtractionOutput
 from app.services.agent.prompts import AgentRequest
 from app.services.agent.provider import (
     AI_AUTH,
@@ -103,8 +104,10 @@ class GeminiAgent:
         self._config_factory = config_factory
         self._sleep = sleep
 
-    def identity(self, program: str) -> str:
-        return f"gemini:{self.model}:{program}"
+    def identity(self, program: str, prompt_version: str = "rules-v1") -> str:
+        if prompt_version == "rules-v1":
+            return f"gemini:{self.model}:{program}"
+        return f"gemini:{self.model}:{prompt_version}:{program}"
 
     def _get_client(self) -> Any:
         if self._client is None:
@@ -125,13 +128,24 @@ class GeminiAgent:
             executor.shutdown(wait=False, cancel_futures=True)
 
     @staticmethod
-    def _parse(response: Any) -> RuleExtractionOutput:
+    def _parse[OutputT: BaseModel](response: Any, contract: type[OutputT]) -> OutputT:
         text = getattr(response, "text", None)
         if not isinstance(text, str) or not text or len(text) > MAX_RESPONSE_CHARS:
             raise ValueError("no usable text")
-        return RuleExtractionOutput.model_validate_json(text)
+        return contract.model_validate_json(text)
 
-    def extract_rules(self, request: AgentRequest, max_attempts: int) -> AgentResult:
+    def extract_rules(self, request: AgentRequest, max_attempts: int) -> AgentResult[RuleExtractionOutput]:
+        return self._structured(request, RuleExtractionOutput, max_attempts)
+
+    def propose_plan(self, request: AgentRequest, max_attempts: int) -> AgentResult[PlanOutput]:
+        return self._structured(request, PlanOutput, max_attempts)
+
+    def migrate(self, request: AgentRequest, max_attempts: int) -> AgentResult[MigrationOutput]:
+        return self._structured(request, MigrationOutput, max_attempts)
+
+    def _structured[OutputT: BaseModel](
+        self, request: AgentRequest, contract: type[OutputT], max_attempts: int
+    ) -> AgentResult[OutputT]:
         if not self._api_key or not self.model:
             raise AgentError(AI_NOT_CONFIGURED)
         attempts: list[Attempt] = []
@@ -140,7 +154,7 @@ class GeminiAgent:
             started = time.monotonic()
             tokens: dict[str, Any] = {}
             code: str | None = None
-            output: RuleExtractionOutput | None = None
+            output: OutputT | None = None
             try:
                 response = self._call(request)
                 tokens = _usage(response)
@@ -148,7 +162,7 @@ class GeminiAgent:
                 code = classify_failure(exc)
             else:
                 try:
-                    output = self._parse(response)
+                    output = self._parse(response, contract)
                 except ValueError:  # Includes pydantic's ValidationError.
                     code = AI_INVALID_OUTPUT
             latency_ms = int((time.monotonic() - started) * 1000)

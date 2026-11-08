@@ -14,7 +14,7 @@ from app.core.config import get_settings
 from app.core.errors import ApiError
 from app.core.middleware import SecurityMiddleware
 from app.db.session import get_session_factory
-from app.routers import admin, auth, health, inventory, projects, rules
+from app.routers import admin, auth, health, inventory, modules, plans, projects, rules
 from app.services.jobs.worker import JobWorker
 
 API_PREFIX = "/api/v1"
@@ -82,6 +82,8 @@ def create_app() -> FastAPI:
     api.include_router(projects.router)
     api.include_router(inventory.router)
     api.include_router(rules.router)
+    api.include_router(plans.router)
+    api.include_router(modules.router)
     api.include_router(admin.router)
     app.include_router(api)
     # Unprefixed aliases, for platform health checks.

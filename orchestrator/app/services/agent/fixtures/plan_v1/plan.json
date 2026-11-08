@@ -1,0 +1,64 @@
+{
+  "services": [
+    {
+      "name": "meter-service",
+      "description": "Validates meter reads and works out consumption, including dial rollover and estimated reads.",
+      "programs": ["MTRVAL"]
+    },
+    {
+      "name": "billing-service",
+      "description": "Prices usage against the tariff and assesses late fees and credits. Also takes over the batch driver once its callees are modern.",
+      "programs": ["RATECALC", "LATEFEE", "BILLRUN"]
+    },
+    {
+      "name": "statement-service",
+      "description": "Formats the fixed-width statement print line for the forms vendor.",
+      "programs": ["STMTGEN"]
+    }
+  ],
+  "risks": [
+    {
+      "title": "Half-up rounding",
+      "detail": "RATECALC rounds the energy charge and the levy with COMPUTE ROUNDED, which rounds a midpoint up. The default rounding of .NET decimals goes to the even cent instead, so a direct translation can be a cent out on some bills.",
+      "severity": "HIGH",
+      "programs": ["RATECALC", "LATEFEE"]
+    },
+    {
+      "title": "Two-digit years",
+      "detail": "LATEFEE expands YYMMDD dates with a fixed pivot. Dates either side of the pivot must expand to the same century as the legacy program, or overdue days change.",
+      "severity": "HIGH",
+      "programs": ["LATEFEE"]
+    },
+    {
+      "title": "Truncation into narrow print fields",
+      "detail": "STMTGEN moves amounts and names into fields narrower than their sources, which drops high-order digits and trailing characters. The modern code has to reproduce this, not fix it.",
+      "severity": "MEDIUM",
+      "programs": ["STMTGEN"]
+    },
+    {
+      "title": "Rollover arithmetic on five-digit dials",
+      "detail": "MTRVAL treats a lower current read as a dial rollover unless the implied usage is implausible. The boundary between the two cases is easy to get wrong by one.",
+      "severity": "MEDIUM",
+      "programs": ["MTRVAL"]
+    },
+    {
+      "title": "Control flow by paragraph ranges",
+      "detail": "PERFORM THRU ranges and a GO TO exit decide which paragraphs run. Reading a range as a single paragraph would skip work.",
+      "severity": "MEDIUM",
+      "programs": ["BILLRUN", "RATECALC"]
+    },
+    {
+      "title": "The batch driver calls everything",
+      "detail": "BILLRUN depends on all four called programs and on the file layouts, so it can only move after them.",
+      "severity": "MEDIUM",
+      "programs": ["BILLRUN"]
+    },
+    {
+      "title": "Retired tariff code",
+      "detail": "A winter discount paragraph and its table are never performed. They should not be carried into the new service.",
+      "severity": "LOW",
+      "programs": ["RATECALC"]
+    }
+  ],
+  "notes": "Proposed from the inventory facts and risk signals only."
+}

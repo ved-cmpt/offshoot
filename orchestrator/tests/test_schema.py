@@ -27,6 +27,8 @@ TABLES = {
     "shadow_mismatches",
     "approvals",
     "audit_logs",
+    # Run 03 (migration 0003): an architect's lowered gate threshold, with its reason.
+    "gate_exceptions",
 }
 
 
@@ -254,3 +256,17 @@ def test_migration_runs_down_and_back_up_on_a_clean_database() -> None:
         with maintenance.connect() as connection:
             connection.execute(text(f"DROP DATABASE IF EXISTS {scratch} WITH (FORCE)"))
         maintenance.dispose()
+
+
+@pytest.mark.parametrize(
+    "statement",
+    ["UPDATE gate_exceptions SET reason = 'x'", "DELETE FROM gate_exceptions"],
+)
+def test_app_role_cannot_change_a_recorded_gate_exception(app_engine: Engine, statement: str) -> None:
+    with app_engine.connect() as connection, pytest.raises(ProgrammingError, match="permission denied"):
+        connection.execute(text(statement))
+
+
+def test_app_role_can_read_gate_exceptions(app_engine: Engine) -> None:
+    with app_engine.connect() as connection:
+        assert connection.scalar(text("SELECT count(*) FROM gate_exceptions")) is not None

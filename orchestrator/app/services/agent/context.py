@@ -14,7 +14,7 @@ from pathlib import PurePosixPath
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
-from app.db.models import SourceFile
+from app.db.models import InventoryItem, Project, Rule, SourceFile
 from app.services.analysis.source import SourceLine, copy_target, to_lines
 
 ALLOWED_SUFFIXES = {".cbl", ".cob", ".cpy"}
@@ -109,3 +109,129 @@ def load_program_context(db: Session, project_id: uuid.UUID, program: str) -> Pr
                 pending.append(copied)
     assert_context_allowed(context)
     return context
+
+
+# --- Plan and migration contexts (Run 03). Still the only route into a prompt. ---
+
+
+@dataclass(frozen=True)
+class ProgramFacts:
+    """What deterministic analysis knows about one program. No source text."""
+
+    name: str
+    is_entry: bool
+    calls: tuple[str, ...]
+    called_by: tuple[str, ...]
+    copybooks: tuple[str, ...]
+    metrics: dict[str, int]
+    rules_total: int
+    rules_verified: int
+    # Counts of constructs that are known migration traps, found in code lines (not comments).
+    keywords: dict[str, int] = field(default_factory=dict)
+
+
+TRAP_KEYWORDS = {
+    "ROUNDED": re.compile(r"\bROUNDED\b"),
+    "REDEFINES": re.compile(r"\bREDEFINES\b"),
+    "DATE_FUNCTIONS": re.compile(r"\b(INTEGER-OF-DATE|TEST-DATE-YYYYMMDD|DATE-OF-INTEGER)\b"),
+    "EDITED_PICTURES": re.compile(r"\bPIC\s+\S*[Z*]"),
+}
+
+
+def _keyword_counts(db: Session, project_id: uuid.UUID) -> dict[str, dict[str, int]]:
+    """Per program, how often each trap appears in its own code lines."""
+    rows = db.scalars(select(SourceFile).where(SourceFile.project_id == project_id, SourceFile.kind == "PROGRAM")).all()
+    found: dict[str, dict[str, int]] = {}
+    for row in rows:
+        if not is_allowed_context_path(row.path):
+            continue
+        name = PurePosixPath(row.path).name
+        code = "\n".join(line.code.upper() for line in to_lines(name, row.content))
+        counts = {key: len(pattern.findall(code)) for key, pattern in TRAP_KEYWORDS.items()}
+        found[PurePosixPath(row.path).stem.upper()] = {key: value for key, value in counts.items() if value}
+    return found
+
+
+@dataclass(frozen=True)
+class PlanContext:
+    project_name: str
+    programs: tuple[ProgramFacts, ...]
+
+
+def load_plan_context(db: Session, project_id: uuid.UUID) -> PlanContext:
+    project = db.get(Project, project_id)
+    if project is None:
+        raise ProgramNotFound("project")
+    items = db.scalars(
+        select(InventoryItem).where(InventoryItem.project_id == project_id, InventoryItem.kind == "PROGRAM")
+    ).all()
+    if not items:
+        raise ProgramNotFound("inventory")
+    callers: dict[str, set[str]] = {item.name: set() for item in items}
+    for item in items:
+        for target in item.attrs.get("calls", []):
+            callers.setdefault(target, set()).add(item.name)
+    keywords = _keyword_counts(db, project_id)
+    counts: dict[tuple[str, str], int] = {}
+    for program, state in db.execute(select(Rule.program, Rule.state).where(Rule.project_id == project_id)):
+        counts[(program, "total")] = counts.get((program, "total"), 0) + 1
+        if state == "VERIFIED":
+            counts[(program, "verified")] = counts.get((program, "verified"), 0) + 1
+    facts = tuple(
+        ProgramFacts(
+            name=item.name,
+            is_entry=bool(item.attrs.get("is_entry")),
+            calls=tuple(sorted(item.attrs.get("calls", []))),
+            called_by=tuple(sorted(callers.get(item.name, set()))),
+            copybooks=tuple(entry["name"] for entry in item.attrs.get("copybooks", [])),
+            metrics=dict(item.attrs.get("metrics", {})),
+            rules_total=counts.get((item.name, "total"), 0),
+            rules_verified=counts.get((item.name, "verified"), 0),
+            keywords=keywords.get(item.name, {}),
+        )
+        for item in sorted(items, key=lambda row: row.name)
+    )
+    return PlanContext(project.name, facts)
+
+
+@dataclass(frozen=True)
+class RuleBrief:
+    """A verified rule as the migration prompt shows it, under a short reference."""
+
+    ref: str
+    id: uuid.UUID
+    title: str
+    statement: str
+    conditions: tuple[str, ...]
+    examples: tuple[dict[str, object], ...]
+
+
+@dataclass
+class MigrationContext:
+    program: ProgramContext
+    rules: list[RuleBrief]
+
+    def rule_id(self, ref: str) -> uuid.UUID | None:
+        return next((rule.id for rule in self.rules if rule.ref == ref), None)
+
+
+def load_migration_context(db: Session, project_id: uuid.UUID, program: str) -> MigrationContext:
+    """The program, its copybooks and its verified rules. Unverified rules never reach the model."""
+    context = load_program_context(db, project_id, program)
+    rows = db.scalars(
+        select(Rule)
+        .where(Rule.project_id == project_id, Rule.program == context.program, Rule.state == "VERIFIED")
+        .order_by(Rule.spans[0]["start_line"].as_integer().nulls_last(), Rule.title, Rule.id)
+    ).all()
+    rules = [
+        RuleBrief(
+            ref=f"R{index}",
+            id=row.id,
+            title=row.title,
+            statement=row.statement,
+            conditions=tuple(row.conditions),
+            examples=tuple(row.examples),
+        )
+        for index, row in enumerate(rows, start=1)
+    ]
+    return MigrationContext(context, rules)

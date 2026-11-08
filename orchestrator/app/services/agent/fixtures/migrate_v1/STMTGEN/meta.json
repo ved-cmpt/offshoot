@@ -1,0 +1,12 @@
+{
+  "notes": "Translated STMTGEN. Amounts and names are cut to the print boxes, as the legacy MOVE does.",
+  "rules_covered": [
+    "Statement print line layout",
+    "Total due truncates on the print line",
+    "Current charge truncates on the print line",
+    "Name cut to twenty characters",
+    "Choosing the statement message",
+    "Statement date check ignores leap years",
+    "Amounts on the statement are numeric"
+  ]
+}

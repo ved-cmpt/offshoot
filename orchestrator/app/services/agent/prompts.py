@@ -42,6 +42,10 @@ class AgentRequest:
     user_prompt: str
     response_schema: dict[str, Any]
     context_files: tuple[str, ...]
+    # The rule references shown in a migration prompt, as (reference, title) pairs.
+    rule_refs: tuple[tuple[str, str], ...] = ()
+    # A repair prompt's attempt number, so a recorded mock can replay the right answer.
+    attempt: int = 0
 
 
 def neutralize(text: str) -> str:

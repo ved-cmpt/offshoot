@@ -14,6 +14,7 @@ from app.services import audit
 
 MAX_ATTEMPTS = 3
 REUSABLE_STATUSES = ("QUEUED", "RUNNING", "SUCCEEDED")
+ACTIVE_STATUSES = ("QUEUED", "RUNNING")
 
 
 def hash_inputs(*parts: str) -> str:
@@ -24,14 +25,16 @@ def hash_inputs(*parts: str) -> str:
     return digest.hexdigest()
 
 
-def _find_reusable(db: Session, project_id: uuid.UUID, kind: str, input_hash: str) -> Job | None:
+def _find_reusable(
+    db: Session, project_id: uuid.UUID, kind: str, input_hash: str, statuses: tuple[str, ...] = ()
+) -> Job | None:
     return db.scalar(
         select(Job)
         .where(
             Job.project_id == project_id,
             Job.kind == kind,
             Job.input_hash == input_hash,
-            Job.status.in_(REUSABLE_STATUSES),
+            Job.status.in_(statuses or REUSABLE_STATUSES),
         )
         .order_by(Job.created_at.desc(), Job.id)
         .limit(1)
@@ -45,9 +48,15 @@ def enqueue(
     input_hash: str,
     payload: dict[str, Any],
     actor_id: uuid.UUID | None,
+    reuse_finished: bool = True,
 ) -> tuple[Job, bool]:
-    """Return (job, created). The same input returns its live or succeeded job; a failed one may retry."""
-    existing = _find_reusable(db, project_id, kind, input_hash)
+    """Return (job, created). The same input returns its live or succeeded job; a failed one may retry.
+
+    With `reuse_finished=False` only a queued or running job is reused, so a finished one can be
+    run again on purpose (a re-verification), while two identical requests still cannot race.
+    """
+    statuses = REUSABLE_STATUSES if reuse_finished else ACTIVE_STATUSES
+    existing = _find_reusable(db, project_id, kind, input_hash, statuses)
     if existing is not None:
         return existing, False
     job = Job(
@@ -64,7 +73,7 @@ def enqueue(
     except IntegrityError:
         # Another request queued the same input between the check and the insert.
         db.rollback()
-        winner = _find_reusable(db, project_id, kind, input_hash)
+        winner = _find_reusable(db, project_id, kind, input_hash, statuses)
         if winner is None:
             raise
         return winner, False

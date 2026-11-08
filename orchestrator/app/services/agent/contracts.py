@@ -45,3 +45,52 @@ class ExtractedRule(StrictModel):
 
 class RuleExtractionOutput(StrictModel):
     rules: list[ExtractedRule] = Field(max_length=MAX_RULES)
+
+
+# --- Plan (prompt plan-v1, Blueprint Section 6.1 Stage 3) ---
+# There is deliberately no order field: the migration order comes from the call graph,
+# never from the model. There is no estimate either: it is computed from the inventory.
+
+SERVICE_NAME = r"^[a-z][a-z0-9-]{2,40}$"
+PROGRAM_NAME = r"^[A-Z][A-Z0-9-]{0,29}$"
+
+
+class PlannedService(StrictModel):
+    name: str = Field(pattern=SERVICE_NAME)
+    description: str = Field(min_length=10, max_length=600)
+    programs: list[str] = Field(min_length=1, max_length=20)
+
+
+class PlanRisk(StrictModel):
+    title: str = Field(min_length=3, max_length=200)
+    detail: str = Field(min_length=10, max_length=1200)
+    severity: Literal["LOW", "MEDIUM", "HIGH"]
+    programs: list[str] = Field(default_factory=list, max_length=20)
+
+
+class PlanOutput(StrictModel):
+    services: list[PlannedService] = Field(min_length=1, max_length=10)
+    risks: list[PlanRisk] = Field(default_factory=list, max_length=30)
+    notes: str = Field(default="", max_length=2000)
+
+
+# --- Migration and repair (prompts migrate-v1 and repair-v1, Blueprint Section 6.2) ---
+# Only C# source files under src/ or tests/. Project files, packages and anything else are
+# fixed by the sandbox template, so a response cannot add a dependency or change the policy.
+
+GENERATED_PATH = r"^(src|tests)/[A-Za-z][A-Za-z0-9_.]{0,80}\.cs$"
+MAX_GENERATED_FILES = 20
+MAX_GENERATED_FILE_CHARS = 64 * 1024
+MAX_GENERATED_TOTAL_CHARS = 256 * 1024
+
+
+class GeneratedFile(StrictModel):
+    path: str = Field(pattern=GENERATED_PATH)
+    content: str = Field(min_length=1, max_length=MAX_GENERATED_FILE_CHARS)
+
+
+class MigrationOutput(StrictModel):
+    files: list[GeneratedFile] = Field(min_length=1, max_length=MAX_GENERATED_FILES)
+    notes: str = Field(default="", max_length=4000)
+    # References to the rules listed in the prompt (R1, R2, ...), mapped back by the server.
+    rule_ids_covered: list[str] = Field(default_factory=list, max_length=100)

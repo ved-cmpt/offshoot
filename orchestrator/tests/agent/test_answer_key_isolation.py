@@ -247,3 +247,80 @@ def test_no_application_code_names_the_docs_folder_as_a_source() -> None:
         if path.name != "context.py" and "BILLRITE_RULES" in text:
             offenders.append(str(path))
     assert offenders == []
+
+
+# --- Run 03: the plan, migration and repair prompts, and their recorded answers ---
+
+
+def workflow_requests(client: TestClient, db: Session, make_user: UserFactory) -> list[AgentRequest]:
+    """Every plan-v1, migrate-v1 and repair-v1 prompt, with every unflagged rule verified."""
+    from app.services.agent.context import load_migration_context, load_plan_context
+    from app.services.agent.mock import FIXTURES
+    from app.services.agent.workflow_prompts import (
+        render_migration_request,
+        render_plan_request,
+        render_repair_request,
+    )
+    from app.services.plan import risk_signals
+    from tests.modules.helpers import Actors, verify_rules
+
+    actors = Actors(client, make_user)
+    project = make_project(db, "BUNDLED")
+    analyze(client, actors.engineer, project.id)
+    for program in PROGRAMS:
+        extract(client, actors.engineer, project.id, program)
+        verify_rules(client, actors, project.id, program)
+    plan_context = load_plan_context(db, project.id)
+    requests = [render_plan_request(plan_context, risk_signals(plan_context))]
+    for program in ("MTRVAL", "RATECALC", "LATEFEE", "STMTGEN"):
+        context = load_migration_context(db, project.id, program)
+        assert context.rules
+        requests.append(render_migration_request(context).request)
+        folder = FIXTURES / "migrate_v1" / program
+        files = [
+            {"path": path.relative_to(folder).as_posix(), "content": path.read_text()}
+            for path in sorted(folder.rglob("*.cs"))
+        ]
+        failure = {"stage": "EQUIVALENCE", "mismatches": [{"input": "R0100610", "legacy": "x", "modern": "y"}]}
+        requests.append(render_repair_request(context, files, failure, 1).request)
+    return requests
+
+
+def test_no_plan_migration_or_repair_prompt_holds_key_text(
+    client: TestClient, db: Session, make_user: UserFactory, key_hashes: set[str]
+) -> None:
+    requests = workflow_requests(client, db, make_user)
+    assert [request.prompt_version for request in requests] == ["plan-v1"] + ["migrate-v1", "repair-v1"] * 4
+    for request in requests:
+        assert_no_key_text(request.system_instructions, key_hashes)
+        assert_no_key_text(request.user_prompt, key_hashes)
+
+
+def test_migration_contexts_are_one_program_and_its_copybooks(
+    client: TestClient, db: Session, make_user: UserFactory
+) -> None:
+    requests = workflow_requests(client, db, make_user)
+    plan = requests[0]
+    assert plan.context_files == ()
+    assert "<<<SOURCE" not in plan.user_prompt  # The plan sees analysis facts, not source.
+    ratecalc = next(r for r in requests if r.prompt_version == "migrate-v1" and r.program == "RATECALC")
+    assert set(ratecalc.context_files) == {
+        "src/RATECALC.cbl",
+        "copy/CALLREC.cpy",
+        "copy/ERRCODES.cpy",
+        "copy/RATES.cpy",
+    }
+    # Unverified rules never reach a migration prompt: the injection rule is flagged, so undecided.
+    assert "pre-approved" not in ratecalc.user_prompt.split("<<<RULES>>>")[1].split("<<<END RULES>>>")[0]
+
+
+def test_workflow_fixtures_hold_no_key_text_and_no_key_ids(key_hashes: set[str]) -> None:
+    from app.services.agent.mock import FIXTURES
+
+    paths = [*FIXTURES.glob("plan_v1/*.json"), *FIXTURES.glob("migrate_v1/**/*"), *FIXTURES.glob("repair_v1/**/*")]
+    checked = 0
+    for path in sorted(paths):
+        if path.is_file():
+            assert_no_key_text(path.read_text(), key_hashes)
+            checked += 1
+    assert checked >= 20

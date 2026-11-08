@@ -45,6 +45,11 @@ AI_MODES = ("mock", "gemini")
 AI_CALL_STATUSES = ("OK", "FAILED")
 APPROVAL_ENTITY_TYPES = ("RULE", "PLAN", "MODULE")
 APPROVAL_DECISIONS = ("APPROVED", "REJECTED", "VERIFIED")
+ARTIFACT_KINDS = ("MIGRATION", "REPAIR")
+BUILD_STATUSES = ("PENDING", "BUILT", "BUILD_FAILED", "POLICY_FAILED", "TESTS_FAILED", "TIMED_OUT", "MEMORY_LIMIT")
+RUN_KINDS = ("FULL", "MUTATION")
+RUN_STATUSES = ("PASSED", "FAILED")
+GATES = ("COVERAGE", "MUTATION")
 
 MAX_SOURCE_CONTENT_BYTES = 2 * 1024 * 1024
 
@@ -239,6 +244,14 @@ class Plan(Base):
     state: Mapped[str] = mapped_column(String(16), nullable=False, server_default=text("'PROPOSED'"))
     approved_by: Mapped[uuid.UUID | None] = mapped_column(ForeignKey("users.id", ondelete="SET NULL"))
     created_at: Mapped[datetime] = created_at_column()
+    decided_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    job_id: Mapped[uuid.UUID | None] = mapped_column(ForeignKey("jobs.id", ondelete="SET NULL"))
+    prompt_version: Mapped[str | None] = mapped_column(String(32))
+    model_id: Mapped[str | None] = mapped_column(String(120))
+    # What the model proposed, before the server computed the order (Blueprint Section 11).
+    model_output: Mapped[dict[str, Any]] = mapped_column(JSONB, nullable=False, server_default=text("'{}'::jsonb"))
+    # The deterministic inputs: the call-graph order and the risk signals found by analysis.
+    signals: Mapped[dict[str, Any]] = mapped_column(JSONB, nullable=False, server_default=text("'{}'::jsonb"))
 
 
 class Module(Base):
@@ -261,6 +274,11 @@ class Module(Base):
     )
     version: Mapped[int] = mapped_column(Integer, nullable=False, server_default=text("1"))
     created_at: Mapped[datetime] = created_at_column()
+    plan_id: Mapped[uuid.UUID | None] = mapped_column(ForeignKey("plans.id", ondelete="SET NULL"))
+    order_index: Mapped[int] = mapped_column(Integer, nullable=False, server_default=text("0"))
+    # Why the module is in its state, as a fixed code (BLOCKED, BUILD_FAILED and so on).
+    state_reason: Mapped[str | None] = mapped_column(String(64))
+    updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False, server_default=func.now())
 
 
 class Job(Base):
@@ -299,7 +317,11 @@ class Job(Base):
 
 class CodeArtifact(Base):
     __tablename__ = "code_artifacts"
-    __table_args__ = (UniqueConstraint("module_id", "version", name="uq_code_artifacts_module_id_version"),)
+    __table_args__ = (
+        UniqueConstraint("module_id", "version", name="uq_code_artifacts_module_id_version"),
+        enum_check("kind", ARTIFACT_KINDS),
+        enum_check("build_status", BUILD_STATUSES),
+    )
 
     id: Mapped[uuid.UUID] = uuid_pk()
     module_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("modules.id", ondelete="CASCADE"), nullable=False)
@@ -308,6 +330,16 @@ class CodeArtifact(Base):
     produced_by_job: Mapped[uuid.UUID | None] = mapped_column(ForeignKey("jobs.id", ondelete="SET NULL"))
     sha256: Mapped[str] = mapped_column(String(64), nullable=False)
     created_at: Mapped[datetime] = created_at_column()
+    kind: Mapped[str] = mapped_column(String(16), nullable=False, server_default=text("'MIGRATION'"))
+    # 1 for the first migration, then each repair counts up from it.
+    attempt: Mapped[int] = mapped_column(Integer, nullable=False, server_default=text("1"))
+    parent_id: Mapped[uuid.UUID | None] = mapped_column(ForeignKey("code_artifacts.id", ondelete="SET NULL"))
+    build_status: Mapped[str] = mapped_column(String(16), nullable=False, server_default=text("'PENDING'"))
+    build_report: Mapped[dict[str, Any]] = mapped_column(JSONB, nullable=False, server_default=text("'{}'::jsonb"))
+    notes: Mapped[str | None] = mapped_column(Text)
+    rule_ids: Mapped[list[Any]] = mapped_column(JSONB, nullable=False, server_default=text("'[]'::jsonb"))
+    prompt_version: Mapped[str | None] = mapped_column(String(32))
+    model_id: Mapped[str | None] = mapped_column(String(120))
 
 
 class AiCall(Base):
@@ -333,7 +365,11 @@ class AiCall(Base):
 
 class VerificationRun(Base):
     __tablename__ = "verification_runs"
-    __table_args__ = (Index("ix_verification_runs_module_id_created_at", "module_id", text("created_at DESC")),)
+    __table_args__ = (
+        Index("ix_verification_runs_module_id_created_at", "module_id", text("created_at DESC")),
+        enum_check("kind", RUN_KINDS),
+        enum_check("status", RUN_STATUSES),
+    )
 
     id: Mapped[uuid.UUID] = uuid_pk()
     module_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("modules.id", ondelete="CASCADE"), nullable=False)
@@ -345,6 +381,32 @@ class VerificationRun(Base):
     coverage_pct: Mapped[float | None] = mapped_column(Float)
     mutation_score: Mapped[float | None] = mapped_column(Float)
     report: Mapped[dict[str, Any]] = mapped_column(JSONB, nullable=False, server_default=text("'{}'::jsonb"))
+    created_at: Mapped[datetime] = created_at_column()
+    job_id: Mapped[uuid.UUID | None] = mapped_column(ForeignKey("jobs.id", ondelete="SET NULL"))
+    kind: Mapped[str] = mapped_column(String(16), nullable=False, server_default=text("'FULL'"))
+    status: Mapped[str] = mapped_column(String(16), nullable=False, server_default=text("'FAILED'"))
+    # Each gate with its value, threshold and outcome, as evaluated when the run was stored.
+    gates: Mapped[list[Any]] = mapped_column(JSONB, nullable=False, server_default=text("'[]'::jsonb"))
+    base_run_id: Mapped[uuid.UUID | None] = mapped_column(ForeignKey("verification_runs.id", ondelete="SET NULL"))
+
+
+class GateException(Base):
+    """An architect's lowered threshold for one gate of one module, with the reason. Append-only."""
+
+    __tablename__ = "gate_exceptions"
+    __table_args__ = (
+        enum_check("gate", GATES),
+        CheckConstraint("threshold >= 0 AND threshold <= 100", name="threshold_range"),
+        CheckConstraint("length(trim(reason)) > 0", name="reason_required"),
+        Index("ix_gate_exceptions_module_id_created_at", "module_id", text("created_at DESC")),
+    )
+
+    id: Mapped[uuid.UUID] = uuid_pk()
+    module_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("modules.id", ondelete="CASCADE"), nullable=False)
+    gate: Mapped[str] = mapped_column(String(16), nullable=False)
+    threshold: Mapped[float] = mapped_column(Float, nullable=False)
+    reason: Mapped[str] = mapped_column(Text, nullable=False)
+    actor_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("users.id", ondelete="RESTRICT"), nullable=False)
     created_at: Mapped[datetime] = created_at_column()
 
 

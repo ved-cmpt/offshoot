@@ -1,0 +1,13 @@
+{
+  "notes": "Translated MTRVAL. Validation stops at the first failing check, and a read of minus zero counts as zero.",
+  "rules_covered": [
+    "Meter reads are numeric",
+    "Meter reads are not negative",
+    "Read type is A or E",
+    "Validation order for a read",
+    "Usage when the dial moved forward",
+    "Rollover usage calculation",
+    "Implausible rollover is refused",
+    "Estimated read flag"
+  ]
+}

@@ -270,3 +270,64 @@ def test_mock_is_the_default_and_gemini_needs_the_mode(monkeypatch: pytest.Monke
     made = get_agent_provider(Settings())  # type: ignore[call-arg]
     assert isinstance(made, GeminiAgent)
     assert made.model == MODEL
+
+
+# --- Run 03: plan-v1, migrate-v1 and repair-v1 use the same bounded, validated call ---
+
+PLAN = {
+    "services": [{"name": "meter-service", "description": "Meter reads and usage.", "programs": ["MTRVAL"]}],
+    "risks": [],
+    "notes": "",
+}
+MIGRATION = {
+    "files": [{"path": "src/ModuleEntry.cs", "content": "class X {}"}],
+    "notes": "n",
+    "rule_ids_covered": ["R1"],
+}
+
+
+def test_a_plan_response_is_validated_against_its_contract() -> None:
+    gemini, _client = agent([Response(json.dumps(PLAN))])
+    result = gemini.propose_plan(request(), 2)
+    assert result.output.services[0].name == "meter-service"
+
+
+def test_a_plan_that_tries_to_set_the_order_is_invalid_output() -> None:
+    gemini, _client = agent(
+        [Response(json.dumps({**PLAN, "order": ["MTRVAL"]})), Response(json.dumps({**PLAN, "order": []}))]
+    )
+    with pytest.raises(AgentError) as caught:
+        gemini.propose_plan(request(), 2)
+    assert caught.value.code == AI_INVALID_OUTPUT
+    assert len(caught.value.attempts) == 2
+
+
+def test_a_migration_response_is_validated_against_its_contract() -> None:
+    gemini, _client = agent([Response(json.dumps(MIGRATION))])
+    result = gemini.migrate(request(), 2)
+    assert [item.path for item in result.output.files] == ["src/ModuleEntry.cs"]
+
+
+@pytest.mark.parametrize(
+    "change",
+    [
+        {"files": [{"path": "src/../Program.cs", "content": "x"}]},
+        {"files": [{"path": "Generated/ParityForge.Generated.csproj", "content": "<Project />"}]},
+        {"files": [{"path": "src/Run.sh", "content": "id"}]},
+        {"files": []},
+        {"approved": True},
+        {"build_passed": True},
+    ],
+)
+def test_a_migration_outside_its_contract_is_invalid_output(change: dict[str, Any]) -> None:
+    body = json.dumps({**MIGRATION, **change})
+    gemini, _client = agent([Response(body), Response(body)])
+    with pytest.raises(AgentError) as caught:
+        gemini.migrate(request(), 2)
+    assert caught.value.code == AI_INVALID_OUTPUT
+
+
+def test_identity_separates_prompt_versions() -> None:
+    gemini, _client = agent([])
+    assert gemini.identity("RATECALC") == f"gemini:{MODEL}:RATECALC"
+    assert gemini.identity("RATECALC", "migrate-v1") != gemini.identity("RATECALC", "repair-v1")
