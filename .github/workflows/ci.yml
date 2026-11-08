@@ -1,0 +1,188 @@
+# Every push and pull request (ADR-049). The slow suites (the whole pytest run with every
+# sandbox test, mutation testing, the browser suite and the production-image browser checks)
+# are in slow.yml, which runs weekly and on demand.
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  python:
+    name: Python lint, types and dependency audit
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    defaults:
+      run:
+        working-directory: orchestrator
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - run: pip install uv==0.13.7
+      - run: uv sync --frozen
+      - run: uv run ruff check .
+      - run: uv run ruff format --check .
+      - run: uv run mypy
+      - name: Audit Python dependencies
+        run: |
+          uv export --frozen --no-dev --no-hashes --no-emit-project > /tmp/requirements.txt
+          uvx --from pip-audit==2.9.0 pip-audit --strict --no-deps --disable-pip --requirement /tmp/requirements.txt
+
+  frontend:
+    name: Frontend lint, tests, build and audit
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    defaults:
+      run:
+        working-directory: frontend
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "24"
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+      - run: npm ci --no-audit --no-fund
+      - run: npm run lint
+      - run: npm test
+      - run: npm run build
+      - name: Audit production dependencies
+        run: npm audit --omit=dev --audit-level=high
+
+  dotnet-audit:
+    # The builder has no network, so NuGet's audit cannot run inside it (ADR-031). It runs here.
+    name: .NET dependency audit
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-dotnet@v4
+        with:
+          global-json-file: modern/global.json
+      - name: Vulnerable packages, direct and transitive
+        run: |
+          set -o pipefail
+          for target in modern/Offshoot.Modern.sln runners/dotnet-builder/template/Offshoot.Sandbox.slnx; do
+            dotnet list "$target" package --vulnerable --include-transitive | tee -a /tmp/audit.txt
+          done
+          if grep -q "has the following vulnerable packages" /tmp/audit.txt; then exit 1; fi
+
+  stack:
+    name: Fresh-clone stack, COBOL, .NET and API tests
+    runs-on: ubuntu-24.04
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v4
+      - name: Environment from the example
+        run: |
+          cp .env.example .env
+          # The containers run as their own users; the runner's checkout belongs to another.
+          chmod -R a+rwX orchestrator legacy/billrite/out
+      - name: Build and start the stack
+        run: docker compose up --build -d --wait --wait-timeout 600
+      - name: Migrate
+        run: docker compose exec -T orchestrator alembic upgrade head
+      - name: Seed (the real pipeline through the sandbox and the facade)
+        run: docker compose exec -T orchestrator python -m app.scripts.seed_demo
+      - name: Seed again, which must change nothing
+        run: |
+          docker compose exec -T orchestrator python -m app.scripts.seed_demo | tee /tmp/seed2.txt
+          grep -q "users created=0 updated=0; project created=False; sources created=0 updated=0 removed=0; jobs created=0; decisions seeded=0; plans seeded=0; modules migrated=0; modules promoted=0" /tmp/seed2.txt
+      - name: Health, readiness and sign-in
+        run: |
+          curl -fsS http://localhost:8100/api/v1/healthz
+          curl -fsS http://localhost:8100/api/v1/readyz
+          curl -fsS -H 'Content-Type: application/json' \
+            -d '{"email":"viewer@demo.offshoot.dev","password":"demo-viewer-pass"}' \
+            http://localhost:8100/api/v1/auth/login > /dev/null
+          curl -fsS -X POST -H 'Content-Type: application/json' \
+            -d '{"customer_class":"R","month":10,"kwh":610}' http://localhost:8200/billing/rate
+      - name: COBOL characterization tests and the batch
+        run: |
+          docker compose exec -T orchestrator pytest tests/legacy
+          docker compose run --rm cobol-runner make billrun
+      - name: API, agent, analysis and unit tests
+        run: |
+          docker compose exec -T orchestrator pytest --ignore=tests/legacy --ignore=tests/modules --ignore=tests/test_seed.py
+          docker compose exec -T orchestrator pytest tests/modules/test_gates.py tests/modules/test_harness_units.py
+      - name: .NET solution, offline in the builder
+        run: docker compose run --rm dotnet-builder build-and-test
+      - name: The answer key's fingerprints are current
+        run: python3 scripts/evaluate_rules.py --check-fingerprints orchestrator/tests/agent/answer_key_shingles.json
+      - name: Logs on failure
+        if: failure()
+        run: docker compose logs --tail 200
+
+  production-image:
+    name: Production image
+    runs-on: ubuntu-24.04
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v4
+      - name: Environment
+        run: |
+          cp .env.example .env
+          echo "PROD_JWT_SECRET=$(openssl rand -hex 32)" >> .env
+      - name: Build and start
+        run: docker compose -f compose.prod.yaml up --build -d --wait --wait-timeout 300
+      - name: Migrate
+        run: docker compose -f compose.prod.yaml exec -T app alembic upgrade head
+      - name: Same origin, headers, no code execution, memory
+        run: |
+          curl -fsS http://localhost:8300/healthz
+          curl -fsS http://localhost:8300/api/v1/readyz
+          curl -fsS -D /tmp/headers -o /tmp/index.html http://localhost:8300/projects
+          grep -qi "content-security-policy: default-src 'self'; script-src 'self'; style-src 'self' 'nonce-" /tmp/headers
+          grep -qi "strict-transport-security: max-age=" /tmp/headers
+          grep -q 'ngCspNonce="' /tmp/index.html
+          curl -fsS http://localhost:8300/api/v1/config | grep -q '"execution_enabled":false'
+          test "$(curl -s -o /dev/null -w '%{http_code}' http://localhost:8300/api/v1/nothing)" = "404"
+          docker stats --no-stream --format '{{.Name}} {{.MemUsage}}'
+      - name: Logs on failure
+        if: failure()
+        run: docker compose -f compose.prod.yaml logs --tail 200
+
+  gitleaks:
+    name: Secret scan (full history)
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - run: >
+          docker run --rm --user "$(id -u):$(id -g)" -v "$PWD:/repo" -w /repo
+          zricethezav/gitleaks:v8.30.1 git --no-banner --redact .
+
+  attribution:
+    name: Attribution scan (full history)
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    # The terms are a repository secret, so that no tracked file holds them (AGENTS.md).
+    if: github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Scan tracked files, file names and every commit message
+        env:
+          PATTERN: ${{ secrets.ATTRIBUTION_PATTERN }}
+        run: |
+          if [ -z "$PATTERN" ]; then echo "The ATTRIBUTION_PATTERN secret is not set."; exit 1; fi
+          found=0
+          git grep -qiE -e "$PATTERN" -- . && { echo "A tracked file matches."; found=1; }
+          git ls-files | grep -qiE -e "$PATTERN" && { echo "A file name matches."; found=1; }
+          git log --all --format='%H %an %ae%n%B' | grep -qiE -e "$PATTERN" && { echo "A commit matches."; found=1; }
+          [ "$found" -eq 0 ] && echo "Attribution scan clean."
+          exit "$found"

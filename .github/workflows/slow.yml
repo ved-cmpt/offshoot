@@ -1,0 +1,80 @@
+# The slow suites (ADR-049): the whole pytest run, including every sandbox, migration,
+# verification and mutation test, the browser suite with its accessibility checks, and the
+# smoke checklist against the production image restored from a real seed. Weekly and on demand,
+# so the per-push CI stays within the free minutes.
+name: Slow suites
+
+on:
+  schedule:
+    - cron: "17 6 * * 1"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: slow-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  full:
+    name: Full pytest, browser suite and production-image smoke
+    runs-on: ubuntu-24.04
+    timeout-minutes: 120
+    steps:
+      - uses: actions/checkout@v4
+      - name: Environment
+        run: |
+          cp .env.example .env
+          echo "PROD_JWT_SECRET=$(openssl rand -hex 32)" >> .env
+          chmod -R a+rwX orchestrator legacy/billrite/out
+          mkdir -p .snapshots && chmod a+rwx .snapshots
+      - name: Build and start the stack
+        run: docker compose up --build -d --wait --wait-timeout 600
+      - name: Migrate and seed
+        run: |
+          docker compose exec -T orchestrator alembic upgrade head
+          docker compose exec -T orchestrator python -m app.scripts.seed_demo
+      - name: The whole pytest suite
+        run: docker compose exec -T orchestrator pytest
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "24"
+          cache: npm
+          cache-dependency-path: e2e/package-lock.json
+      - name: Browser suite (resets the demo first)
+        working-directory: e2e
+        run: |
+          npm ci --no-audit --no-fund
+          npx playwright install --with-deps chromium
+          npx playwright test
+      - name: Snapshot of a fresh seed, for the production image
+        run: |
+          docker compose exec -T orchestrator python -m app.scripts.reset_demo --confirm
+          docker compose exec -T orchestrator python -m app.scripts.demo_snapshot capture
+          docker compose exec -T orchestrator python -m app.scripts.demo_snapshot export /tmp/demo.json
+          docker compose cp orchestrator:/tmp/demo.json .snapshots/demo.json
+          chmod a+r .snapshots/demo.json
+      - name: Production image with the snapshot
+        run: |
+          docker compose -f compose.prod.yaml up --build -d --wait --wait-timeout 300
+          docker compose -f compose.prod.yaml exec -T app alembic upgrade head
+          docker compose -f compose.prod.yaml exec -T app python -m app.scripts.demo_snapshot import /snapshots/demo.json
+      - name: Smoke checklist against the production image
+        working-directory: e2e
+        run: npx playwright test -c playwright.smoke.config.ts
+      - name: Reports on failure
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-reports
+          path: |
+            e2e/playwright-report
+            e2e/test-results
+            e2e/test-results-smoke
+          retention-days: 7
+      - name: Logs on failure
+        if: failure()
+        run: |
+          docker compose logs --tail 200
+          docker compose -f compose.prod.yaml logs --tail 200
