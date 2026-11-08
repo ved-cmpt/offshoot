@@ -175,7 +175,7 @@ def test_seeded_decisions_are_mostly_verified_with_one_rejection_and_some_pendin
         states.setdefault(row.state, []).append(row)
     assert len(states["VERIFIED"]) > len(states["PROPOSED"])
     assert [row.title for row in states["REJECTED"]] == ["Senior discount on the energy charge"]
-    assert {row.program for row in states["VERIFIED"]} == {"BILLRUN", "LATEFEE", "MTRVAL", "STMTGEN"}
+    assert {row.program for row in states["VERIFIED"]} == {"BILLRUN", "LATEFEE", "MTRVAL", "RATECALC", "STMTGEN"}
     pending = {row.program for row in states["PROPOSED"]}
     assert "RATECALC" in pending
     assert all(not row.flags for row in states["VERIFIED"])
@@ -201,9 +201,7 @@ def test_a_later_seed_never_overrides_a_persons_decision(db: Session, seeded: No
     architect = db.scalar(select(User).where(User.role == "ARCHITECT", User.active))
     assert architect is not None
     row = db.scalar(
-        select(Rule).where(
-            Rule.project_id == project.id, Rule.state == "PROPOSED", Rule.program == "RATECALC", Rule.flags == []
-        )
+        select(Rule).where(Rule.project_id == project.id, Rule.state == "PROPOSED", Rule.program == "RATECALC")
     )
     assert row is not None
     rule_id = row.id
@@ -220,7 +218,82 @@ def test_a_later_seed_never_overrides_a_persons_decision(db: Session, seeded: No
 def test_seed_jobs_are_reused_on_a_second_run(db: Session, seeded: None) -> None:
     project = billrite(db)
     before = db.scalar(select(func.count()).select_from(Job).where(Job.project_id == project.id))
-    assert before == 6
+    # Analysis, five extractions, the plan, four migrations and their four verifications.
+    assert before == 15
     result = run_seed(db, get_settings())
-    assert (result.jobs_created, result.decisions_seeded) == (0, 0)
+    assert (result.jobs_created, result.decisions_seeded, result.plans_seeded, result.modules_migrated) == (0, 0, 0, 0)
     assert db.scalar(select(func.count()).select_from(Job).where(Job.project_id == project.id)) == before
+
+
+# --- Run 03: the plan and the modules, from real pipeline runs ---
+
+
+def test_seed_approves_the_plan_as_a_labelled_demo_decision(db: Session, seeded: None) -> None:
+    from app.db.models import Plan
+
+    project = billrite(db)
+    plan = db.scalars(select(Plan).where(Plan.project_id == project.id)).one()
+    assert (plan.version, plan.state) == (1, "APPROVED")
+    assert [step["program"] for step in plan.order] == ["MTRVAL", "RATECALC", "LATEFEE", "STMTGEN", "BILLRUN"]
+    approval = db.scalars(select(Approval).where(Approval.entity_id == plan.id)).one()
+    assert approval.reason is not None and "not a human review" in approval.reason
+    entry = db.scalars(
+        select(AuditLog).where(AuditLog.action == "plan.decision", AuditLog.entity_id == str(plan.id))
+    ).one()
+    assert entry.safe_metadata["seeded"] is True
+
+
+def test_seed_modules_come_from_real_runs(db: Session, seeded: None) -> None:
+    from app.db.models import CodeArtifact, Module, VerificationRun
+
+    project = billrite(db)
+    modules = {m.program: m for m in db.scalars(select(Module).where(Module.project_id == project.id))}
+    assert {name: m.state for name, m in modules.items()} == {
+        "MTRVAL": "VERIFIED",
+        "RATECALC": "BLOCKED",
+        "LATEFEE": "VERIFIED",
+        "STMTGEN": "VERIFIED",
+        "BILLRUN": "PENDING",
+    }
+    ratecalc = modules["RATECALC"]
+    assert ratecalc.state_reason == "EQUIVALENCE_FAILED"
+    run = db.scalars(select(VerificationRun).where(VerificationRun.module_id == ratecalc.id)).one()
+    assert run.failed > 0 and run.passed + run.failed == run.cases == 500
+    assert set(run.report["mismatched_fields"]) <= {"RC-OUT-ENERGY", "RC-OUT-SUBTOTAL", "RC-OUT-LEVY", "RC-OUT-TOTAL"}
+    artifact = db.get(CodeArtifact, ratecalc.current_artifact_id)
+    assert artifact is not None
+    assert "Math.Round(amount, 2)" in "".join(f["content"] for f in artifact.files)
+    for name in ("MTRVAL", "LATEFEE", "STMTGEN"):
+        verified = db.scalars(select(VerificationRun).where(VerificationRun.module_id == modules[name].id)).one()
+        assert (verified.status, verified.failed, verified.cases) == ("PASSED", 0, 500)
+        assert verified.mutation_score is not None and verified.coverage_pct is not None
+
+
+def test_the_demo_reset_restores_the_seeded_state_and_keeps_the_audit_log(db: Session, seeded: None) -> None:
+    from app.db.models import GateException, Module
+    from app.scripts.reset_demo import ResetRefused, main, reset_demo
+
+    project = billrite(db)
+    architect = db.scalar(select(User).where(User.role == "ARCHITECT", User.active))
+    assert architect is not None
+    module = db.scalars(select(Module).where(Module.project_id == project.id, Module.program == "MTRVAL")).one()
+    # An append-only row hangs off the module: the cascade must still remove it.
+    exception = GateException(module_id=module.id, gate="COVERAGE", threshold=50.0, reason="x", actor_id=architect.id)
+    db.add(exception)
+    db.commit()
+    exception_id = exception.id
+    audit_before = db.scalar(select(func.count()).select_from(AuditLog)) or 0
+
+    assert main([]) == 2  # Refuses without --confirm.
+    result = reset_demo(db, get_settings())
+    assert (result.plans_seeded, result.modules_migrated) == (1, 4)
+    db.expire_all()
+    fresh = billrite(db)
+    assert fresh.id != project.id
+    assert db.get(GateException, exception_id) is None
+    assert (db.scalar(select(func.count()).select_from(AuditLog)) or 0) > audit_before
+    assert db.scalars(select(AuditLog).where(AuditLog.action == "demo.reset")).first() is not None
+
+    settings = get_settings().model_copy(update={"demo_mode": False})
+    with pytest.raises(ResetRefused):
+        reset_demo(db, settings)

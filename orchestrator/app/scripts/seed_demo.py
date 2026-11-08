@@ -1,9 +1,10 @@
 """Idempotent demo seed: `python -m app.scripts.seed_demo`.
 
 Creates the demo users, the BillRite project with its sources, its inventory, and in mock
-mode its proposed rules plus clearly labelled demo decisions (ADR-024). Running it again
-changes nothing except one audit entry recording the run. The plan and modules are seeded
-by the runs that build them (ADR-017).
+mode its proposed rules plus clearly labelled demo decisions (ADR-024). Since Run 03 it also
+proposes the plan, approves it as a labelled demo decision, and migrates and verifies the
+four called programs through the real sandbox and harness (ADR-037). Every number those
+leave behind comes from real runs. Running it again changes nothing except one audit entry.
 """
 
 import hashlib
@@ -17,13 +18,15 @@ from sqlalchemy.orm import Session
 
 from app.core.config import Settings, get_settings
 from app.core.security import hash_password, verify_password
-from app.db.models import MAX_SOURCE_CONTENT_BYTES, Job, Project, Rule, SourceFile, User
+from app.db.models import MAX_SOURCE_CONTENT_BYTES, Job, Module, Project, Rule, SourceFile, User
 from app.db.session import get_session_factory
 from app.scripts.demo_accounts import demo_accounts
 from app.services import audit
 from app.services.agent.mock import MockAgent
 from app.services.jobs import queue
 from app.services.jobs.handlers import analyze_input_hash, extract_input_hash, run_pending
+from app.services.jobs.module_handlers import migrate_input_hash
+from app.services.plan import decide_plan, latest_plan
 from app.services.rules import apply_decision
 
 BILLRITE_NAME = "BillRite"
@@ -34,12 +37,15 @@ BILLRITE_DESCRIPTION = (
 # Only the application's own sources. The harness and the README are not project sources,
 # and the answer key in docs/ is not mounted into this container at all.
 BILLRITE_PROGRAMS = ("BILLRUN", "LATEFEE", "MTRVAL", "RATECALC", "STMTGEN")
-# RATECALC stays undecided so a visitor can work through a real review.
-SEEDED_VERIFIED_PROGRAMS = ("BILLRUN", "LATEFEE", "MTRVAL", "STMTGEN")
+# RATECALC's unflagged rules are verified too, because migration needs verified rules
+# (ADR-037). Its flagged rules stay undecided, so a visitor still has a real review to do.
+SEEDED_VERIFIED_PROGRAMS = ("BILLRUN", "LATEFEE", "MTRVAL", "RATECALC", "STMTGEN")
+SEEDED_MODULES = ("MTRVAL", "RATECALC", "LATEFEE", "STMTGEN")
+SEED_PLAN_REASON = "Demo seed decision, not a human review."
 SEEDED_REJECTED_TITLE = "Senior discount on the energy charge"
 SEED_VERIFY_REASON = "Demo seed decision, not a human review."
 SEED_REJECT_REASON = "Demo seed decision, not a human review: the cited lines do not exist."
-JOB_WAIT_SECONDS = 60
+JOB_WAIT_SECONDS = 900
 SOURCE_GLOBS = (
     ("src/*.cbl", "PROGRAM"),
     ("copy/*.cpy", "COPYBOOK"),
@@ -57,6 +63,8 @@ class SeedResult:
     sources_removed: int = 0
     jobs_created: int = 0
     decisions_seeded: int = 0
+    plans_seeded: int = 0
+    modules_migrated: int = 0
 
     @property
     def changed(self) -> bool:
@@ -70,6 +78,8 @@ class SeedResult:
                 self.sources_removed,
                 self.jobs_created,
                 self.decisions_seeded,
+                self.plans_seeded,
+                self.modules_migrated,
             )
         )
 
@@ -220,6 +230,50 @@ def seed_decisions(db: Session, project: Project, architect: User, settings: Set
         result.decisions_seeded += 1
 
 
+def seed_plan(
+    db: Session, project: Project, owner: User, architect: User, settings: Settings, result: SeedResult
+) -> None:
+    """Propose the plan once and approve it as a labelled demo decision. Never re-plans."""
+    if latest_plan(db, project.id) is not None:
+        return
+    input_hash = queue.hash_inputs(analyze_input_hash(db, project.id), "plan-v1", MockAgent().identity("*", "plan-v1"))
+    job, created = queue.enqueue(db, project.id, "PLAN", input_hash, {}, owner.id)
+    result.jobs_created += int(created)
+    _wait_for_jobs(db, [job.id], settings)
+    plan = latest_plan(db, project.id)
+    if plan is None:
+        raise RuntimeError("The seed plan job stored no plan")
+    decide_plan(db, project.id, architect, "APPROVED", SEED_PLAN_REASON, plan.version, settings, seeded=True)
+    db.commit()
+    result.plans_seeded += 1
+
+
+def seed_modules(db: Session, project: Project, owner: User, settings: Settings, result: SeedResult) -> None:
+    """Migrate and verify each called program once, through the real sandbox and harness."""
+    for program in SEEDED_MODULES:
+        module = db.scalar(select(Module).where(Module.project_id == project.id, Module.program == program))
+        if module is None or module.state != "PENDING" or module.current_artifact_id is not None:
+            continue
+        verified = db.scalar(
+            select(Rule.id)
+            .where(Rule.project_id == project.id, Rule.program == program, Rule.state == "VERIFIED")
+            .limit(1)
+        )
+        if verified is None:
+            continue  # A database seeded before Run 03 has no verified RATECALC rules: leave it to a person.
+        input_hash = migrate_input_hash(db, module, MockAgent())
+        payload = {"module_id": str(module.id), "program": program}
+        job, created = queue.enqueue(db, project.id, "MIGRATE", input_hash, payload, owner.id, reuse_finished=False)
+        result.jobs_created += int(created)
+        _wait_for_jobs(db, [job.id], settings)
+        db.refresh(job)
+        verify_job = job.metrics.get("verify_job_id")
+        if verify_job:
+            result.jobs_created += 1
+            _wait_for_jobs(db, [uuid.UUID(verify_job)], settings)
+        result.modules_migrated += 1
+
+
 def run_seed(db: Session, settings: Settings) -> SeedResult:
     result = SeedResult()
     admin = seed_users(db, settings, result)
@@ -234,6 +288,11 @@ def run_seed(db: Session, settings: Settings) -> SeedResult:
             if architect is None:
                 raise ValueError("The demo accounts must include an ARCHITECT")
             seed_decisions(db, project, architect, settings, result)
+        architect = db.scalar(select(User).where(User.role == "ARCHITECT", User.active))
+        if architect is None:
+            raise ValueError("The demo accounts must include an ARCHITECT")
+        seed_plan(db, project, admin, architect, settings, result)
+        seed_modules(db, project, admin, settings, result)
     audit.record(
         db,
         "seed.run",
@@ -247,6 +306,8 @@ def run_seed(db: Session, settings: Settings) -> SeedResult:
             "sources_removed": result.sources_removed,
             "jobs_created": result.jobs_created,
             "decisions_seeded": result.decisions_seeded,
+            "plans_seeded": result.plans_seeded,
+            "modules_migrated": result.modules_migrated,
         },
     )
     db.commit()
@@ -260,7 +321,8 @@ def main() -> None:
         f"Seed complete. users created={result.users_created} updated={result.users_updated}; "
         f"project created={result.project_created}; sources created={result.sources_created} "
         f"updated={result.sources_updated} removed={result.sources_removed}; "
-        f"jobs created={result.jobs_created}; decisions seeded={result.decisions_seeded}"
+        f"jobs created={result.jobs_created}; decisions seeded={result.decisions_seeded}; "
+        f"plans seeded={result.plans_seeded}; modules migrated={result.modules_migrated}"
     )
 
 
