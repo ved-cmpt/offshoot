@@ -54,7 +54,8 @@ All of them are in `render.yaml`. The fixed ones need no action.
 | `COOKIE_SECURE` | `true` (Secure cookies, HSTS) | No | `render.yaml` |
 | `CORS_ORIGINS` | empty (same origin only) | No | `render.yaml` |
 | `APP_DB_ROLE` | `offshoot_app` | No | `render.yaml` |
-| `TRUSTED_PROXY_HOPS` | `1` (Render's proxy) | No | `render.yaml` |
+| `CLIENT_IP_HEADER` | `cf-connecting-ip` (set by Cloudflare, cannot be forged) | No | `render.yaml` |
+| `TRUSTED_PROXY_HOPS` | `3` (fallback: the client's entry in `X-Forwarded-For`) | No | `render.yaml` |
 | `DEMO_AUTO_RESET_HOURS` | `24` | No | `render.yaml` |
 | `DEMO_DAILY_JOB_CAP` | `200` | No | `render.yaml` |
 | `WRITE_RATE_LIMIT_PER_MINUTE` | `60` | No | `render.yaml` |

@@ -31,9 +31,13 @@ services:
         value: ""
       - key: APP_DB_ROLE
         value: offshoot_app
-      # Render's proxy appends the client's address to X-Forwarded-For (ADR-048).
+      # Measured on the live service (ADR-048): Cloudflare sets CF-Connecting-IP to the client and
+      # refuses a request that sends its own, so it cannot be forged. X-Forwarded-For has the client
+      # third from the right, after two proxy hops; it is the fallback.
+      - key: CLIENT_IP_HEADER
+        value: cf-connecting-ip
       - key: TRUSTED_PROXY_HOPS
-        value: "1"
+        value: "3"
       - key: DEMO_AUTO_RESET_HOURS
         value: "24"
       - key: DEMO_DAILY_JOB_CAP

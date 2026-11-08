@@ -63,7 +63,7 @@ Live Gemini held against the injection comment in the Run 05 sample; the defence
 | Mutating API requests per client address | 60 a minute (429 `RATE_LIMITED`) |
 | Request body size | 2 MB, counted on bytes received (413) |
 | Jobs in any 24 hours, all projects | 200 (429 `DEMO_CAP_REACHED`) |
-| Client address | The rightmost `X-Forwarded-For` entry, written by Render's proxy; entries a client adds are ignored |
+| Client address | `CF-Connecting-IP`, which Cloudflare sets and refuses to accept from a client; otherwise the third `X-Forwarded-For` entry from the right. Both measured on the live service (ADR-048) |
 | Daily reset | The demo project is restored from a stored snapshot every 24 hours; users, approvals and the audit log are kept |
 | Banner | "Public demo — synthetic COBOL app, simulated AI responses", and that no code is compiled or run |
 
