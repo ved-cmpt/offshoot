@@ -1,18 +1,21 @@
-"""Project read endpoints. Project creation and uploads are not built yet."""
+"""Projects: list and read (any role), and create one from an uploaded .zip (Engineer or Architect)."""
 
 import uuid
 from datetime import datetime
 from typing import Annotated
 
-from fastapi import APIRouter, Depends, Query
+from fastapi import APIRouter, Depends, File, Form, Query, UploadFile, status
 from pydantic import BaseModel
 from sqlalchemy import Select, func, select
 
-from app.core.deps import ALL_ROLES, DbSession, require_roles
-from app.core.errors import not_found
-from app.db.models import Project, SourceFile
+from app.core.deps import ALL_ROLES, ENGINEER_PLUS, AppSettings, DbSession, require_roles
+from app.core.errors import ApiError, not_found
+from app.db.models import Project, SourceFile, User
+from app.services import audit
+from app.services.uploads import read_upload
 
 router = APIRouter(prefix="/projects", tags=["projects"], dependencies=[Depends(require_roles(ALL_ROLES))])
+Engineer = Annotated[User, Depends(require_roles(ENGINEER_PLUS))]
 
 
 class ProjectOut(BaseModel):
@@ -80,4 +83,49 @@ def get_project(project_id: str, db: DbSession) -> ProjectOut:
     row = db.execute(_projects_with_counts().where(Project.id == parsed)).first()
     if row is None:
         raise not_found("Project not found.")
+    return _to_out(*row)
+
+
+@router.post("", status_code=status.HTTP_201_CREATED)
+async def create_project(
+    db: DbSession,
+    user: Engineer,
+    settings: AppSettings,
+    name: Annotated[str, Form(min_length=3, max_length=120)],
+    archive: Annotated[UploadFile, File()],
+    description: Annotated[str | None, Form(max_length=1000)] = None,
+) -> ProjectOut:
+    """A new project from a .zip of COBOL sources. It can be analyzed, never executed."""
+    if settings.demo_mode:
+        raise ApiError(403, "UPLOADS_DISABLED", "Uploads are turned off in the public demo.")
+    if not (archive.filename or "").lower().endswith(".zip"):
+        raise ApiError(422, "UPLOAD_NOT_ZIP", "Upload a .zip archive.")
+    data = await archive.read(settings.upload_max_bytes + 1)
+    sources = read_upload(data, settings)
+    project = Project(
+        name=name.strip(), description=description, source_kind="UPLOAD", status="IMPORTED", created_by=user.id
+    )
+    db.add(project)
+    db.flush()
+    for source in sources:
+        db.add(
+            SourceFile(
+                project_id=project.id,
+                path=source.path,
+                sha256=source.sha256,
+                kind=source.kind,
+                line_count=len(source.content.splitlines()),
+                content=source.content,
+            )
+        )
+    audit.record(
+        db,
+        "project.uploaded",
+        actor_id=user.id,
+        entity_type="project",
+        entity_id=project.id,
+        metadata={"files": len(sources), "bytes": len(data)},
+    )
+    db.commit()
+    row = db.execute(_projects_with_counts().where(Project.id == project.id)).one()
     return _to_out(*row)
