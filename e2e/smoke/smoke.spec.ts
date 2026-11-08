@@ -49,6 +49,38 @@ test('the app and the API send the security headers', async ({ request }) => {
   expect(config).toMatchObject({ demo_mode: true, execution_enabled: false, ai_mode: 'mock' });
 });
 
+test('the page and every script it loads are UTF-8, with no replacement characters', async ({
+  page,
+  request,
+}) => {
+  const index = await request.get('/');
+  expect(index.headers()['content-type']).toBe('text/html; charset=utf-8');
+  const html = await index.text();
+  expect(html).toContain('<meta charset="utf-8">');
+  // Every script the app can load: the entry points, then the lazy chunks they name.
+  const seen = new Set<string>();
+  const queue = [...html.matchAll(/src="([^"]+\.js)"/g)].map((match) => match[1]);
+  while (queue.length) {
+    const name = queue.shift()!.replace(/^\.\//, '');
+    if (seen.has(name)) continue;
+    seen.add(name);
+    const script = await request.get(`/${name}`);
+    expect(script.status(), name).toBe(200);
+    expect(script.headers()['content-type'], name).toContain('charset=utf-8');
+    const bytes = await script.body();
+    expect(bytes.includes(Buffer.from([0xef, 0xbf, 0xbd])), `${name} holds U+FFFD`).toBe(false);
+    for (const match of bytes.toString('utf-8').matchAll(/\.\/(chunk-[A-Za-z0-9_-]+\.js)/g)) {
+      queue.push(match[1]);
+    }
+  }
+  expect(seen.size).toBeGreaterThan(3);
+
+  await signIn(page, 'viewer');
+  const banner = await page.locator('.demo-banner').innerText();
+  expect(banner).toContain('Public demo \u2014 synthetic COBOL app');
+  expect(await page.locator('body').innerText()).not.toContain('\ufffd');
+});
+
 test('the refresh cookie is HttpOnly, Secure and SameSite=Strict, and only for the auth path', async ({
   request,
 }) => {

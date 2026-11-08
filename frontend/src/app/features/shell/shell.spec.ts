@@ -80,6 +80,9 @@ describe('Shell', () => {
     await render('VIEWER', true, { execution_enabled: false, demo_reset_hours: 24 });
     const banner = page.querySelector('.demo-banner')?.textContent ?? '';
     expect(banner).toContain('simulated AI responses');
+    // A real em dash, never the replacement character a mis-decoded edit once left (Run 06).
+    expect(banner).toContain('Public demo \u2014 synthetic COBOL app');
+    expect(banner).not.toContain('\ufffd');
     expect(banner).toContain('No code is compiled or run here');
     expect(banner).toContain('resets every day');
   });

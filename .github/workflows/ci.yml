@@ -30,6 +30,9 @@ jobs:
         with:
           python-version: "3.12"
       - run: pip install uv==0.13.7
+      - name: Tracked text is UTF-8 with LF and no replacement characters
+        working-directory: .
+        run: python scripts/check_text.py
       - run: uv sync --frozen
       - run: uv run ruff check .
       - run: uv run ruff format --check .
