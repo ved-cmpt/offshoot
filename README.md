@@ -1,6 +1,6 @@
 # ParityForge
 
-**Status: in development (Run 03 of 6).** The legacy application, sign-in, deterministic inventory, rule extraction with human review, the modernization plan, migration to C# in a network-less sandbox, and golden-master equivalence verification with coverage, mutation testing and gates all work, in mock AI mode. Approvals, the routing facade and the dashboard come next. Live Gemini is implemented but has never been called. See [`docs/IMPLEMENTATION_STATUS.md`](docs/IMPLEMENTATION_STATUS.md) for exactly what works today.
+**Status: in development (Run 04 of 6).** The whole workflow works locally in mock AI mode: inventory, rule extraction with human review, the plan, migration to C# in a network-less sandbox, golden-master equivalence with coverage, mutation testing and gates, human approval, and strangler-fig promotion through a YARP facade with shadow comparison. A dashboard, an assessment report and the audit log show the results. CI, the production image and deployment come next. Live Gemini is implemented but has never been called. See [`docs/IMPLEMENTATION_STATUS.md`](docs/IMPLEMENTATION_STATUS.md) for exactly what works today.
 
 ParityForge will be an AI-assisted legacy modernization workbench: it inventories a COBOL application, extracts business rules that a person verifies against the source, migrates modules to C#, and proves behavioural equivalence by running the real legacy program alongside the new code. The model proposes; deterministic tooling verifies; people approve.
 
@@ -19,9 +19,9 @@ docker compose exec orchestrator alembic upgrade head
 docker compose exec orchestrator python -m app.scripts.seed_demo
 ```
 
-Then open http://localhost:4200 and pick a demo account. API health is at http://localhost:8100/api/v1/readyz.
+Then open http://localhost:4200 and pick a demo account. API health is at http://localhost:8100/api/v1/readyz. The BillRite business API, behind the strangler facade, is at http://localhost:8200 (for example `POST /billing/rate` with `{"customer_class": "R", "month": 10, "kwh": 610}`).
 
-The seed runs the real pipeline, so it takes about a minute. Open **BillRite** to browse the inventory and its call graph, read the source and review rules, then open **Plan** and **Modules**. RATECALC is blocked: its first C# translation rounds to the even cent, and the harness found the cases where that differs from COBOL's half-up rounding. Sign in as the demo engineer and press **Repair** to watch the fix verified against all 500 cases. Seeded decisions are labelled as not being human reviews.
+The seed runs the real pipeline, so it takes about a minute. Open **BillRite** to browse the inventory and its call graph, read the source and review rules, then open **Plan** and **Modules**. RATECALC is blocked: its first C# translation rounds to the even cent, and the harness found the cases where that differs from COBOL's half-up rounding. Sign in as the demo engineer and press **Repair** to watch the fix verified against all 500 cases, then as the demo architect approve it, start shadow mode, replay recorded traffic and promote it to modern. MTRVAL is already modern and LATEFEE is in shadow. Seeded decisions are labelled as not being human reviews.
 
 To put the demo back to its seeded state: `docker compose exec orchestrator python -m app.scripts.reset_demo --confirm`.
 
@@ -31,7 +31,7 @@ To put the demo back to its seeded state: `docker compose exec orchestrator pyth
 
 All accounts and data are synthetic, and the demo passwords are published on the sign-in page. `.env.example` holds placeholder secrets that are fine for a local stack, and all ports bind to `127.0.0.1`. Change the secrets before exposing this anywhere else.
 
-The default host ports are 5433 (Postgres), 8100 (API) and 4200 (Angular). Change them in `.env`. If you change the database passwords after the first start, run `docker compose down -v` to reinitialize the database volume.
+The default host ports are 5433 (Postgres), 8100 (API), 4200 (Angular) and 8200 (facade). Change them in `.env`. If you change the database passwords after the first start, run `docker compose down -v` to reinitialize the database volume.
 
 ## Run the legacy application
 
@@ -52,6 +52,8 @@ docker compose exec frontend npm test
 docker compose exec frontend npm run build
 docker compose run --rm dotnet-builder build-and-test
 ```
+
+Uploads (`POST /projects` with a .zip) are off while `DEMO_MODE=true`, the default. Uploaded code is only analyzed, never run.
 
 Browser journeys and accessibility checks run from the host against the running stack. They reset the demo first:
 

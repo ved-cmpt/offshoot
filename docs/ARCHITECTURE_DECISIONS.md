@@ -267,3 +267,43 @@ The seed now also verifies RATECALC's unflagged rules, because migration needs v
 ## ADR-038 The browser suite (Playwright and axe)
 
 `e2e/` holds Playwright 1.64.1 and `@axe-core/playwright` 4.14.0, run from the host against the running stack (`cd e2e; npm ci; npx playwright install chromium; npx playwright test`). The global setup runs the demo reset, so the suite starts from the seeded state every time; `E2E_SKIP_RESET=1` skips it. Specs run in file order with one worker, because they change shared state. Accessibility checks use the WCAG 2.0 and 2.1 A and AA rules and fail on any serious or critical violation. Layout checks fail on any sideways page scroll. Screenshots go to `assets/screenshots/`.
+
+## ADR-039 The strangler facade: one process, YARP routes per module mode
+
+**Decision.** `modern/src/ParityForge.Facade` is one ASP.NET Core process with YARP 2.3.0 that exposes the BillRite business API: `POST /meter/validate`, `/billing/rate`, `/billing/late-fee` and `/statement/render`. Each path is a YARP route whose cluster is the module's mode (`legacy`, `shadow` or `modern`); a path transform sends it to a backend endpoint on a second listener bound to loopback (`127.0.0.1:8081`), which only YARP in the same process can reach. The facade reads the route table from the orchestrator's internal API every 2 seconds and reloads YARP's in-memory configuration when a mode changes. Until it has read a table, every route goes to legacy.
+
+- **Legacy** calls `BRCALL` in cobol-runner, one record per request.
+- **Modern** calls dotnet-builder's `/v1/run` with the approved artifact's files from the route table. The builder builds once per artifact digest and runs the harness under `nonet`. The facade never runs generated code itself.
+- **Shadow** calls both, reports the input and both output records to the orchestrator, and answers with the legacy result. A failure on the modern side is recorded as a mismatch (`!MODERN_RUN_FAILED`) and the caller still gets legacy.
+
+JSON in and out is mapped to the CALLREC parameter blocks by hand-written codecs in the facade (and, for replaying recorded traffic, by `services/facade_codec.py`). Money is a decimal string such as `"55.91"`, never a binary float. Invalid requests get 422 before any backend runs.
+
+**Deviations from the blueprint's diagram.** The three target services (meter, billing and statement) are routes of one facade process, not three deployed microservices, and the legacy and modern adapters live in that process behind YARP rather than as separate services. That keeps the topology to one more container. The facade publishes one more host port, `FACADE_HOST_PORT` (default 8200), next to 5433, 8100 and 4200. Its runtime image is `mcr.microsoft.com/dotnet/aspnet:10.0.14`, pinned by digest, with a non-root user and a read-only root file system. Python's standard-library servers need a `Content-Length`, so the facade sends buffered JSON bodies to the runners.
+
+**Internal API.** `GET /api/v1/internal/facade/routes` and `POST /api/v1/internal/facade/shadow` need `X-Facade-Token` equal to `FACADE_SHARED_SECRET`, compared in constant time; without a configured secret they answer 503. The route table carries code only for an approved module that is routed to shadow or modern.
+
+## ADR-040 Approval and promotion rules
+
+- **Approval** (architect only, with `expected_version`) needs the module to be VERIFIED and the latest full run of the current artifact to pass every gate under today's thresholds, re-checked at decision time (409 `VERIFICATION_REQUIRED`). A rejection needs a reason and is allowed from VERIFIED, BLOCKED or BUILD_FAILED; a rejected module can be migrated again. Approved code cannot be migrated or repaired behind the approval. With `ALLOW_SELF_APPROVAL=false` and a second architect active, the architect who started the current artifact's migration may not decide on it (403 `SELF_APPROVAL`).
+- **Facade modes** (architect only, with `expected_version`): SHADOW needs an approved module and resets the shadow count; MODERN needs SHADOW and at least `SHADOW_SAMPLE_SIZE` (default 20) compared requests since entering shadow with zero mismatches (409 `SHADOW_GATE`); LEGACY is always allowed, as the rollback. Every change is audited with the counts at the time.
+- **Shadow comparisons** are decided by the orchestrator, not the facade: the facade reports the records, and the server compares them field by field with the same code as the harness. Counters live on `modules` (`shadow_since`, `shadow_compared`, migration 0004); mismatches go to `shadow_mismatches` with the field-level difference.
+- **Re-verifying an approved module** keeps it APPROVED if it passes. If it fails, the module becomes BLOCKED and its traffic rolls back to legacy at once (`facade.rollback` in the audit log).
+- **Replaying recorded traffic** is a SHADOW job (new job kind, migration 0004). It sends recorded BillRite requests through the real facade, starting at a different offset each time, after waiting until the facade routes the module through shadow.
+
+## ADR-041 What the seed covers in Run 04 (extends ADR-037)
+
+After migration, the seed approves MTRVAL and LATEFEE as labelled demo decisions, routes both through shadow mode, and replays recorded BillRite requests through the real facade: MTRVAL gets the full sample with no mismatch and goes modern; LATEFEE gets half the sample and stays in shadow. STMTGEN stays verified and awaiting approval, RATECALC stays blocked by its rounding mismatches, and BILLRUN stays pending: the five states of Section 8.2, all from real runs and real traffic. A later seed never touches a module someone has decided on.
+
+The seed tests (`tests/test_seed.py`) run against the test database, which the real facade cannot see (it reads the stack's database). There the facade is replaced by a stand-in that reports through the same internal API. The real path is exercised by the seed on the running stack, by `e2e/tests/05-promotion.spec.ts`, and was checked by hand while building it.
+
+## ADR-042 The assessment report's PDF is the browser's print to PDF
+
+The report page has a print stylesheet that hides the navigation and buttons and keeps tables whole, and a "Print or save as PDF" button. A server-side PDF would need a rendering library and its fonts in the image, or a headless browser, for no gain in content. The Markdown export is generated on the server from the same data as the page (`GET /projects/{id}/report.md`), so the two cannot disagree.
+
+## ADR-043 Uploads
+
+`POST /projects` takes a multipart form with a name and a `.zip`. It needs `python-multipart` 0.0.32 (0.0.33 was under two weeks old). The archive is read in memory and never extracted to disk. Default caps: 1 MB archive, 40 files, 256 kB per file, 2 MB uncompressed in total, each configurable. Members are read to at most one byte past the per-file cap, so a member that lies about its size still stops. Refused with 422 and a fixed code: not a zip, absolute paths, `..`, backslashes, drive letters, symbolic links, encrypted members, extensions other than `.cbl`, `.cob`, `.cpy` and `.txt`, non-ASCII or control characters, duplicate file names, and no program. With `DEMO_MODE=true` the endpoint answers 403 `UPLOADS_DISABLED` and the screen says uploads are off. An uploaded project can be analyzed and its rules extracted; it is never compiled or run (ADR-035).
+
+## ADR-044 Dashboard numbers and activity
+
+The dashboard and report read stored rows only. Rule decisions are counted as seeded when their approval reason starts with the seed's label, and as human otherwise (ADR-024). AI usage is summed from `ai_calls`; mock calls cost nothing and their input tokens are an estimate from prompt length, which the screen says. Recent activity is built from jobs and approvals rather than the audit log, because viewers may read the dashboard and the audit log is for architects and admins. The project now opens on the overview instead of the inventory.

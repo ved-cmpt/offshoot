@@ -21,15 +21,15 @@ Updated at every checkpoint. `[x]` means done and verified by a command that exi
 
 **Part B (Run 04 scope)**
 
-- [ ] Module approve/reject (F09), 409 without a passing verification
-- [ ] Strangler facade (ASP.NET Core + YARP), legacy/shadow/modern, shadow mismatches, promotion gate
-- [ ] Uploads (F03) with caps, traversal rejection, allowlist, disabled in demo mode
-- [ ] Angular: dashboard, plan, module workspace, report, audit, job progress, all states, 375 px, both themes
-- [ ] Seed with mixed module states from real pipeline runs
-- [ ] Playwright + axe suites in e2e/, screenshots
-- [ ] RUN_04.md, Run 05 prompt, full verification, scans, push
+- [x] Module approve/reject (F09), 409 without a passing verification
+- [x] Strangler facade (ASP.NET Core + YARP), legacy/shadow/modern, shadow mismatches, promotion gate
+- [x] Uploads (F03) with caps, traversal rejection, allowlist, disabled in demo mode
+- [x] Angular: dashboard, plan, module workspace, report, audit, job progress, all states, 375 px, both themes
+- [x] Seed with mixed module states from real pipeline runs
+- [x] Playwright + axe suites in e2e/, screenshots
+- [x] RUN_04.md, Run 05 prompt, full verification, scans, push
 
-**Current state:** Run 03 of 6 is complete (Part A of the combined Run 03 + Run 04). Run 04 (Part B) is in progress. Evidence for Run 03 is in [`RUN_REPORTS/RUN_03.md`](RUN_REPORTS/RUN_03.md).
+**Current state:** Run 04 of 6 is complete (the combined Run 03 + Run 04 session). Run 05 is next: evaluation, CI, production image, hardening, demo safeguards and deployment prep. Evidence is in [`RUN_REPORTS/RUN_04.md`](RUN_REPORTS/RUN_04.md) and [`RUN_REPORTS/RUN_03.md`](RUN_REPORTS/RUN_03.md).
 
 **Rename (2026-11-07):** the project is now ParityForge (ADR-029). Display names and every identifier were renamed with behaviour unchanged: Compose project, database and roles (the app role name now comes from `APP_DB_ROLE`), Python and Angular packages, the CSRF header, the .NET solution and namespaces, and the demo emails (`@demo.parityforge.dev`). Verified from a clean slate on 2026-11-07: all 5 services healthy, migrations to `0002`, seed twice (second run changed nothing), pytest 562 passed, ruff and mypy clean, frontend lint, 124 tests and build, .NET 3 tests, `make billrun`, API login for all 4 roles, and a real-browser check of sign-in, inventory and rules. A local volume from before the rename needs `docker compose down -v` once.
 
@@ -47,6 +47,10 @@ Code and tests are the ground truth. Evidence is in [`RUN_REPORTS/RUN_02.md`](RU
 | Migration | `migrate-v1` and `repair-v1`; fixtures for MTRVAL, RATECALC, LATEFEE, STMTGEN; sandbox build, analyzers, unit tests; repair loop of at most 3 (ADR-035) |
 | Equivalence | 500 seeded cases per module, real COBOL against real C#, exact field comparison, paragraph coverage, Stryker.NET mutation, reproducible reports (ADR-033) |
 | Gates | Server-side, configurable, exceptions with reasons in an append-only table (ADR-034) |
+| Approval | Architect approves or rejects with `expected_version`; 409 without a passing verification (ADR-040) |
+| Facade | ASP.NET Core + YARP on port 8200; legacy, shadow and modern per module; shadow mismatches; promotion gated on a clean sample; rollback (ADR-039, ADR-040) |
+| Uploads | `POST /projects` with a .zip, capped and checked, never executed, off in demo mode (ADR-043) |
+| Dashboard and report | Overview, assessment report with Markdown and print to PDF, audit log screen (ADR-042, ADR-044) |
 | BillRite | 5 programs and 6 copybooks; the batch runs with `make billrun`; `BRCALL` works for each of the 4 modules |
 | BillRite data | Seeded generator; 199 customers and 599 reads over 3 billing periods, with all edge cases |
 | Answer key | `docs/BILLRITE_RULES.md`, with line references. Not reachable by the agent, and a test proves it (ADR-025) |
@@ -57,13 +61,13 @@ Code and tests are the ground truth. Evidence is in [`RUN_REPORTS/RUN_02.md`](RU
 | Rule extraction | `AgentProvider` with `MockAgent` (fixtures for all 5 programs) and `GeminiAgent` (unit-tested with a fake client). Prompt `rules-v1`, strict contract, server checks, every attempt logged to `ai_calls`, live budget per project |
 | Rule decisions | Architect verifies or rejects, engineers edit. `expected_version` with 409 on stale. Every decision goes to `approvals` and `audit_logs`. A flagged rule cannot be verified until an edit fixes it. The model cannot decide anything |
 | Evaluation | Measured in mock mode from the host: see [`EVALUATION.md`](EVALUATION.md). These numbers measure the pipeline, not a model |
-| API | `/auth/*`, `/healthz`, `/readyz`, `/config`, `/projects`, `/projects/{id}/analyze`, `/inventory`, `/inventory/layouts`, `/graph`, `/sources`, `/sources/{fileId}`, `/jobs`, `/jobs/{id}`, `/programs/{program}/extract-rules`, `/rules`, `/rules/{id}`, `/rules/{id}/decision`, `/admin/audit` |
+| API | `/auth/*`, `/healthz`, `/readyz`, `/config`, `/projects`, `/projects/{id}/analyze`, `/inventory`, `/inventory/layouts`, `/graph`, `/sources`, `/sources/{fileId}`, `/jobs`, `/jobs/{id}`, `/programs/{program}/extract-rules`, `/rules`, `/rules/{id}`, `/rules/{id}/decision`, `/admin/audit`; since Run 03: `POST /projects` (upload), `/projects/{id}/plan`, `/plan/decision`, `/modules`, `/dashboard`, `/report`, `/report.md`; `/modules/{id}` with `/artifacts`, `/runs`, `/migrate`, `/repair`, `/verify`, `/mutate`, `/gate-exceptions`, `/decision`, `/facade-mode`, `/shadow-replay`, `/shadow`; internal `/internal/facade/routes` and `/internal/facade/shadow` |
 | Seed | Idempotent: 4 demo users, BillRite, inventory, 46 rules with 44 labelled demo decisions, an approved plan, and four modules from real runs: RATECALC blocked by the rounding defect, the others verified (ADR-037). Guarded demo reset |
 | Angular | `/login`, protected shell, `/projects`, and `/projects/:id/` `inventory`, `sources/:file` `rules`, `plan`, `modules` and `modules/:mid`: self-hosted SVG call graph, layouts, dead code, line-numbered source with rule spans and copybook links, rule cards with verify, edit and reject by role, live job progress. Loading, empty, error and retry states; both themes; keyboard accessible; usable at 375 px |
 
 ## Not built yet
 
-Module approval, the facade, uploads, dashboard, report and audit screens (Run 04, in progress); CI, production image and deployment (Runs 05 and 06).
+CI, the production image, security hardening, demo safeguards and deployment (Runs 05 and 06). A capped live Gemini sample (Run 05).
 
 ## Unverified
 

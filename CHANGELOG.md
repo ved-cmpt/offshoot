@@ -4,6 +4,15 @@ All notable changes are recorded here. Dates are UTC.
 
 ## [Unreleased]
 
+### Run 04 (2026-11-08)
+
+- Module approval and rejection by an architect, refused without a passing verification under today's thresholds.
+- Strangler facade (ASP.NET Core with YARP) for the BillRite business API, with legacy, shadow and modern modes per module, shadow mismatches recorded field by field, promotion to modern only after a clean shadow sample, rollback to legacy at any time and automatically when a re-verification fails. Recorded traffic can be replayed through it.
+- Project uploads with size, count, path and type checks, disabled in demo mode, never executed.
+- Overview dashboard, assessment report with Markdown export and print to PDF, audit log screen, and approval and routing controls in the module workspace.
+- Seed with the mixed module states of Blueprint Section 8.2 from real runs and real facade traffic.
+- Browser suite extended to promotion, gates, uploads, dashboard, report, audit and two tabs refreshing together, with accessibility checks on every screen.
+
 ### Run 03 (2026-11-08)
 
 - Runner APIs require a shared secret and fail closed without it. dotnet-builder has no network at all and serves a narrow build, run and mutate API on a Unix socket. Generated C# is built in a fixed template whose banned-API analyzer fails the build on processes, network, file system, environment, reflection, native or unsafe code.
