@@ -1,0 +1,55 @@
+T:System.Diagnostics.Process;Generated code may not start processes or reach the runtime
+T:System.Diagnostics.ProcessStartInfo;Generated code may not start processes or reach the runtime
+T:System.Diagnostics.Debugger;Generated code may not start processes or reach the runtime
+T:System.Diagnostics.Trace;Generated code may not start processes or reach the runtime
+T:System.Diagnostics.EventLog;Generated code may not start processes or reach the runtime
+T:System.Diagnostics.FileVersionInfo;Generated code may not start processes or reach the runtime
+T:System.Diagnostics.DiagnosticListener;Generated code may not start processes or reach the runtime
+N:System.Net;Generated code may not use the network
+N:System.Net.Http;Generated code may not use the network
+N:System.Net.Sockets;Generated code may not use the network
+N:System.Net.WebSockets;Generated code may not use the network
+N:System.Net.Security;Generated code may not use the network
+N:System.IO.Pipes;Generated code may not use pipes
+N:System.IO.MemoryMappedFiles;Generated code may not map files
+N:System.IO.IsolatedStorage;Generated code may not use storage
+T:System.IO.File;Generated code may not touch the file system
+T:System.IO.FileInfo;Generated code may not touch the file system
+T:System.IO.FileStream;Generated code may not touch the file system
+T:System.IO.FileSystemInfo;Generated code may not touch the file system
+T:System.IO.FileSystemWatcher;Generated code may not touch the file system
+T:System.IO.Directory;Generated code may not touch the file system
+T:System.IO.DirectoryInfo;Generated code may not touch the file system
+T:System.IO.DriveInfo;Generated code may not touch the file system
+T:System.IO.Path;Generated code may not touch the file system
+T:System.IO.StreamReader;Generated code may not touch the file system
+T:System.IO.StreamWriter;Generated code may not touch the file system
+T:System.IO.RandomAccess;Generated code may not touch the file system
+T:System.Environment;Generated code may not read the environment
+T:System.AppContext;Generated code may not read the environment
+T:System.AppDomain;Generated code may not reach the runtime host
+T:System.Console;Generated code may not use the console because the harness owns stdio
+T:System.Reflection.Assembly;Generated code may not use reflection
+T:System.Reflection.AssemblyName;Generated code may not use reflection
+T:System.Reflection.Module;Generated code may not use reflection
+T:System.Reflection.MemberInfo;Generated code may not use reflection
+T:System.Reflection.MethodBase;Generated code may not use reflection
+T:System.Reflection.MethodInfo;Generated code may not use reflection
+T:System.Reflection.ConstructorInfo;Generated code may not use reflection
+T:System.Reflection.FieldInfo;Generated code may not use reflection
+T:System.Reflection.PropertyInfo;Generated code may not use reflection
+T:System.Reflection.EventInfo;Generated code may not use reflection
+T:System.Reflection.ParameterInfo;Generated code may not use reflection
+T:System.Reflection.TypeInfo;Generated code may not use reflection
+T:System.Reflection.IntrospectionExtensions;Generated code may not use reflection
+T:System.Reflection.RuntimeReflectionExtensions;Generated code may not use reflection
+T:System.Reflection.DispatchProxy;Generated code may not use reflection
+N:System.Reflection.Emit;Generated code may not emit code
+N:System.Runtime.Loader;Generated code may not load assemblies
+N:System.Runtime.InteropServices;Generated code may not call native code
+T:System.Runtime.CompilerServices.Unsafe;Generated code may not use unsafe memory
+T:System.Type;Generated code may not inspect or load types by name
+T:System.Activator;Generated code may not create types by name
+T:System.Threading.Thread;Generated code may not manage threads
+T:System.Threading.ThreadPool;Generated code may not manage threads
+T:System.GC;Generated code may not control the garbage collector

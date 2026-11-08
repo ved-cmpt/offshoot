@@ -1,0 +1,15 @@
+<Project>
+  <!-- The generated-code deny policy (Blueprint Section 11), imported by the two projects
+       that hold generated files. A banned API is error RS0030 and fails the build, and
+       unsafe code is error CS0227 because AllowUnsafeBlocks is false. -->
+  <ItemGroup>
+    <PackageReference Include="Microsoft.CodeAnalysis.BannedApiAnalyzers" Version="5.0.0">
+      <PrivateAssets>all</PrivateAssets>
+      <IncludeAssets>runtime; build; native; contentfiles; analyzers</IncludeAssets>
+    </PackageReference>
+    <AdditionalFiles Include="$(MSBuildThisFileDirectory)BannedSymbols.txt" />
+  </ItemGroup>
+  <PropertyGroup>
+    <WarningsAsErrors>$(WarningsAsErrors);RS0030;RS0031;CS0227</WarningsAsErrors>
+  </PropertyGroup>
+</Project>

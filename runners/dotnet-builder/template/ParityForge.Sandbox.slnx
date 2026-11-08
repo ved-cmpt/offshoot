@@ -1,0 +1,5 @@
+<Solution>
+  <Project Path="Generated/ParityForge.Generated.csproj" />
+  <Project Path="Generated.Tests/ParityForge.Generated.Tests.csproj" />
+  <Project Path="Harness/ParityForge.Harness.csproj" />
+</Solution>

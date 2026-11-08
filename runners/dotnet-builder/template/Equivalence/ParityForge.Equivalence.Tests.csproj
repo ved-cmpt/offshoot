@@ -1,0 +1,17 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <!-- Template code, not generated. The equivalence cases (legacy input, legacy output) as
+       one test: the test suite for mutation testing (Blueprint Section 7.1). -->
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <IsPackable>false</IsPackable>
+  </PropertyGroup>
+  <ItemGroup>
+    <PackageReference Include="xunit.v3.mtp-v2" Version="4.0.2" />
+  </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="../Generated/ParityForge.Generated.csproj" />
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="cases.jsonl" CopyToOutputDirectory="PreserveNewest" Condition="Exists('cases.jsonl')" />
+  </ItemGroup>
+</Project>

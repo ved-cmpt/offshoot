@@ -12,10 +12,13 @@ from typing import Any
 import httpx
 
 RUNNER_URL = os.environ.get("COBOL_RUNNER_URL", "http://cobol-runner:9000")
+RUNNER_HEADERS = {"X-Runner-Token": os.environ.get("RUNNER_SHARED_SECRET", "")}
 
 
 def call_module(module: str, records: list[str]) -> list[str]:
-    response = httpx.post(f"{RUNNER_URL}/v1/brcall/{module}", json={"records": records}, timeout=60)
+    response = httpx.post(
+        f"{RUNNER_URL}/v1/brcall/{module}", json={"records": records}, headers=RUNNER_HEADERS, timeout=60
+    )
     response.raise_for_status()
     result = response.json()
     assert result["exit_code"] == 0, result
@@ -27,7 +30,7 @@ def call_module(module: str, records: list[str]) -> list[str]:
 
 
 def run_batch() -> dict[str, Any]:
-    response = httpx.post(f"{RUNNER_URL}/v1/billrun", timeout=120)
+    response = httpx.post(f"{RUNNER_URL}/v1/billrun", headers=RUNNER_HEADERS, timeout=120)
     response.raise_for_status()
     result: dict[str, Any] = response.json()
     return result

@@ -13,21 +13,36 @@ ENV DOTNET_CLI_TELEMETRY_OPTOUT=1 \
     NUGET_SCRATCH=/tmp/nuget-scratch \
     HOME=/tmp \
     MSBUILDDISABLENODEREUSE=1 \
-    DOTNET_CLI_USE_MSBUILD_SERVER=0
+    DOTNET_CLI_USE_MSBUILD_SERVER=0 \
+    STRYKER_PATH=/opt/stryker/dotnet-stryker
+
+# The runner API is standard-library Python, like the cobol-runner's.
+RUN apt-get update \
+    && apt-get install -y --no-install-recommends python3=3.12.3-0ubuntu2.1 \
+    && rm -rf /var/lib/apt/lists/*
 
 COPY --from=nonet /nonet /usr/local/bin/nonet
 COPY runners/dotnet-builder/build-and-test /usr/local/bin/build-and-test
 
-# Restore while the image builds so that builds at run time never need the network.
+# Everything is restored and installed while the image builds, so that nothing at run time
+# needs the network, which the container does not have (ADR-016, ADR-030): the modern
+# solution, the sandbox template with its analyzers and test packages, and Stryker.NET.
 COPY modern/ /tmp/restore/
+COPY runners/dotnet-builder/template/ /opt/template/
 RUN chmod 0755 /usr/local/bin/build-and-test \
     && dotnet restore /tmp/restore/ParityForge.Modern.sln --locked-mode \
+    && dotnet restore /opt/template/ParityForge.Sandbox.slnx --locked-mode \
+    && dotnet restore /opt/template/Equivalence/ParityForge.Equivalence.Tests.csproj --locked-mode \
+    && dotnet tool install dotnet-stryker --version 4.16.0 --tool-path /opt/stryker \
+    && find /opt/template -type d \( -name obj -o -name bin \) -prune -exec rm -rf {} + \
     && rm -rf /tmp/restore /tmp/dotnet-home /tmp/nuget-http /tmp/nuget-scratch \
-    && chmod -R a+rX /opt/nuget \
+    && chmod -R a+rX /opt/nuget /opt/template /opt/stryker \
     && groupadd --gid 10001 runner \
     && useradd --uid 10001 --gid 10001 --no-create-home --shell /usr/sbin/nologin runner \
-    && install -d -o 10001 -g 10001 /work
+    && install -d -o 10001 -g 10001 /work /run/builder
+
+COPY runners/common/runner_auth.py runners/dotnet-builder/server.py /opt/runner/
 
 USER 10001:10001
 WORKDIR /work
-CMD ["tail", "-f", "/dev/null"]
+CMD ["python3", "/opt/runner/server.py"]

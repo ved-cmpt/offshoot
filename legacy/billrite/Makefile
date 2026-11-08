@@ -17,7 +17,7 @@ export COB_LS_FIXED := Y
 
 .PHONY: build billrun clean
 
-build: $(BUILD_DIR)/BILLRUN $(BUILD_DIR)/BRCALL
+build: $(BUILD_DIR)/BILLRUN $(BUILD_DIR)/BRCALL $(BUILD_DIR)/BRCALLT
 
 $(BUILD_DIR)/BILLRUN: src/BILLRUN.cbl $(MODULES) $(COPYBOOKS)
 	@mkdir -p $(BUILD_DIR)
@@ -26,6 +26,11 @@ $(BUILD_DIR)/BILLRUN: src/BILLRUN.cbl $(MODULES) $(COPYBOOKS)
 $(BUILD_DIR)/BRCALL: harness/BRCALL.cbl $(MODULES) $(COPYBOOKS)
 	@mkdir -p $(BUILD_DIR)
 	$(NONET) $(COBC) -x $(COBFLAGS) -o $@ harness/BRCALL.cbl $(MODULES)
+
+# The same entry program with paragraph tracing, for legacy coverage (Blueprint Section 7.1).
+$(BUILD_DIR)/BRCALLT: harness/BRCALL.cbl $(MODULES) $(COPYBOOKS)
+	@mkdir -p $(BUILD_DIR)
+	$(NONET) $(COBC) -x $(COBFLAGS) -ftrace -o $@ harness/BRCALL.cbl $(MODULES)
 
 billrun: $(BUILD_DIR)/BILLRUN
 	DD_CUSTFILE=$(abspath $(DATA_DIR))/CUSTFILE.dat \

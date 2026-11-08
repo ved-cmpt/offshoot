@@ -48,7 +48,25 @@ class Settings(BaseSettings):
 
     job_worker_enabled: bool = True
     job_poll_seconds: float = Field(default=0.5, gt=0)
-    job_lease_seconds: int = Field(default=300, ge=1)
+    # A verification with mutation testing can run for many minutes (ADR-023).
+    job_lease_seconds: int = Field(default=1800, ge=1)
+
+    # Sandbox runners (ADR-013, ADR-030). Every call carries the shared token.
+    cobol_runner_url: str = "http://cobol-runner:9000"
+    dotnet_builder_socket: str = "/run/builder/builder.sock"
+    runner_shared_secret: SecretStr = SecretStr("")
+    runner_timeout_seconds: float = Field(default=1200.0, gt=0)
+    # Lower the builder's own limits for this deployment. Unset means the builder's defaults.
+    sandbox_test_timeout_seconds: int | None = Field(default=None, ge=1)
+    sandbox_run_timeout_seconds: int | None = Field(default=None, ge=1)
+
+    # Migration and verification (Blueprint Sections 6.1, 7.1 and 7.2).
+    repair_max_attempts: int = Field(default=3, ge=0, le=3)
+    equivalence_cases: int = Field(default=500, ge=20, le=5000)
+    equivalence_seed: int = Field(default=20261107, ge=0)
+    coverage_threshold: float = Field(default=85.0, ge=0, le=100)
+    mutation_threshold: float = Field(default=70.0, ge=0, le=100)
+    report_mismatch_limit: int = Field(default=25, ge=1, le=200)
 
     @field_validator("cors_origins", mode="before")
     @classmethod

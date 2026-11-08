@@ -10,9 +10,6 @@ x-runner-hardening: &runner-hardening
   security_opt:
     - no-new-privileges:true
   pids_limit: 512
-  # Reachable only over this internal network. No published ports.
-  networks:
-    - sandbox
 
 services:
   postgres:
@@ -63,6 +60,8 @@ services:
       DEMO_PASSWORD_ADMIN: ${DEMO_PASSWORD_ADMIN:?copy .env.example to .env}
       BILLRITE_PATH: /legacy/billrite
       COBOL_RUNNER_URL: http://cobol-runner:9000
+      DOTNET_BUILDER_SOCKET: /run/builder/builder.sock
+      RUNNER_SHARED_SECRET: ${RUNNER_SHARED_SECRET:?copy .env.example to .env}
       WATCHFILES_FORCE_POLLING: "true"
     ports:
       - "127.0.0.1:${ORCHESTRATOR_HOST_PORT:-8100}:8000"
@@ -70,6 +69,8 @@ services:
       - ./orchestrator:/app
       - ./legacy/billrite:/legacy/billrite:ro
       - ./scripts:/repo-scripts:ro
+      # The builder has no network at all; its API is a Unix socket in this volume (ADR-030).
+      - builder-socket:/run/builder:ro
     depends_on:
       postgres:
         condition: service_healthy
@@ -119,6 +120,11 @@ services:
     build:
       context: .
       dockerfile: runners/cobol-runner/Dockerfile
+    # Reachable only over this internal network. No published ports.
+    networks:
+      - sandbox
+    environment:
+      RUNNER_SHARED_SECRET: ${RUNNER_SHARED_SECRET:?copy .env.example to .env}
     working_dir: /app/billrite
     cpus: "1.0"
     mem_limit: 512m
@@ -143,15 +149,20 @@ services:
     build:
       context: .
       dockerfile: runners/dotnet-builder/Dockerfile
+    # No network interface but loopback (ADR-030). The API is a Unix socket in a volume.
+    network_mode: none
+    environment:
+      RUNNER_SHARED_SECRET: ${RUNNER_SHARED_SECRET:?copy .env.example to .env}
     cpus: "2.0"
-    mem_limit: 2g
+    mem_limit: 3g
     tmpfs:
-      - /work:uid=10001,gid=10001,mode=0700,size=512m,exec
-      - /tmp:uid=10001,gid=10001,mode=0700,size=512m
+      - /work:uid=10001,gid=10001,mode=0700,size=768m,exec
+      - /tmp:uid=10001,gid=10001,mode=0700,size=512m,exec
     volumes:
       - ./modern:/src/modern:ro
+      - builder-socket:/run/builder
     healthcheck:
-      test: ["CMD-SHELL", "dotnet --list-sdks >/dev/null && test -x /usr/local/bin/nonet"]
+      test: ["CMD", "python3", "/opt/runner/server.py", "healthcheck"]
       interval: 10s
       timeout: 10s
       retries: 12
@@ -164,3 +175,9 @@ networks:
 
 volumes:
   postgres-data: {}
+  # tmpfs-backed, so the socket never persists and the builder's user owns it.
+  builder-socket:
+    driver_opts:
+      type: tmpfs
+      device: tmpfs
+      o: "uid=10001,gid=10001,mode=0755,size=1m"

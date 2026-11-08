@@ -1,0 +1,18 @@
+<Project>
+  <!-- Fixed by the sandbox template. Generated code supplies .cs files only (ADR-031). -->
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
+    <EnableNETAnalyzers>true</EnableNETAnalyzers>
+    <AnalysisLevel>latest</AnalysisLevel>
+    <AllowUnsafeBlocks>false</AllowUnsafeBlocks>
+    <InvariantGlobalization>true</InvariantGlobalization>
+    <RestorePackagesWithLockFile>true</RestorePackagesWithLockFile>
+    <Deterministic>true</Deterministic>
+    <!-- The sandbox has no network. Versions are pinned by lock files and audited when the
+         image builds, so the restore-time audit, which needs nuget.org, is off here. -->
+    <NuGetAudit>false</NuGetAudit>
+  </PropertyGroup>
+</Project>

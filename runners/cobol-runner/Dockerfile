@@ -14,7 +14,7 @@ RUN gcc -O2 -Wall -Wextra -Werror -static -o /usr/local/bin/nonet /tmp/nonet.c -
     && apt-get purge -y libseccomp-dev \
     && apt-get autoremove -y --purge
 
-COPY runners/cobol-runner/server.py /opt/runner/server.py
+COPY runners/common/runner_auth.py runners/cobol-runner/server.py /opt/runner/
 
 RUN groupadd --gid 10001 runner \
     && useradd --uid 10001 --gid 10001 --no-create-home --shell /usr/sbin/nologin runner \

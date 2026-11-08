@@ -1,0 +1,10 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <!-- Template code, not generated. Reads one input record per line and writes one output
+       record per line: the same protocol as BRCALL. -->
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+  </PropertyGroup>
+  <ItemGroup>
+    <ProjectReference Include="../Generated/ParityForge.Generated.csproj" />
+  </ItemGroup>
+</Project>
