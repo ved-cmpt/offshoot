@@ -3,15 +3,28 @@ import { CanActivateFn, Router } from '@angular/router';
 
 import { AuthService } from './auth.service';
 
-/** Convenience for navigation only. The server enforces every permission. */
-export const authGuard: CanActivateFn = (_route, state) => {
-  if (inject(AuthService).isSignedIn()) {
+export const APP_HOME = '/app/projects';
+export const LOGIN = '/app/login';
+
+/**
+ * Convenience for navigation only: the server enforces every permission. The guards restore a
+ * session from the refresh cookie the first time the app is opened, so the public landing page
+ * never waits for it (ADR-052).
+ */
+export const authGuard: CanActivateFn = async (_route, state) => {
+  const auth = inject(AuthService);
+  const router = inject(Router);
+  await auth.ensureSession();
+  if (auth.isSignedIn()) {
     return true;
   }
-  return inject(Router).createUrlTree(['/login'], {
-    queryParams: state.url === '/' ? {} : { returnUrl: state.url },
-  });
+  const home = state.url === '/app' || state.url === '/app/';
+  return router.createUrlTree([LOGIN], { queryParams: home ? {} : { returnUrl: state.url } });
 };
 
-export const guestGuard: CanActivateFn = () =>
-  inject(AuthService).isSignedIn() ? inject(Router).createUrlTree(['/projects']) : true;
+export const guestGuard: CanActivateFn = async () => {
+  const auth = inject(AuthService);
+  const router = inject(Router);
+  await auth.ensureSession();
+  return auth.isSignedIn() ? router.createUrlTree([APP_HOME]) : true;
+};

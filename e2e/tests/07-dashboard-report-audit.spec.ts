@@ -47,7 +47,7 @@ test('the audit log is for architects and admins', async ({ page, request }) => 
 
   await signIn(page, 'engineer');
   await expect(page.getByRole('link', { name: 'Audit log' })).toHaveCount(0);
-  await page.goto('/admin/audit');
+  await page.goto('/app/admin/audit');
   await expect(page.getByText('Only architects and admins can read the audit log.')).toBeVisible();
   await page.getByRole('button', { name: 'Sign out' }).click();
   await expect(page).toHaveURL(/\/login$/);

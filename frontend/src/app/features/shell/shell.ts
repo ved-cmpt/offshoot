@@ -43,7 +43,7 @@ export class Shell {
   protected signOut(): void {
     this.isSigningOut.set(true);
     // The local session ends either way, so the outcome of the request doesn't change where we go.
-    const toLogin = () => void this.router.navigate(['/login']);
+    const toLogin = () => void this.router.navigate(['/app/login']);
     this.auth.logout().subscribe({ next: toLogin, error: toLogin });
   }
 }

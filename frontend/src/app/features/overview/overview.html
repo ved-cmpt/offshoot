@@ -91,7 +91,7 @@
               @for (row of data.modules; track row.id) {
                 <tr>
                   <th scope="row">
-                    <a [routerLink]="['/projects', projectId(), 'modules', row.id]">{{
+                    <a [routerLink]="['/app/projects', projectId(), 'modules', row.id]">{{
                       row.program
                     }}</a>
                   </th>
@@ -125,7 +125,7 @@
       } @else {
         <p class="muted">
           Nothing to show yet. Start with the
-          <a [routerLink]="['/projects', projectId(), 'plan']">plan</a>.
+          <a [routerLink]="['/app/projects', projectId(), 'plan']">plan</a>.
         </p>
       }
     </section>

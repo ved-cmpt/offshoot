@@ -97,11 +97,11 @@ describe('Overview', () => {
       providers: [
         provideHttpClient(),
         provideHttpClientTesting(),
-        provideRouter([{ path: 'projects/:id/overview', component: Overview }]),
+        provideRouter([{ path: 'app/projects/:id/overview', component: Overview }]),
       ],
     });
     http = TestBed.inject(HttpTestingController);
-    harness = await RouterTestingHarness.create('/projects/p1/overview');
+    harness = await RouterTestingHarness.create('/app/projects/p1/overview');
     page = harness.routeNativeElement!;
   }
 

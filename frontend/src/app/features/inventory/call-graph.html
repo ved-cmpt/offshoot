@@ -106,7 +106,7 @@
             @if (node.file_id) {
               ·
               <a
-                [routerLink]="['/projects', projectId(), 'sources', node.file_id]"
+                [routerLink]="['/app/projects', projectId(), 'sources', node.file_id]"
                 [queryParams]="sourceQuery(node)"
                 >Open source</a
               >

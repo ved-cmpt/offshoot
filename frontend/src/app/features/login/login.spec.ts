@@ -189,17 +189,17 @@ describe('Login', () => {
     expect(buttonNamed('Signing in').disabled).toBe(true);
     request.flush(SESSION);
     await settle();
-    expect(navigateByUrl).toHaveBeenCalledWith('/projects');
+    expect(navigateByUrl).toHaveBeenCalledWith('/app/projects');
   });
 
   it('returns to the page the visitor originally asked for', async () => {
-    returnUrl = '/projects/123';
+    returnUrl = '/app/projects/123';
     await render();
     buttonNamed('Sign in as Vera Viewer').click();
     await settle();
     http.expectOne('/api/v1/auth/login').flush(SESSION);
     await settle();
-    expect(navigateByUrl).toHaveBeenCalledWith('/projects/123');
+    expect(navigateByUrl).toHaveBeenCalledWith('/app/projects/123');
   });
 
   it('signs in with one click on a demo card', async () => {
@@ -210,7 +210,7 @@ describe('Login', () => {
     expect(request.request.body).toEqual({ username: 'architect', password: 'a-pass' });
     request.flush({ ...SESSION, user: { ...SESSION.user, role: 'ARCHITECT' } });
     await settle();
-    expect(navigateByUrl).toHaveBeenCalledWith('/projects');
+    expect(navigateByUrl).toHaveBeenCalledWith('/app/projects');
   });
 
   it('does not send an empty form, and explains what is missing', async () => {

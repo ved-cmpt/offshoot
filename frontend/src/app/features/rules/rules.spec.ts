@@ -48,13 +48,13 @@ describe('Rules', () => {
       providers: [
         provideHttpClient(),
         provideHttpClientTesting(),
-        provideRouter([{ path: 'projects/:id/rules', component: Rules }]),
+        provideRouter([{ path: 'app/projects/:id/rules', component: Rules }]),
         { provide: AuthService, useValue: authAs(role) },
         { provide: JOB_POLL_INTERVAL_MS, useValue: 100000 },
       ],
     });
     http = TestBed.inject(HttpTestingController);
-    harness = await RouterTestingHarness.create('/projects/p1/rules');
+    harness = await RouterTestingHarness.create('/app/projects/p1/rules');
     page = harness.routeNativeElement!;
     http.expectOne(RULES_URL).flush(pageOf(rules, overrides));
     http.expectOne(INVENTORY_URL).flush(makeInventory());
@@ -140,7 +140,7 @@ describe('Rules', () => {
     const card = page.querySelector('.card')!;
     const link = card.querySelector('a.span')!;
     expect(link.textContent).toBe('RATECALC.cbl:196-203');
-    expect(link.getAttribute('href')).toBe('/projects/p1/sources/f1?line=196&end=203');
+    expect(link.getAttribute('href')).toBe('/app/projects/p1/sources/f1?line=196&end=203');
     expect(card.textContent).toContain('RC-OUT-ENERGY');
     expect(card.textContent).toContain('RC-OUT-SUBTOTAL < WS-MINIMUM');
     expect(card.textContent).toContain('{"RC-OUT-ENERGY":1} gives {"RC-OUT-SUBTOTAL":8.5}');
@@ -470,12 +470,12 @@ describe('Rules', () => {
       providers: [
         provideHttpClient(),
         provideHttpClientTesting(),
-        provideRouter([{ path: 'projects/:id/rules', component: Rules }]),
+        provideRouter([{ path: 'app/projects/:id/rules', component: Rules }]),
         { provide: AuthService, useValue: authAs('ENGINEER') },
       ],
     });
     http = TestBed.inject(HttpTestingController);
-    harness = await RouterTestingHarness.create('/projects/p1/rules');
+    harness = await RouterTestingHarness.create('/app/projects/p1/rules');
     page = harness.routeNativeElement!;
     http.expectOne(RULES_URL).flush(pageOf([]));
     http.expectOne(INVENTORY_URL).flush(makeInventory({ analyzed: false, programs: [] }));

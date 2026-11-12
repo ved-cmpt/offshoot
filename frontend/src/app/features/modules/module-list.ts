@@ -66,7 +66,7 @@ type ViewState =
                   <tr>
                     <td>{{ module.order_index }}</td>
                     <th scope="row">
-                      <a [routerLink]="['/projects', projectId(), 'modules', module.id]">{{
+                      <a [routerLink]="['/app/projects', projectId(), 'modules', module.id]">{{
                         module.program
                       }}</a>
                     </th>
@@ -98,7 +98,7 @@ type ViewState =
             <p>There are no modules yet.</p>
             <p class="muted">
               They are created when an architect approves the
-              <a [routerLink]="['/projects', projectId(), 'plan']">plan</a>.
+              <a [routerLink]="['/app/projects', projectId(), 'plan']">plan</a>.
             </p>
           </div>
         }

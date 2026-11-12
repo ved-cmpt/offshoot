@@ -37,11 +37,11 @@ describe('ReportPage', () => {
       providers: [
         provideHttpClient(),
         provideHttpClientTesting(),
-        provideRouter([{ path: 'projects/:id/report', component: ReportPage }]),
+        provideRouter([{ path: 'app/projects/:id/report', component: ReportPage }]),
       ],
     });
     http = TestBed.inject(HttpTestingController);
-    harness = await RouterTestingHarness.create('/projects/p1/report');
+    harness = await RouterTestingHarness.create('/app/projects/p1/report');
     page = harness.routeNativeElement!;
     http.expectOne('/api/v1/projects/p1/report').flush(REPORT);
     await harness.fixture.whenStable();

@@ -36,12 +36,12 @@ describe('SourceViewer', () => {
   let http: HttpTestingController;
   let harness: RouterTestingHarness;
 
-  async function open(url = '/projects/p1/sources/f2'): Promise<HTMLElement> {
+  async function open(url = '/app/projects/p1/sources/f2'): Promise<HTMLElement> {
     TestBed.configureTestingModule({
       providers: [
         provideHttpClient(),
         provideHttpClientTesting(),
-        provideRouter([{ path: 'projects/:id/sources/:file', component: SourceViewer }]),
+        provideRouter([{ path: 'app/projects/:id/sources/:file', component: SourceViewer }]),
       ],
     });
     http = TestBed.inject(HttpTestingController);
@@ -88,7 +88,7 @@ describe('SourceViewer', () => {
     const page = await open();
     await loadReady();
     const rows = page.querySelectorAll('.code tr');
-    expect(rows[2].querySelector('a')?.getAttribute('href')).toBe('/projects/p1/sources/f4');
+    expect(rows[2].querySelector('a')?.getAttribute('href')).toBe('/app/projects/p1/sources/f4');
     expect(rows[2].textContent).toContain('Open RATES');
     expect(rows[3].querySelector('a')).toBeNull();
   });
@@ -105,7 +105,7 @@ describe('SourceViewer', () => {
   });
 
   it('highlights the range from the address', async () => {
-    const page = await open('/projects/p1/sources/f2?line=2&end=3');
+    const page = await open('/app/projects/p1/sources/f2?line=2&end=3');
     await loadReady();
     const selected = page.querySelectorAll('.code tr.selected');
     expect([...selected].map((row) => row.id)).toEqual(['L2', 'L3']);
@@ -113,15 +113,15 @@ describe('SourceViewer', () => {
   });
 
   it('a backwards or nonsense range selects at most the first line', async () => {
-    const page = await open('/projects/p1/sources/f2?line=3&end=1');
+    const page = await open('/app/projects/p1/sources/f2?line=3&end=1');
     await loadReady();
     expect([...page.querySelectorAll('.code tr.selected')].map((row) => row.id)).toEqual(['L3']);
   });
 
   it('moving between ranges in the same file does not refetch it', async () => {
-    const page = await open('/projects/p1/sources/f2?line=1');
+    const page = await open('/app/projects/p1/sources/f2?line=1');
     await loadReady();
-    await harness.navigateByUrl('/projects/p1/sources/f2?line=4');
+    await harness.navigateByUrl('/app/projects/p1/sources/f2?line=4');
     await settle();
     http.expectNone(SOURCE_URL);
     expect([...page.querySelectorAll('.code tr.selected')].map((row) => row.id)).toEqual(['L4']);
@@ -130,7 +130,7 @@ describe('SourceViewer', () => {
   it('opening another file loads it', async () => {
     const page = await open();
     await loadReady();
-    await harness.navigateByUrl('/projects/p1/sources/f4');
+    await harness.navigateByUrl('/app/projects/p1/sources/f4');
     http
       .expectOne('/api/v1/projects/p1/sources/f4')
       .flush(makeSource({ id: 'f4', name: 'RATES.cpy', rule_spans: [] }));
@@ -154,7 +154,7 @@ describe('SourceViewer', () => {
     const page = await open();
     const first = http.expectOne(SOURCE_URL);
     http.expectOne(LIST_URL).flush(FILES);
-    await harness.navigateByUrl('/projects/p1/sources/f4');
+    await harness.navigateByUrl('/app/projects/p1/sources/f4');
     expect(first.cancelled).toBe(true);
     http
       .expectOne('/api/v1/projects/p1/sources/f4')

@@ -9,39 +9,39 @@ import { map } from 'rxjs';
   imports: [RouterLink, RouterLinkActive, RouterOutlet],
   template: `
     <nav class="tabs no-print" aria-label="Project">
-      <a routerLink="/projects">All projects</a>
+      <a routerLink="/app/projects">All projects</a>
       <a
-        [routerLink]="['/projects', projectId(), 'overview']"
+        [routerLink]="['/app/projects', projectId(), 'overview']"
         routerLinkActive="tab--active"
         ariaCurrentWhenActive="page"
         >Overview</a
       >
       <a
-        [routerLink]="['/projects', projectId(), 'inventory']"
+        [routerLink]="['/app/projects', projectId(), 'inventory']"
         routerLinkActive="tab--active"
         ariaCurrentWhenActive="page"
         >Inventory</a
       >
       <a
-        [routerLink]="['/projects', projectId(), 'rules']"
+        [routerLink]="['/app/projects', projectId(), 'rules']"
         routerLinkActive="tab--active"
         ariaCurrentWhenActive="page"
         >Rules</a
       >
       <a
-        [routerLink]="['/projects', projectId(), 'plan']"
+        [routerLink]="['/app/projects', projectId(), 'plan']"
         routerLinkActive="tab--active"
         ariaCurrentWhenActive="page"
         >Plan</a
       >
       <a
-        [routerLink]="['/projects', projectId(), 'modules']"
+        [routerLink]="['/app/projects', projectId(), 'modules']"
         routerLinkActive="tab--active"
         ariaCurrentWhenActive="page"
         >Modules</a
       >
       <a
-        [routerLink]="['/projects', projectId(), 'report']"
+        [routerLink]="['/app/projects', projectId(), 'report']"
         routerLinkActive="tab--active"
         ariaCurrentWhenActive="page"
         >Report</a

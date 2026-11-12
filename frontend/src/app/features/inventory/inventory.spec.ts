@@ -62,13 +62,13 @@ describe('Inventory', () => {
       providers: [
         provideHttpClient(),
         provideHttpClientTesting(),
-        provideRouter([{ path: 'projects/:id/inventory', component: Inventory }]),
+        provideRouter([{ path: 'app/projects/:id/inventory', component: Inventory }]),
         { provide: AuthService, useValue: authAs(role) },
         { provide: JOB_POLL_INTERVAL_MS, useValue: 100000 },
       ],
     });
     http = TestBed.inject(HttpTestingController);
-    harness = await RouterTestingHarness.create('/projects/p1/inventory');
+    harness = await RouterTestingHarness.create('/app/projects/p1/inventory');
     return harness.routeNativeElement!;
   }
 
@@ -100,8 +100,8 @@ describe('Inventory', () => {
     expect(page.textContent).toContain('CUSTOMER-RECORD');
     expect(page.textContent).toContain('100 bytes');
     const hrefs = [...page.querySelectorAll('a')].map((link) => link.getAttribute('href'));
-    expect(hrefs).toContain('/projects/p1/sources/f1?line=216&end=232');
-    expect(hrefs).toContain('/projects/p1/sources/f3');
+    expect(hrefs).toContain('/app/projects/p1/sources/f1?line=216&end=232');
+    expect(hrefs).toContain('/app/projects/p1/sources/f3');
   });
 
   it('every scrolling table can be reached by keyboard', async () => {

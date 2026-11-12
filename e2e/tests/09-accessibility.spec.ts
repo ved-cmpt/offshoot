@@ -94,7 +94,7 @@ for (const theme of ['light', 'dark'] as Theme[]) {
 test('the sign-in page in both themes', async ({ page }) => {
   for (const theme of ['light', 'dark'] as Theme[]) {
     await useTheme(page, theme);
-    await page.goto('/login');
+    await page.goto('/app/login');
     await expect(page.locator('html')).toHaveAttribute('data-theme', theme);
     await expectAccessible(page, `login, ${theme}`);
   }

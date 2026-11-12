@@ -29,13 +29,13 @@ describe('PlanPage', () => {
       providers: [
         provideHttpClient(),
         provideHttpClientTesting(),
-        provideRouter([{ path: 'projects/:id/plan', component: PlanPage }]),
+        provideRouter([{ path: 'app/projects/:id/plan', component: PlanPage }]),
         { provide: AuthService, useValue: authAs(role) },
         { provide: JOB_POLL_INTERVAL_MS, useValue: 100000 },
       ],
     });
     http = TestBed.inject(HttpTestingController);
-    harness = await RouterTestingHarness.create('/projects/p1/plan');
+    harness = await RouterTestingHarness.create('/app/projects/p1/plan');
     page = harness.routeNativeElement!;
     if (view) {
       http.expectOne(PLAN_URL).flush(view);

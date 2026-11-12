@@ -13,12 +13,12 @@
     </p>
   }
   <div class="shell-header__inner">
-    <a class="brand" routerLink="/projects">Offshoot</a>
+    <a class="brand" routerLink="/app/projects">Offshoot</a>
 
     <nav aria-label="Main">
       <a
         class="nav-link"
-        routerLink="/projects"
+        routerLink="/app/projects"
         routerLinkActive="nav-link--active"
         ariaCurrentWhenActive="page"
         >Projects</a
@@ -26,7 +26,7 @@
       @if (canReadAudit()) {
         <a
           class="nav-link"
-          routerLink="/admin/audit"
+          routerLink="/app/admin/audit"
           routerLinkActive="nav-link--active"
           ariaCurrentWhenActive="page"
           >Audit log</a

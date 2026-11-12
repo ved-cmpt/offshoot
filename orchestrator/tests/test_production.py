@@ -213,7 +213,7 @@ def static_dir(tmp_path: Path) -> Path:
 
 def test_the_app_is_served_with_a_fresh_nonce_and_a_strict_policy(fresh_app: Any, static_dir: Path) -> None:
     app_client = fresh_app(static_dir=str(static_dir), cookie_secure=True)
-    first, second = app_client.get("/"), app_client.get("/projects/123/modules")
+    first, second = app_client.get("/"), app_client.get("/app/projects/123/modules")
     for page in (first, second):
         assert page.status_code == 200
         policy = page.headers["Content-Security-Policy"]
@@ -240,6 +240,24 @@ def test_hashed_files_are_immutable_and_api_paths_never_fall_through(fresh_app: 
         response = app_client.get(path)
         assert response.status_code == 404, path
         assert response.json()["error"]["code"] == "NOT_FOUND"
+    # The landing page's files: fonts, the manifest, the sitemap and its data, by type.
+    (static_dir / "fonts").mkdir()
+    (static_dir / "fonts" / "inter-var.woff2").write_bytes(b"wOF2")
+    (static_dir / "manifest.webmanifest").write_text("{}")
+    (static_dir / "data").mkdir()
+    (static_dir / "data" / "landing-snapshot.json").write_text("{}")
+    expected = {
+        "/fonts/inter-var.woff2": "font/woff2",
+        "/manifest.webmanifest": "application/manifest+json",
+        "/data/landing-snapshot.json": "application/json",
+    }
+    for path, kind in expected.items():
+        response = app_client.get(path)
+        assert response.status_code == 200, path
+        assert response.headers["Content-Type"].startswith(kind), path
+    # The old app paths and the landing page are all the app's page.
+    for path in ("/", "/login", "/projects/1/rules", "/app/login"):
+        assert "<app-root" in app_client.get(path).text, path
     escaped = app_client.get("/..%2Fsecret.txt")
     assert "outside" not in escaped.text
     assert app_client.get("/api/v1/healthz").json() == {"status": "ok"}

@@ -46,6 +46,10 @@ def mount_spa(app: FastAPI, static_dir: str, https: bool) -> None:
         raise RuntimeError("index.html has no <app-root> element")
     mimetypes.add_type("text/javascript", ".js")
     mimetypes.add_type("text/css", ".css")
+    mimetypes.add_type("font/woff2", ".woff2")
+    mimetypes.add_type("application/manifest+json", ".webmanifest")
+    mimetypes.add_type("image/svg+xml", ".svg")
+    mimetypes.add_type("application/json", ".json")
 
     def page() -> HTMLResponse:
         nonce = secrets.token_urlsafe(18)

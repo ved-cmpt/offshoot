@@ -30,7 +30,7 @@ export async function useTheme(page: Page, theme: Theme): Promise<void> {
 }
 
 export async function signIn(page: Page, role: Role): Promise<void> {
-  await page.goto('/login');
+  await page.goto('/app/login');
   await page.getByLabel('Username').fill(username(role));
   await page.getByLabel('Password').fill(PASSWORD);
   await page.getByRole('button', { name: 'Sign in', exact: true }).click();

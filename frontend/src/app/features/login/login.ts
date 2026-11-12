@@ -86,8 +86,10 @@ export class Login implements OnInit {
     this.errorMessage.set(null);
     this.auth.login(username, password).subscribe({
       next: () => {
+        // Only a path inside the app, never another site.
         const returnUrl = this.route.snapshot.queryParamMap.get('returnUrl');
-        void this.router.navigateByUrl(returnUrl ?? '/projects');
+        const safe = returnUrl && returnUrl.startsWith('/app/') ? returnUrl : '/app/projects';
+        void this.router.navigateByUrl(safe);
       },
       error: (error: unknown) => {
         this.isSubmitting.set(false);

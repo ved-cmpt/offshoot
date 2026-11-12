@@ -34,6 +34,7 @@ export class AuthService {
 
   private accessToken: string | null = null;
   private refreshInFlight: Observable<string> | null = null;
+  private restored: Promise<void> | null = null;
   private readonly currentUser = signal<User | null>(null);
 
   readonly user = this.currentUser.asReadonly();
@@ -68,7 +69,18 @@ export class AuthService {
     return this.refreshInFlight;
   }
 
-  /** Called once at startup. A visitor with no session is a normal outcome, not an error. */
+  /**
+   * Restore the session once per page load, on the first visit to the app (the route guards
+   * call this). The landing page never waits for it. Later calls share the first result.
+   */
+  ensureSession(): Promise<void> {
+    if (!this.restored) {
+      this.restored = this.isSignedIn() ? Promise.resolve() : this.restoreSession();
+    }
+    return this.restored;
+  }
+
+  /** A visitor with no session is a normal outcome, not an error. */
   async restoreSession(): Promise<void> {
     try {
       await firstValueFrom(this.refresh());

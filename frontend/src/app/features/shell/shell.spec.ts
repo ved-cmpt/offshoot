@@ -114,7 +114,7 @@ describe('Shell', () => {
     expect(buttonNamed('Signing out').disabled).toBe(true);
     http.expectOne('/api/v1/auth/logout').flush(null, { status: 204, statusText: 'No Content' });
     await settle();
-    expect(navigate).toHaveBeenCalledWith(['/login']);
+    expect(navigate).toHaveBeenCalledWith(['/app/login']);
     expect(TestBed.inject(AuthService).isSignedIn()).toBe(false);
   });
 
@@ -124,7 +124,7 @@ describe('Shell', () => {
     await settle();
     http.expectOne('/api/v1/auth/logout').flush(null, { status: 500, statusText: 'Error' });
     await settle();
-    expect(navigate).toHaveBeenCalledWith(['/login']);
+    expect(navigate).toHaveBeenCalledWith(['/app/login']);
     expect(TestBed.inject(AuthService).isSignedIn()).toBe(false);
   });
 

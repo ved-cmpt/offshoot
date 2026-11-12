@@ -104,7 +104,7 @@
                   <li>
                     <code>{{ program }}</code>
                     @if (modulesByProgram().get(program); as module) {
-                      <a [routerLink]="['/projects', projectId(), 'modules', module.id]">
+                      <a [routerLink]="['/app/projects', projectId(), 'modules', module.id]">
                         {{ moduleStateText[module.state] }}
                       </a>
                     }

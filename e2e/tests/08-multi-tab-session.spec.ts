@@ -7,7 +7,7 @@ import { openBillRite, signIn } from '../helpers';
 test('two tabs reloading together both stay signed in', async ({ context, page }) => {
   await signIn(page, 'engineer');
   const second = await context.newPage();
-  await second.goto('/projects');
+  await second.goto('/app/projects');
   await expect(second.getByRole('heading', { name: 'Projects' })).toBeVisible();
 
   for (let round = 0; round < 3; round++) {

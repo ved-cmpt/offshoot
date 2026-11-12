@@ -145,12 +145,13 @@ jobs:
         run: |
           curl -fsS http://localhost:8300/healthz
           curl -fsS http://localhost:8300/api/v1/readyz
-          curl -fsS -D /tmp/headers -o /tmp/index.html http://localhost:8300/projects
+          curl -fsS -D /tmp/headers -o /tmp/index.html http://localhost:8300/app/projects
           grep -qi "content-security-policy: default-src 'self'; script-src 'self'; style-src 'self' 'nonce-" /tmp/headers
           grep -qi "strict-transport-security: max-age=" /tmp/headers
           grep -q 'ngCspNonce="' /tmp/index.html
           curl -fsS http://localhost:8300/api/v1/config | grep -q '"execution_enabled":false'
           test "$(curl -s -o /dev/null -w '%{http_code}' http://localhost:8300/api/v1/nothing)" = "404"
+          curl -fsS http://localhost:8300/robots.txt | grep -q 'Sitemap:'
           docker stats --no-stream --format '{{.Name}} {{.MemUsage}}'
       - name: Logs on failure
         if: failure()

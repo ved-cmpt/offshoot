@@ -14,7 +14,7 @@
   @case ('ready') {
     @let module = current.data.module;
     <p class="crumbs">
-      <a [routerLink]="['/projects', projectId(), 'modules']">All modules</a>
+      <a [routerLink]="['/app/projects', projectId(), 'modules']">All modules</a>
     </p>
     <div class="page-head">
       <h1 class="page-title">{{ module.program }}</h1>

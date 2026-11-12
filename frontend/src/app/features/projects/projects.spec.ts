@@ -75,7 +75,7 @@ describe('Projects', () => {
     await settle();
     const project = page.querySelector('.project')!;
     expect(project.querySelector('h2')?.textContent?.trim()).toBe('BillRite');
-    expect(project.querySelector('h2 a')?.getAttribute('href')).toBe('/projects/p1/overview');
+    expect(project.querySelector('h2 a')?.getAttribute('href')).toBe('/app/projects/p1/overview');
     expect(project.textContent).toContain('Synthetic billing system.');
     expect(project.textContent).toContain('Imported, not analyzed yet');
     expect(project.textContent).toContain('Bundled sample');

@@ -79,7 +79,7 @@
                 <tr>
                   <th scope="row">
                     @if (program.file_id) {
-                      <a [routerLink]="['/projects', projectId(), 'sources', program.file_id]">{{
+                      <a [routerLink]="['/app/projects', projectId(), 'sources', program.file_id]">{{
                         program.name
                       }}</a>
                     } @else {
@@ -97,7 +97,7 @@
                   <td class="links">
                     @for (copybook of program.copybooks; track copybook.name) {
                       @if (copybook.file_id) {
-                        <a [routerLink]="['/projects', projectId(), 'sources', copybook.file_id]">{{
+                        <a [routerLink]="['/app/projects', projectId(), 'sources', copybook.file_id]">{{
                           copybook.name
                         }}</a>
                       }
@@ -129,7 +129,7 @@
                 <code>{{ item.name }}</code> in {{ item.program }}
                 @if (item.file_id) {
                   (<a
-                    [routerLink]="['/projects', projectId(), 'sources', item.file_id]"
+                    [routerLink]="['/app/projects', projectId(), 'sources', item.file_id]"
                     [queryParams]="query(item.start_line, item.end_line)"
                     >lines {{ item.start_line }}-{{ item.end_line }}</a
                   >)
@@ -149,7 +149,7 @@
                 >, {{ item.length }} bytes
                 @if (item.file_id) {
                   (<a
-                    [routerLink]="['/projects', projectId(), 'sources', item.file_id]"
+                    [routerLink]="['/app/projects', projectId(), 'sources', item.file_id]"
                     [queryParams]="query(item.start_line, item.end_line)"
                     >lines {{ item.start_line }}-{{ item.end_line }}</a
                   >)

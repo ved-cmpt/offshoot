@@ -84,13 +84,13 @@ describe('ModuleWorkspace', () => {
       providers: [
         provideHttpClient(),
         provideHttpClientTesting(),
-        provideRouter([{ path: 'projects/:id/modules/:mid', component: ModuleWorkspace }]),
+        provideRouter([{ path: 'app/projects/:id/modules/:mid', component: ModuleWorkspace }]),
         { provide: AuthService, useValue: authAs(role) },
         { provide: JOB_POLL_INTERVAL_MS, useValue: 100000 },
       ],
     });
     http = TestBed.inject(HttpTestingController);
-    harness = await RouterTestingHarness.create('/projects/p1/modules/m1');
+    harness = await RouterTestingHarness.create('/app/projects/p1/modules/m1');
     page = harness.routeNativeElement!;
     await flushLoad(module, run);
   }
@@ -339,12 +339,12 @@ describe('ModuleWorkspace', () => {
       providers: [
         provideHttpClient(),
         provideHttpClientTesting(),
-        provideRouter([{ path: 'projects/:id/modules/:mid', component: ModuleWorkspace }]),
+        provideRouter([{ path: 'app/projects/:id/modules/:mid', component: ModuleWorkspace }]),
         { provide: AuthService, useValue: authAs('VIEWER') },
       ],
     });
     http = TestBed.inject(HttpTestingController);
-    harness = await RouterTestingHarness.create('/projects/p1/modules/m1');
+    harness = await RouterTestingHarness.create('/app/projects/p1/modules/m1');
     page = harness.routeNativeElement!;
     http
       .expectOne(MODULE_URL)

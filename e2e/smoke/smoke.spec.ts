@@ -97,7 +97,7 @@ test('the refresh cookie is HttpOnly, Secure and SameSite=Strict, and only for t
 });
 
 test('the sign-in page lists the four usernames and the one published password', async ({ page }) => {
-  await page.goto('/login');
+  await page.goto('/app/login');
   const cards = page.locator('.account');
   await expect(cards).toHaveCount(4);
   for (const role of ROLES) {

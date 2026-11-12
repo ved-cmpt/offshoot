@@ -149,7 +149,7 @@ describe('CallGraph', () => {
     );
     expect(details.textContent).toContain('line 60');
     expect(details.querySelector('a')?.getAttribute('href')).toBe(
-      '/projects/p1/sources/f1?line=56&end=66',
+      '/app/projects/p1/sources/f1?line=56&end=66',
     );
     expect(main.getAttribute('aria-pressed')).toBe('true');
     expect(page.querySelectorAll('.edge--active').length).toBeGreaterThan(0);

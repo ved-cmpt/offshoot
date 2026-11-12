@@ -37,7 +37,7 @@
       @if (created(); as project) {
         <p role="status">
           Created {{ project.name }} with {{ project.source_file_count }} files.
-          <a [routerLink]="['/projects', project.id, 'inventory']">Analyze it</a>.
+          <a [routerLink]="['/app/projects', project.id, 'inventory']">Analyze it</a>.
         </p>
       }
     }
@@ -63,7 +63,7 @@
         @for (project of current.projects; track project.id) {
           <li class="project">
             <h2 class="project__name">
-              <a [routerLink]="['/projects', project.id, 'overview']">{{ project.name }}</a>
+              <a [routerLink]="['/app/projects', project.id, 'overview']">{{ project.name }}</a>
             </h2>
             @if (project.description) {
               <p class="project__description">{{ project.description }}</p>
@@ -91,10 +91,10 @@
               </div>
             </dl>
             <p class="project__links">
-              <a [routerLink]="['/projects', project.id, 'overview']">Overview</a>
-              <a [routerLink]="['/projects', project.id, 'inventory']">Inventory</a>
-              <a [routerLink]="['/projects', project.id, 'rules']">Rules</a>
-              <a [routerLink]="['/projects', project.id, 'modules']">Modules</a>
+              <a [routerLink]="['/app/projects', project.id, 'overview']">Overview</a>
+              <a [routerLink]="['/app/projects', project.id, 'inventory']">Inventory</a>
+              <a [routerLink]="['/app/projects', project.id, 'rules']">Rules</a>
+              <a [routerLink]="['/app/projects', project.id, 'modules']">Modules</a>
             </p>
           </li>
         }

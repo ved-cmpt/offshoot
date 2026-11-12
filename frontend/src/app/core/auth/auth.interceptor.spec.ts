@@ -119,7 +119,7 @@ describe('authInterceptor', () => {
     http.expectOne('/api/v1/auth/refresh').flush({}, UNAUTHORIZED);
     await expect(result).rejects.toMatchObject({ status: 401 });
     expect(auth.isSignedIn()).toBe(false);
-    expect(navigate).toHaveBeenCalledWith(['/login'], expect.anything());
+    expect(navigate).toHaveBeenCalledWith(['/app/login'], expect.anything());
   });
 
   it('passes other errors straight through without refreshing', async () => {

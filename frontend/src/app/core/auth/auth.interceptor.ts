@@ -40,7 +40,7 @@ export const authInterceptor: HttpInterceptorFn = (
       return auth.refresh().pipe(
         catchError((refreshError: unknown) => {
           auth.clear();
-          void router.navigate(['/login'], { queryParams: { returnUrl: router.url } });
+          void router.navigate(['/app/login'], { queryParams: { returnUrl: router.url } });
           return throwError(() => refreshError);
         }),
         switchMap((newToken) => next(withToken(request, newToken))),

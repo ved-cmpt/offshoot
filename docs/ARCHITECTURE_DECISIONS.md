@@ -403,3 +403,17 @@ The dashboard and report read stored rows only. Rule decisions are counted as se
 **Budgets.** The initial-bundle budget is tightened to a 350 kB warning and 500 kB error (it was 500 kB and 1 MB), because the landing page now ships first. The per-component style budget rises from 4/8 kB to 10/20 kB: the landing's and the module workspace's styles are larger than Run 02's screens, and splitting them further would only move bytes between chunks.
 
 **Motion.** Every transition and animation is behind `prefers-reduced-motion: no-preference`, and a global rule stops them all under `reduce`. Animated pictures on the landing page show their final state instead.
+
+## ADR-052 The landing page at "/", the app under "/app"
+
+**Date:** 2026-11-11 (Run 07).
+
+**Routes.** `/` is the public pitch site: no sign-in and no API call. The application moved to `/app/...`: `/app/login`, `/app/projects`, `/app/projects/:id/...` and `/app/admin/audit`. Every path that began with `login`, `projects` or `admin` redirects to the same path under `/app`, keeping its query and fragment, so old links and bookmarks still work. The redirect is in the client, because the server serves the same page for every app path (ADR-047); the server needs no change beyond the content types of the new static files (fonts, the web manifest, JSON). Every screen is lazy-loaded, the landing page included.
+
+**The session is restored by the route guards, not at start.** Until now an app initializer exchanged the refresh cookie before the first render, on every page. That would make the landing page wait for an authentication call that answers 401 for nearly every visitor. `AuthService.ensureSession()` now runs once per page load, on the first visit to a guarded `/app` route, and later guards share its result. The interceptor's refresh-and-retry on a 401 is unchanged.
+
+**Links into the demo by name.** Ids differ between databases (the public demo, a local stack, a fresh seed), so the landing page cannot link to a module by id. `/app/open/module/:program`, `/app/open/source/:file` (with `line` and `end`), `/app/open/rules` (with filters) and `/app/open/:screen` find the bundled BillRite project and the named item after sign-in, and fall back to the project's overview or the project list. They decide nothing and read only what the signed-in user can read.
+
+**Return addresses.** After sign-in the app follows `returnUrl` only when it is a path inside `/app/`.
+
+**Deployment.** `render.yaml` keeps `healthCheckPath: /healthz`, which never was an app path. CI's production-image check now fetches `/app/projects`. `robots.txt` allows `/` and disallows `/app/` and `/api/`; `sitemap.xml` lists `/`.

@@ -44,7 +44,7 @@
           @if (span.valid && span.file_id) {
             <a
               class="span"
-              [routerLink]="['/projects', item.project_id, 'sources', span.file_id]"
+              [routerLink]="['/app/projects', item.project_id, 'sources', span.file_id]"
               [queryParams]="spanQuery(span)"
               >{{ formatSpan(span) }}</a
             >

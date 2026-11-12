@@ -5,7 +5,7 @@ import { openBillRite, signIn, useTheme } from '../helpers';
 const OUT = '../assets/screenshots/readme';
 
 async function openModule(page: Page, program: string): Promise<void> {
-  await page.goto('/projects');
+  await page.goto('/app/projects');
   await openBillRite(page);
   await page.getByRole('link', { name: 'Modules', exact: true }).click();
   await page.getByRole('link', { name: program }).click();
@@ -14,7 +14,7 @@ async function openModule(page: Page, program: string): Promise<void> {
 
 test('README screenshots', async ({ page }) => {
   await useTheme(page, 'light');
-  await page.goto('/login');
+  await page.goto('/app/login');
   await expect(page.locator('.account')).toHaveCount(4);
   await page.screenshot({ path: `${OUT}/sign-in.png` });
 
