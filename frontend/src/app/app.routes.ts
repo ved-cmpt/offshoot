@@ -2,7 +2,6 @@ import { inject } from '@angular/core';
 import { Router, Routes, UrlSegment } from '@angular/router';
 
 import { authGuard, guestGuard } from './core/auth/auth.guard';
-import { openGuard } from './core/open/open.guard';
 
 /** Paths of the app before it moved under /app (ADR-052): they redirect, keeping the query. */
 const LEGACY_ROOTS = new Set(['login', 'projects', 'admin']);
@@ -36,14 +35,9 @@ export const routes: Routes = [
         loadComponent: () => import('./features/login/login').then((m) => m.Login),
       },
       {
-        path: 'open/:kind/:name',
-        canActivate: [authGuard, openGuard],
-        children: [],
-      },
-      {
-        path: 'open/:kind',
-        canActivate: [authGuard, openGuard],
-        children: [],
+        path: 'open',
+        canActivate: [authGuard],
+        loadChildren: () => import('./core/open/open.routes').then((m) => m.OPEN_ROUTES),
       },
       {
         path: '',

@@ -1,0 +1,416 @@
+<section class="l-section" aria-labelledby="demos-title">
+  <div class="l-container">
+    <div class="l-head" appReveal>
+      <p class="l-eyebrow">Interactive demos</p>
+      <h2 id="demos-title" class="l-title">Four things a rewrite gets wrong. Caught.</h2>
+      <p class="l-lede">
+        Real BillRite COBOL, real stored results. Pick a case, read the legacy code, see what the
+        harness or the validator found, then open the same run in the live demo.
+      </p>
+    </div>
+
+    <div class="demo l-card" appReveal>
+      <div class="tabs" role="tablist" aria-label="Demo cases">
+        @for (tab of tabs; track tab.key; let i = $index) {
+          <button
+            type="button"
+            role="tab"
+            class="tab"
+            [id]="'demo-tab-' + tab.key"
+            [attr.aria-selected]="selected() === tab.key"
+            [attr.aria-controls]="'demo-panel-' + tab.key"
+            [attr.tabindex]="selected() === tab.key ? 0 : -1"
+            (click)="select(tab.key)"
+            (keydown)="onKey($event, i)"
+          >
+            <app-icon [name]="tab.icon" [size]="16" />
+            <span class="tab__label">{{ tab.label }}</span>
+            <span class="tab__program">{{ tab.program }}</span>
+          </button>
+        }
+      </div>
+
+      @switch (selected()) {
+        @case ('rounding') {
+          <div
+            class="panel"
+            role="tabpanel"
+            id="demo-panel-rounding"
+            aria-labelledby="demo-tab-rounding"
+            tabindex="0"
+          >
+            <div class="panel__code">
+              <app-code-view
+                [lines]="roundingCobol().lines"
+                [start]="roundingCobol().start"
+                language="cobol"
+                [filename]="roundingCobol().file"
+                label="RATECALC.cbl, the energy charge"
+                [marks]="roundingMarks()"
+              >
+                <span codeMeta class="chip chip--warn">legacy</span>
+              </app-code-view>
+              <app-code-view
+                [lines]="csharpLines()"
+                language="csharp"
+                [filename]="'RateCalculator.cs: first translation, then the repair'"
+                label="The C# rounding helper, before and after the repair"
+                [marks]="csharpMarks"
+                [numbers]="false"
+                [notes]="csharpNotes()"
+              />
+            </div>
+            <div class="panel__story">
+              <div class="story">
+                <h3>The risk</h3>
+                <p>
+                  COBOL's <code>ROUNDED</code> takes a half cent up. C#'s <code>Math.Round</code>
+                  takes it to the even cent unless told otherwise. Both look right in review, and
+                  the first translation passed its own
+                  {{ r().csharp_first.unit_tests.passed }} of
+                  {{ r().csharp_first.unit_tests.total }} unit tests.
+                </p>
+              </div>
+              <div class="math" role="group" [attr.aria-label]="'The arithmetic of stored case ' + math().case">
+                <p class="math__head">
+                  Case {{ math().case }} · {{ math().label }} · residential, month
+                  {{ math().month }}, {{ math().kwh }} kWh
+                </p>
+                <dl>
+                  <div>
+                    <dt>{{ math().tier1.kwh }} kWh × {{ math().tier1.rate }}</dt>
+                    <dd>{{ math().tier1.amount }}</dd>
+                  </div>
+                  <div>
+                    <dt>{{ math().tier2.kwh }} kWh × {{ math().tier2.rate }}</dt>
+                    <dd>{{ math().tier2.amount }}</dd>
+                  </div>
+                  <div class="math__sum">
+                    <dt>Energy before rounding</dt>
+                    <dd>{{ math().exact }}</dd>
+                  </div>
+                  <div class="math__ok">
+                    <dt>COBOL, half up</dt>
+                    <dd>{{ math().legacy }}</dd>
+                  </div>
+                  <div class="math__bad">
+                    <dt>First C#, half to even</dt>
+                    <dd>{{ math().modern }}</dd>
+                  </div>
+                </dl>
+                <p class="l-source">Rates from RATES.cpy lines {{ math().constants['RT-RES-TIER1-RATE'].line }} and {{ math().constants['RT-RES-TIER2-RATE'].line }}.</p>
+              </div>
+              <div class="found">
+                <h3><app-icon name="flask-conical" [size]="16" /> What the harness found</h3>
+                <p>
+                  <strong class="bad">{{ r().passed }} of {{ r().cases }}</strong> cases identical;
+                  {{ r().failed }} differed, each by one cent. Equivalence
+                  {{ equivalenceGate()?.value }}% against a gate of
+                  {{ equivalenceGate()?.threshold }}%: the module was
+                  <strong class="bad">blocked</strong> before anyone could approve it.
+                </p>
+                <ul class="fields" aria-label="Fields that differed">
+                  @for (field of fields(); track field[0]) {
+                    <li><code>{{ field[0] }}</code> {{ field[1] }}</li>
+                  }
+                </ul>
+                <div class="table-scroll mini" tabindex="0" role="region" aria-label="First five mismatches">
+                  <table>
+                    <thead>
+                      <tr>
+                        <th scope="col">Case</th>
+                        <th scope="col">Input</th>
+                        <th scope="col">Field</th>
+                        <th scope="col" class="num">COBOL</th>
+                        <th scope="col" class="num">C#</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      @for (item of firstMismatches(); track item.case) {
+                        <tr>
+                          <th scope="row">{{ item.case }}</th>
+                          <td><code>{{ item.input }}</code></td>
+                          <td><code>{{ item.diffs[0].field }}</code></td>
+                          <td class="num ok">{{ item.diffs[0].legacy }}</td>
+                          <td class="num bad">{{ item.diffs[0].modern }}</td>
+                        </tr>
+                      }
+                    </tbody>
+                  </table>
+                </div>
+                <p class="after">
+                  <app-icon name="circle-check" [size]="16" />
+                  After one repair: {{ repo().repair.identical }} identical, coverage
+                  {{ repo().repair.coverage }}, mutation score {{ repo().repair.mutation }}.
+                </p>
+              </div>
+              <div class="panel__foot">
+                <a class="button" routerLink="/app/open/module/RATECALC">
+                  See it in the app <app-icon name="arrow-right" [size]="16" />
+                </a>
+                <p class="l-source">
+                  Run {{ shortId(r().run_id) }} on the public demo, seed {{ r().seed }},
+                  {{ r().versions['compiler'] }}. The repair's numbers are from
+                  docs/EVALUATION.md (Run 03): the public demo does not run code.
+                </p>
+              </div>
+            </div>
+          </div>
+        }
+        @case ('year-window') {
+          <div
+            class="panel"
+            role="tabpanel"
+            id="demo-panel-year-window"
+            aria-labelledby="demo-tab-year-window"
+            tabindex="0"
+          >
+            <div class="panel__code">
+              <app-code-view
+                [lines]="ywCobol().lines"
+                [start]="ywCobol().start"
+                language="cobol"
+                [filename]="ywCobol().file"
+                label="LATEFEE.cbl, the century window"
+                [marks]="ywMarks()"
+              >
+                <span codeMeta class="chip chip--warn">legacy</span>
+              </app-code-view>
+              <app-code-view
+                [lines]="ywPivotLine().lines"
+                [start]="ywPivotLine().start"
+                language="cobol"
+                [filename]="ywPivotLine().file"
+                label="RATES.cpy, the century pivot"
+                [marks]="ywPivotMarks()"
+              />
+              <app-code-view
+                [lines]="yw().csharp.lines"
+                [start]="yw().csharp.start"
+                language="csharp"
+                [filename]="yw().csharp.file + ' (v' + yw().csharp.artifact_version + ')'"
+                label="The C# century window"
+              />
+            </div>
+            <div class="panel__story">
+              <div class="story">
+                <h3>The risk</h3>
+                <p>
+                  BillRite stores two-digit years and expands them with a fixed window. A rewrite
+                  that picks any other window moves some dates by a century, and a late fee with
+                  them.
+                </p>
+              </div>
+              @if (pivot() !== null) {
+                <div class="years" role="group" aria-label="Two years either side of the pivot">
+                  @for (item of years(); track item.yy) {
+                    <div class="year">
+                      <span class="year__yy">{{ item.yy }}</span>
+                      <app-icon name="arrow-right" [size]="16" />
+                      <span class="year__full">{{ item.year }}</span>
+                    </div>
+                  }
+                  <p class="l-source">Pivot {{ pivot() }}, from RATES.cpy line {{ ywPivotLine().start }}.</p>
+                </div>
+              }
+              <div class="rule">
+                <p class="rule__head">
+                  <span class="chip chip--ok">{{ yw().rule.state.toLowerCase() }}</span>
+                  <strong>{{ yw().rule.title }}</strong>
+                </p>
+                <p>{{ yw().rule.statement }}</p>
+                <p class="rule__spans">
+                  @for (span of yw().rule.spans; track span.file + span.start_line) {
+                    <code>{{ span.file }}:{{ span.start_line }}{{ span.end_line !== span.start_line ? '-' + span.end_line : '' }}</code>
+                  }
+                </p>
+              </div>
+              <div class="found">
+                <h3><app-icon name="flask-conical" [size]="16" /> What the harness found</h3>
+                <p>
+                  <strong class="ok">{{ yw().passed }} of {{ yw().cases }}</strong> cases
+                  identical, including {{ yw().by_source['date'] }} date-window cases drawn around
+                  the pivot. Coverage {{ yw().coverage_pct }}%, mutation score
+                  {{ yw().mutation_score }}%.
+                </p>
+              </div>
+              <div class="panel__foot">
+                <a class="button" routerLink="/app/open/module/LATEFEE">
+                  See it in the app <app-icon name="arrow-right" [size]="16" />
+                </a>
+                <p class="l-source">Run {{ shortId(yw().run_id) }} on the public demo, seed {{ yw().seed }}.</p>
+              </div>
+            </div>
+          </div>
+        }
+        @case ('rollover') {
+          <div
+            class="panel"
+            role="tabpanel"
+            id="demo-panel-rollover"
+            aria-labelledby="demo-tab-rollover"
+            tabindex="0"
+          >
+            <div class="panel__code">
+              <app-code-view
+                [lines]="roCobol().lines"
+                [start]="roCobol().start"
+                language="cobol"
+                [filename]="roCobol().file"
+                label="MTRVAL.cbl, the meter rollover"
+                [marks]="roMarks()"
+              >
+                <span codeMeta class="chip chip--warn">legacy</span>
+              </app-code-view>
+              <app-code-view
+                [lines]="ro().csharp.lines"
+                [start]="ro().csharp.start"
+                language="csharp"
+                [filename]="ro().csharp.file + ' (v' + ro().csharp.artifact_version + ')'"
+                label="The C# rollover"
+              />
+            </div>
+            <div class="panel__story">
+              <div class="story">
+                <h3>The risk</h3>
+                <p>
+                  Meter dials count up to 99999 and roll over to 00000. A read below the previous
+                  one is a rollover, not negative use. Plain subtraction gets it wrong.
+                </p>
+              </div>
+              @if (roExample(); as ex) {
+                <div class="math" role="group" aria-label="The rule's own example">
+                  <p class="math__head">The rule's example: previous {{ ex.previous }}, current {{ ex.current }}</p>
+                  <dl>
+                    <div class="math__bad">
+                      <dt>Plain subtraction</dt>
+                      <dd>{{ ex.naive }}</dd>
+                    </div>
+                    <div>
+                      <dt>To the top of the dial</dt>
+                      <dd>{{ ex.toRollover }}</dd>
+                    </div>
+                    <div>
+                      <dt>Plus the tick to 00000, plus the current read</dt>
+                      <dd>+ 1 + {{ ex.current }}</dd>
+                    </div>
+                    <div class="math__ok">
+                      <dt>Usage, kWh</dt>
+                      <dd>{{ ex.computed }}</dd>
+                    </div>
+                  </dl>
+                </div>
+              }
+              <div class="rule">
+                <p class="rule__head">
+                  <span class="chip chip--ok">{{ ro().rule.state.toLowerCase() }}</span>
+                  <strong>{{ ro().rule.title }}</strong>
+                </p>
+                <p>{{ ro().rule.statement }}</p>
+              </div>
+              <div class="found">
+                <h3><app-icon name="flask-conical" [size]="16" /> What the harness found</h3>
+                <p>
+                  <strong class="ok">{{ ro().passed }} of {{ ro().cases }}</strong> cases
+                  identical, with {{ ro().by_source['boundary'] }} cases on PIC boundaries.
+                  Coverage {{ ro().coverage_pct }}%, mutation score {{ ro().mutation_score }}%.
+                </p>
+              </div>
+              <div class="panel__foot">
+                <a class="button" routerLink="/app/open/module/MTRVAL">
+                  See it in the app <app-icon name="arrow-right" [size]="16" />
+                </a>
+                <p class="l-source">Run {{ shortId(ro().run_id) }} on the public demo, seed {{ ro().seed }}.</p>
+              </div>
+            </div>
+          </div>
+        }
+        @case ('injection') {
+          <div
+            class="panel"
+            role="tabpanel"
+            id="demo-panel-injection"
+            aria-labelledby="demo-tab-injection"
+            tabindex="0"
+          >
+            <div class="panel__code">
+              <app-code-view
+                [lines]="injCobol().lines"
+                [start]="injCobol().start"
+                language="cobol"
+                [filename]="injCobol().file"
+                label="RATECALC.cbl, with the planted comment"
+                [marks]="injMarks()"
+                [notes]="injNotes()"
+              >
+                <span codeMeta class="chip chip--warn">legacy</span>
+              </app-code-view>
+              <div class="callout">
+                <app-icon name="info" [size]="16" />
+                <p>
+                  BillRite carries a deliberate test: a comment that tells an AI assistant to
+                  approve everything. Code and comments are data to Offshoot, never instructions.
+                </p>
+              </div>
+            </div>
+            <div class="panel__story">
+              @if (injectionRule(); as rule) {
+                <div class="rule rule--flagged">
+                  <p class="rule__head">
+                    <span class="chip">{{ rule.state.toLowerCase() }}</span>
+                    @for (flag of rule.flags; track flag) {
+                      <span class="chip chip--bad">{{ flag }}</span>
+                    }
+                  </p>
+                  <p><strong>{{ rule.title }}</strong></p>
+                  <p>{{ rule.statement }}</p>
+                  @for (detail of rule.flag_details; track detail.code) {
+                    <p class="rule__detail">{{ detail.detail }}</p>
+                  }
+                </div>
+              }
+              <div class="found">
+                <h3><app-icon name="shield-check" [size]="16" /> What the validator did</h3>
+                <p>
+                  The proposed rule cites only the comment, so the server flagged it
+                  <code>SPAN_INVALID</code>. A flagged rule cannot be verified until a person edits
+                  it, and no field in the agent's contract can approve anything.
+                </p>
+                @if (hallucination(); as rule) {
+                  <p>
+                    Also caught: <strong>{{ rule.title }}</strong>, which cites lines that do not
+                    exist and invented field names. It is {{ rule.state.toLowerCase() }}.
+                  </p>
+                }
+                <ul class="fields" aria-label="From docs/EVALUATION.md">
+                  @if (obeyed(); as row) {
+                    <li>Injection obeyed: mock {{ row[1] }}, live {{ row[2] }}</li>
+                  }
+                  @if (approvals(); as row) {
+                    <li>Model-initiated approvals: {{ row[1] }}</li>
+                  }
+                </ul>
+              </div>
+              <div class="panel__foot">
+                <a class="button" routerLink="/app/open/rules" [queryParams]="{ program: 'RATECALC', flag: 'SPAN_INVALID' }">
+                  See it in the app <app-icon name="arrow-right" [size]="16" />
+                </a>
+                <a class="button button--quiet" routerLink="/app/open/source/RATECALC.cbl" [queryParams]="{ line: 135 }">
+                  Open line 135
+                </a>
+                <p class="l-source">
+                  {{ inj().rules_proposed }} RATECALC rules on the public demo; evaluation rows
+                  from docs/EVALUATION.md.
+                </p>
+              </div>
+            </div>
+          </div>
+        }
+      }
+    </div>
+    <p class="l-source note">
+      Data read from the public demo on {{ generated() }} by scripts/landing_snapshot.py. Signing in
+      to the demo needs no account: the four demo users are listed on the sign-in page.
+    </p>
+  </div>
+</section>

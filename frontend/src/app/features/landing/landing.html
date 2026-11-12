@@ -1,0 +1,169 @@
+<a class="skip-link" href="#main">Skip to main content</a>
+
+<header class="nav" [class.nav--open]="menuOpen()">
+  <div class="nav__inner l-container">
+    <a class="brand" href="/" aria-label="Offshoot home">
+      <img src="brand/offshoot-mark.svg" alt="" width="28" height="28" />
+      <span>Offshoot</span>
+    </a>
+
+    <nav class="nav__links" id="site-menu" aria-label="Site">
+      <a href="#product" (click)="closeMenu()">Product</a>
+      <a href="#demo" (click)="closeMenu()">Demo</a>
+      <a href="#how-it-works" (click)="closeMenu()">How it works</a>
+      <a href="#security" (click)="closeMenu()">Security</a>
+      <a [href]="docs.readme" rel="noopener" (click)="closeMenu()">Docs</a>
+      <a [href]="repo" rel="noopener" (click)="closeMenu()">
+        <app-icon name="git-branch" [size]="15" />GitHub
+      </a>
+    </nav>
+
+    <div class="nav__actions">
+      <button
+        type="button"
+        class="icon-button"
+        (click)="toggleTheme()"
+        [attr.aria-label]="theme() === 'dark' ? 'Use light theme' : 'Use dark theme'"
+      >
+        <app-icon [name]="theme() === 'dark' ? 'sun' : 'moon'" />
+      </button>
+      <a class="button button--sm nav__cta" routerLink="/app">Try live demo</a>
+      <button
+        type="button"
+        class="icon-button nav__menu"
+        (click)="toggleMenu()"
+        [attr.aria-expanded]="menuOpen()"
+        aria-controls="site-menu"
+        aria-label="Menu"
+      >
+        <app-icon [name]="menuOpen() ? 'x' : 'menu'" />
+      </button>
+    </div>
+  </div>
+</header>
+
+<main id="main" tabindex="-1">
+  <section class="hero" aria-labelledby="hero-title">
+    <div class="hero__glow" aria-hidden="true"></div>
+    <div class="hero__inner l-container">
+      <div class="hero__copy">
+        <a class="hero__tag" href="#demo">
+          <span class="hero__tag-dot" aria-hidden="true"></span>
+          Open source · MIT · live demo with stored runs
+          <app-icon name="arrow-right" [size]="14" />
+        </a>
+        <h1 id="hero-title" class="hero__title">
+          Move COBOL to C#.<br />
+          <span class="gradient-text">Prove every module.</span>
+        </h1>
+        <p class="hero__sub">AI-assisted COBOL → C# modernization, with proof.</p>
+        <p class="hero__body">
+          An AI agent proposes the rules, the plan and the code. A golden-master harness runs the
+          real COBOL and the new C# on the same seeded cases and compares every field. People
+          approve. The model never can.
+        </p>
+        <div class="hero__ctas">
+          <a class="button button--lg" routerLink="/app">
+            Try the live demo
+            <app-icon name="arrow-right" [size]="16" />
+          </a>
+          <a class="button button--lg button--quiet" href="#how-it-works">See how it works</a>
+        </div>
+        <p class="hero__note">
+          No sign-up: the demo accounts are on the sign-in page. It runs on a free instance, so the
+          first visit can take about 45 seconds to wake it.
+        </p>
+      </div>
+
+      <div class="hero__visual">
+        @if (data(); as snapshot) {
+          <app-hero-visual [data]="snapshot" />
+        } @else if (failed()) {
+          <p class="state">The demo data could not be loaded. The live demo shows the same runs.</p>
+        } @else {
+          <div class="hero__placeholder" aria-hidden="true">
+            <span class="skeleton"></span><span class="skeleton"></span
+            ><span class="skeleton"></span>
+          </div>
+        }
+      </div>
+    </div>
+
+    @if (stats().length) {
+      <div class="l-container">
+        <dl class="stats">
+          @for (stat of stats(); track stat.label) {
+            <div class="stat">
+              <dt class="stat__label">{{ stat.label }}</dt>
+              <dd class="stat__value">{{ stat.value }}</dd>
+              <dd class="stat__source">{{ stat.source }}</dd>
+            </div>
+          }
+        </dl>
+      </div>
+    }
+  </section>
+
+  @if (data(); as snapshot) {
+    <app-landing-problem id="product" [data]="snapshot" />
+    <app-landing-pipeline id="how-it-works" [data]="snapshot" />
+    <app-landing-demos id="demo" [data]="snapshot" />
+    <app-landing-deployment id="deployment" />
+    <app-landing-capabilities id="security" [data]="snapshot" />
+    <app-landing-results id="results" [data]="snapshot" />
+  } @else {
+    <!-- Anchors still resolve while the data loads. -->
+    <span id="product"></span><span id="how-it-works"></span><span id="demo"></span
+    ><span id="security"></span>
+  }
+</main>
+
+<footer class="footer">
+  <div class="footer__inner l-container">
+    <div class="footer__brand">
+      <a class="brand" href="/" aria-label="Offshoot home">
+        <img src="brand/offshoot-mark.svg" alt="" width="28" height="28" />
+        <span>Offshoot</span>
+      </a>
+      <p>AI-assisted COBOL → C# modernization, with proof.</p>
+      <p class="footer__small">
+        Every number on this page comes from a stored run or from docs/EVALUATION.md, and says
+        which. BillRite, the demo's COBOL application, is synthetic.
+      </p>
+    </div>
+    <nav class="footer__cols" aria-label="Footer">
+      <div>
+        <h2>Product</h2>
+        <ul>
+          <li><a href="#product">Why Offshoot</a></li>
+          <li><a href="#how-it-works">How it works</a></li>
+          <li><a href="#demo">Interactive demos</a></li>
+          <li><a href="#deployment">Deployment model</a></li>
+          <li><a routerLink="/app">Live demo</a></li>
+        </ul>
+      </div>
+      <div>
+        <h2>Evidence</h2>
+        <ul>
+          <li><a [href]="docs.evaluation" rel="noopener">Evaluation</a></li>
+          <li><a [href]="docs.security" rel="noopener">Security</a></li>
+          <li><a [href]="docs.decisions" rel="noopener">Decisions (ADRs)</a></li>
+          <li><a [href]="docs.snapshot" rel="noopener">This page's data</a></li>
+        </ul>
+      </div>
+      <div>
+        <h2>Project</h2>
+        <ul>
+          <li><a [href]="repo" rel="noopener">GitHub</a></li>
+          <li><a [href]="docs.readme" rel="noopener">README</a></li>
+          <li><a [href]="docs.changelog" rel="noopener">Changelog</a></li>
+          <li><a [href]="docs.license" rel="noopener">MIT License</a></li>
+        </ul>
+      </div>
+    </nav>
+  </div>
+  <div class="footer__base l-container">
+    <span>© {{ year }} Offshoot contributors. MIT licensed.</span>
+    <span>No analytics and no tracking.</span>
+  </div>
+</footer>

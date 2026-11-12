@@ -1,0 +1,91 @@
+<figure class="visual" [class.visual--still]="reducedMotion()">
+  <figcaption class="visually-hidden">{{ label() }}</figcaption>
+  <div class="window" aria-hidden="true">
+    <div class="window__bar">
+      <span class="window__dots"><i></i><i></i><i></i></span>
+      <span class="window__title">RATECALC · equivalence</span>
+      @switch (phase()) {
+        @case ('cobol') {
+          <span class="pill">Reading the legacy program</span>
+        }
+        @case ('csharp') {
+          <span class="pill pill--accent">Agent drafting C#</span>
+        }
+        @case ('running') {
+          <span class="pill">Harness running</span>
+        }
+        @case ('blocked') {
+          <span class="pill pill--bad">Blocked</span>
+        }
+        @case ('repair') {
+          <span class="pill pill--accent">Repairing</span>
+        }
+        @case ('rerun') {
+          <span class="pill">Verifying again</span>
+        }
+        @case ('verified') {
+          <span class="pill pill--ok">Verified</span>
+        }
+      }
+    </div>
+
+    <div class="panes">
+      <div class="pane">
+        <p class="pane__label"><span class="lang lang--cobol">COBOL</span> RATECALC.cbl</p>
+        <pre class="pane__code pane__code--cobol"><code>@for (line of shownCobol(); track $index) {<span class="line">@for (token of line.tokens; track $index) {<span [class]="'tok-' + token.kind">{{ token.text }}</span>}</span>}<span class="caret" [class.caret--on]="phase() === 'cobol'"></span></code></pre>
+      </div>
+      <div class="pane" [class.pane--fixed]="repaired()">
+        <p class="pane__label"><span class="lang lang--cs">C#</span> RateCalculator.cs</p>
+        <pre class="pane__code pane__code--cs"><code>@for (line of shownCsharp(); track $index) {<span class="line" [class.line--changed]="repaired() && $index === 1">@for (token of line.tokens; track $index) {<span [class]="'tok-' + token.kind">{{ token.text }}</span>}</span>}<span class="caret" [class.caret--on]="phase() === 'csharp'"></span></code></pre>
+      </div>
+    </div>
+
+    <div class="harness">
+      <div class="harness__head">
+        <span>Equivalence harness · {{ rounding().cases }} seeded cases · seed {{ rounding().seed }}</span>
+        <span
+          class="count"
+          [class.count--bad]="phase() === 'blocked'"
+          [class.count--ok]="phase() === 'verified'"
+          ><strong>{{ identical() }}</strong> / {{ rounding().cases }} identical</span
+        >
+      </div>
+      <div class="grid">
+        @for (cell of cells(); track cell) {
+          <i [class]="'cell cell--' + cellState(cell)"></i>
+        }
+      </div>
+      <div class="harness__foot">
+        @if (phase() === 'blocked') {
+          <span class="diff">
+            <span class="diff__case">case {{ focusDiff().case }}</span>
+            <span>tiers sum to {{ focusDiff().exact }}</span>
+            <span class="diff__legacy">COBOL {{ focusDiff().legacy }}</span>
+            <span class="diff__modern">C# {{ focusDiff().modern }}</span>
+          </span>
+        } @else if (phase() === 'verified') {
+          <span class="diff diff--ok">
+            <span>first translation {{ rounding().passed }} / {{ rounding().cases }}, blocked</span>
+            <span aria-hidden="true">→</span>
+            <span>after one repair {{ data().repo.repair.identical.replace(' of ', ' / ') }}</span>
+          </span>
+        } @else {
+          <span class="diff diff--quiet">Every output field compared with the real COBOL, exactly</span>
+        }
+      </div>
+    </div>
+  </div>
+
+  @if (!reducedMotion()) {
+    <div class="controls">
+      <button type="button" class="control" (click)="togglePause()" [attr.aria-pressed]="paused()">
+        <app-icon [name]="paused() ? 'play' : 'pause'" [size]="14" />
+        {{ paused() ? 'Play animation' : 'Pause animation' }}
+      </button>
+      <button type="button" class="control" (click)="replay()">
+        <app-icon name="rotate-ccw" [size]="14" />
+        Replay
+      </button>
+    </div>
+  }
+</figure>

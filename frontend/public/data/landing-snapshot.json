@@ -1,7 +1,7 @@
 {
  "schema": 1,
  "provenance": {
-  "generated_at": "2026-11-12T02:09:01+00:00",
+  "generated_at": "2026-11-12T02:14:52+00:00",
   "read_from": "https://offshoot-go2y.onrender.com",
   "read_as": "viewer (the published demo viewer, read-only)",
   "script": "scripts/landing_snapshot.py",
@@ -10,7 +10,28 @@
  "api": {
   "project": {
    "id": "f708e290-fff8-4693-ad8e-874831d5ff7d",
-   "name": "BillRite"
+   "name": "BillRite",
+   "files": 12,
+   "lines": 1464
+  },
+  "inventory": {
+   "summary": {
+    "calls": 4,
+    "files": 4,
+    "lines": 1179,
+    "go_tos": 1,
+    "records": 30,
+    "performs": 64,
+    "programs": 5,
+    "copybooks": 6,
+    "exit_labels": 58,
+    "dead_paragraphs": 1,
+    "obsolete_records": 1,
+    "working_paragraphs": 69
+   },
+   "dead_paragraphs": [
+    "8500-APPLY-WINTER-DISCOUNT"
+   ]
   },
   "modules": [
    {

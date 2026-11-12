@@ -258,8 +258,18 @@ def build_api_part(get: Get) -> dict[str, Any]:
     counts: dict[str, int] = {}
     for rule in rules:
         counts[rule["state"]] = counts.get(rule["state"], 0) + 1
+    inventory = get(f"/api/v1/projects/{pid}/inventory")
     return {
-        "project": {"id": pid, "name": project["name"]},
+        "project": {
+            "id": pid,
+            "name": project["name"],
+            "files": project["source_file_count"],
+            "lines": project["source_line_count"],
+        },
+        "inventory": {
+            "summary": inventory["summary"],
+            "dead_paragraphs": [item["name"] for item in inventory["dead_code"]["paragraphs"]],
+        },
         "modules": summaries,
         "rules": {"total": len(rules), "by_state": dict(sorted(counts.items()))},
         "rounding": rounding,

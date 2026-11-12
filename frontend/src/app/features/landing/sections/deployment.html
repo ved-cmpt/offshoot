@@ -1,0 +1,158 @@
+<section class="l-section" aria-labelledby="deploy-title">
+  <div class="l-container">
+    <div class="l-head" appReveal>
+      <p class="l-eyebrow">How it fits your organization</p>
+      <h2 id="deploy-title" class="l-title">Inside your network. Beside your mainframe.</h2>
+      <p class="l-lede">
+        The reference deployment model: Offshoot runs where your code already lives, talks to the
+        AI endpoint you have approved, and hands back C# one verified module at a time, while the
+        mainframe keeps running until each cutover.
+      </p>
+    </div>
+
+    <div class="diagram l-card" appReveal>
+      <div class="diagram__scroll" tabindex="0" role="region" aria-label="Reference deployment diagram, scrolls sideways on small screens">
+        <svg
+          viewBox="0 0 960 560"
+          role="img"
+          aria-labelledby="deploy-svg-title deploy-svg-desc"
+          [attr.data-mode]="mode()"
+        >
+          <title id="deploy-svg-title">Reference deployment model</title>
+          <desc id="deploy-svg-desc">
+            Inside the organization's network: source control gives Offshoot a read-only copy of the
+            COBOL; Offshoot talks only to an approved AI endpoint inside the network; each verified
+            module becomes a pull request of C#, which the organization's CI deploys as a service. A
+            strangler facade sits in front of the mainframe's entry points and routes each module to
+            legacy, shadow or modern, while the mainframe keeps running.
+          </desc>
+
+          <rect class="zone" x="12" y="36" width="936" height="512" rx="22" />
+          <text class="zone__label" x="34" y="24">Your network or private cloud · reference deployment model</text>
+
+          <!-- Flows. -->
+          <path class="edge flow" d="M240 128 H340" />
+          <path class="edge flow" d="M620 120 H720" />
+          <path class="edge flow flow--back" d="M720 140 H620" />
+          <path class="edge flow" d="M480 220 V262" />
+          <path class="edge flow" d="M620 297 H720" />
+          <path class="edge flow" d="M240 462 H340" />
+          <path class="edge control" d="M340 196 H300 V430 H340" />
+          <path class="edge route route--legacy" d="M620 462 H720" />
+          <path class="edge route route--modern" d="M620 424 C690 424 700 340 790 332" />
+
+          <text class="edge__label" x="290" y="116" text-anchor="middle">reads a copy</text>
+          <text class="edge__label" x="670" y="108" text-anchor="middle">prompts</text>
+          <text class="edge__label" x="670" y="160" text-anchor="middle">replies</text>
+          <text class="edge__label" x="490" y="248">verified</text>
+          <text class="edge__label edge__label--side" x="292" y="320" text-anchor="middle" transform="rotate(-90 292 320)">sets each module's route</text>
+
+          <!-- Boxes. -->
+          <g class="box">
+            <rect x="40" y="86" width="200" height="84" rx="14" />
+            <text class="box__title" x="60" y="120">Source control</text>
+            <text class="box__sub" x="60" y="146">a read-only copy of the COBOL</text>
+          </g>
+
+          <g class="box box--accent">
+            <rect x="340" y="70" width="280" height="150" rx="16" />
+            <text class="box__title" x="362" y="106">Offshoot</text>
+            <text class="box__sub" x="362" y="132">orchestrator · harness · gates</text>
+            <text class="box__sub" x="362" y="152">rules · plan · audit log</text>
+            <rect class="chip" x="362" y="170" width="236" height="30" rx="8" />
+            <text class="chip__text" x="378" y="190">sandboxes · no network · limits</text>
+          </g>
+
+          <g class="box">
+            <rect x="720" y="86" width="200" height="84" rx="14" />
+            <text class="box__title" x="740" y="120">Approved AI endpoint</text>
+            <text class="box__sub" x="740" y="146">your model, your network</text>
+          </g>
+
+          <g class="box">
+            <rect x="340" y="262" width="280" height="70" rx="14" />
+            <text class="box__title" x="362" y="292">Pull request per module</text>
+            <text class="box__sub" x="362" y="316">C# service, tests and its report</text>
+          </g>
+
+          <g class="box box--modern">
+            <rect x="720" y="262" width="200" height="70" rx="14" />
+            <text class="box__title" x="740" y="292">C# services</text>
+            <text class="box__sub" x="740" y="316">deployed by your CI</text>
+          </g>
+
+          <g class="box">
+            <rect x="40" y="420" width="200" height="84" rx="14" />
+            <text class="box__title" x="60" y="454">Clients and batch</text>
+            <text class="box__sub" x="60" y="480">the same entry points</text>
+          </g>
+
+          <g class="box box--facade">
+            <rect x="340" y="392" width="280" height="134" rx="16" />
+            <text class="box__title" x="362" y="426">Strangler facade</text>
+            <text class="box__sub" x="362" y="450">routes each module separately</text>
+            <g class="pill pill--legacy">
+              <rect x="362" y="472" width="72" height="30" rx="15" />
+              <text x="398" y="492" text-anchor="middle">legacy</text>
+            </g>
+            <g class="pill pill--shadow">
+              <rect x="444" y="472" width="72" height="30" rx="15" />
+              <text x="480" y="492" text-anchor="middle">shadow</text>
+            </g>
+            <g class="pill pill--modern">
+              <rect x="526" y="472" width="72" height="30" rx="15" />
+              <text x="562" y="492" text-anchor="middle">modern</text>
+            </g>
+          </g>
+
+          <g class="box box--legacy">
+            <rect x="720" y="420" width="200" height="84" rx="14" />
+            <text class="box__title" x="740" y="454">Mainframe</text>
+            <text class="box__sub" x="740" y="480">runs until each cutover</text>
+          </g>
+        </svg>
+      </div>
+
+      <div class="modes" role="group" aria-label="Example module route">
+        <span class="modes__label">One module's route:</span>
+        <button type="button" class="mode" [attr.aria-pressed]="mode() === 'legacy'" (click)="choose('legacy')">
+          Legacy
+        </button>
+        <button type="button" class="mode" [attr.aria-pressed]="mode() === 'shadow'" (click)="choose('shadow')">
+          Shadow
+        </button>
+        <button type="button" class="mode" [attr.aria-pressed]="mode() === 'modern'" (click)="choose('modern')">
+          Modern
+        </button>
+        <p class="modes__text" aria-live="polite">
+          @switch (mode()) {
+            @case ('legacy') {
+              The mainframe answers. Nothing has changed for anyone yet.
+            }
+            @case ('shadow') {
+              Both run. The mainframe still answers, and the facade records every difference.
+            }
+            @case ('modern') {
+              The C# service answers, after a clean shadow sample. Rolling back is one step.
+            }
+          }
+        </p>
+      </div>
+    </div>
+
+    <ul class="legend" appReveal aria-label="What v1 builds today">
+      <li>
+        <app-icon name="circle-check" [size]="16" class="yes" />
+        <span><strong>Built:</strong> the orchestrator, the sandboxes (no network, read-only sources, CPU, memory and time limits), the harness, the gates, the audit log, and a YARP facade with legacy, shadow and modern per module.</span>
+      </li>
+      <li>
+        <app-icon name="circle-dot" [size]="16" class="part" />
+        <span><strong>In v1 instead:</strong> sources come from a .zip upload or the bundled sample, not a source-control connector; the AI is the recorded fixtures or Gemini through its API; verified C# is stored with its SHA-256 and shown in the app, and is not yet opened as a pull request.</span>
+      </li>
+      <li>
+        <app-icon name="info" [size]="16" class="info" />
+        <span>This is a model of how a deployment would look, not a description of any customer. Offshoot has none.</span>
+      </li>
+    </ul>
+  </div>
+</section>
