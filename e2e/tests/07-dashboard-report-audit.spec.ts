@@ -2,7 +2,7 @@ import { readFileSync } from 'node:fs';
 
 import { expect, test } from '@playwright/test';
 
-import { apiToken, billriteId, openBillRite, SCREENSHOTS, signIn } from '../helpers';
+import { apiToken, billriteId, openBillRite, SCREENSHOTS, signIn, signOut } from '../helpers';
 
 test('the overview shows the stored numbers', async ({ page, request }) => {
   const viewer = await apiToken(request, 'viewer');
@@ -49,8 +49,7 @@ test('the audit log is for architects and admins', async ({ page, request }) => 
   await expect(page.getByRole('link', { name: 'Audit log' })).toHaveCount(0);
   await page.goto('/app/admin/audit');
   await expect(page.getByText('Only architects and admins can read the audit log.')).toBeVisible();
-  await page.getByRole('button', { name: 'Sign out' }).click();
-  await expect(page).toHaveURL(/\/login$/);
+  await signOut(page);
 
   await signIn(page, 'architect');
   await page.getByRole('link', { name: 'Audit log' }).click();

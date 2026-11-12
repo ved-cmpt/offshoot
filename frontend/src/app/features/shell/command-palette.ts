@@ -77,7 +77,7 @@ export class CommandPalette {
   private readonly router = inject(Router);
   private readonly context = inject(ProjectContext);
   private readonly dialog = viewChild.required<ElementRef<HTMLDialogElement>>('dialog');
-  private readonly input = viewChild.required<ElementRef<HTMLInputElement>>('search');
+  private readonly input = viewChild<ElementRef<HTMLInputElement>>('search');
 
   readonly open = model(false);
   readonly canReadAudit = model(false);
@@ -205,7 +205,8 @@ export class CommandPalette {
         this.query.set('');
         this.active.set(0);
         dialog.showModal?.();
-        queueMicrotask(() => this.input().nativeElement.focus());
+        // The content renders once open; focus the field after that render.
+        setTimeout(() => this.input()?.nativeElement.focus());
         void this.preload();
       } else if (!this.open() && dialog.open) {
         dialog.close();

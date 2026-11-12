@@ -29,6 +29,7 @@ export const SHORTCUTS: { keys: string[]; what: string }[] = [
   imports: [Icon],
   template: `
     <dialog #dialog class="sheet" aria-labelledby="shortcuts-title" (close)="open.set(false)">
+      @if (open()) {
       <div class="sheet__head">
         <h2 id="shortcuts-title"><app-icon name="keyboard" [size]="18" /> Keyboard shortcuts</h2>
         <button type="button" class="sheet__close" (click)="open.set(false)" aria-label="Close">
@@ -48,6 +49,7 @@ export const SHORTCUTS: { keys: string[]; what: string }[] = [
         }
       </dl>
       <p class="sheet__note">Letter shortcuts are off while you type in a field.</p>
+      }
     </dialog>
   `,
   styles: `

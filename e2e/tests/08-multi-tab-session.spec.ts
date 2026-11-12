@@ -14,7 +14,7 @@ test('two tabs reloading together both stay signed in', async ({ context, page }
     await Promise.all([page.reload(), second.reload()]);
     for (const tab of [page, second]) {
       await expect(tab).toHaveURL(/\/projects$/);
-      await expect(tab.getByRole('button', { name: 'Sign out' })).toBeVisible();
+      await expect(tab.locator('.role-badge')).toContainText('ENGINEER');
       await expect(tab.getByRole('link', { name: 'BillRite', exact: true }).first()).toBeVisible();
     }
   }

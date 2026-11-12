@@ -63,10 +63,18 @@ describe('route guards', () => {
 
   it('sends a signed-out visitor to login and remembers where they were going', async () => {
     const harness = await RouterTestingHarness.create();
+    const navigation = harness.navigateByUrl('/app/projects/p1/rules');
+    await noSession();
+    await navigation;
+    expect(router.url).toBe('/app/login?returnUrl=%2Fapp%2Fprojects%2Fp1%2Frules');
+  });
+
+  it('needs no return address for the front door of the app', async () => {
+    const harness = await RouterTestingHarness.create();
     const navigation = harness.navigateByUrl('/app/projects');
     await noSession();
     await navigation;
-    expect(router.url).toBe('/app/login?returnUrl=%2Fapp%2Fprojects');
+    expect(router.url).toBe('/app/login');
   });
 
   it('restores a session from the refresh cookie on the first visit only', async () => {

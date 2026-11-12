@@ -7,6 +7,7 @@
   (click)="backdrop($event)"
   (keydown.escape)="closed()"
 >
+  @if (open()) {
   <div class="palette__search">
     <app-icon name="search" [size]="18" />
     <input
@@ -63,4 +64,5 @@
     <span><kbd>⏎</kbd> open</span>
     <span><kbd>Esc</kbd> close</span>
   </div>
+  }
 </dialog>

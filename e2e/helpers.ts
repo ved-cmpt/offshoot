@@ -29,12 +29,31 @@ export async function useTheme(page: Page, theme: Theme): Promise<void> {
   }, theme);
 }
 
+/** The first-visit tour is its own journey (11-shell); every other journey starts without it. */
+export async function skipTour(page: Page): Promise<void> {
+  await page.addInitScript(() => {
+    try {
+      window.localStorage.setItem('offshoot-tour-done', '1');
+    } catch {
+      // Storage blocked: the tour shows, and can be skipped.
+    }
+  });
+}
+
 export async function signIn(page: Page, role: Role): Promise<void> {
+  await skipTour(page);
   await page.goto('/app/login');
   await page.getByLabel('Username').fill(username(role));
   await page.getByLabel('Password').fill(PASSWORD);
   await page.getByRole('button', { name: 'Sign in', exact: true }).click();
   await expect(page).toHaveURL(/\/projects$/);
+}
+
+/** Sign out from the user menu in the sidebar. */
+export async function signOut(page: Page): Promise<void> {
+  await page.locator('.user__button').click();
+  await page.getByRole('button', { name: 'Sign out' }).click();
+  await expect(page).toHaveURL(/\/app\/login$/);
 }
 
 /** Open the bundled BillRite project from the projects list, and wait until it is open:

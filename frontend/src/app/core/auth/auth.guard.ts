@@ -18,7 +18,8 @@ export const authGuard: CanActivateFn = async (_route, state) => {
   if (auth.isSignedIn()) {
     return true;
   }
-  const home = state.url === '/app' || state.url === '/app/';
+  // The app's front door needs no return address.
+  const home = ['/app', '/app/', APP_HOME].includes(state.url);
   return router.createUrlTree([LOGIN], { queryParams: home ? {} : { returnUrl: state.url } });
 };
 

@@ -23,7 +23,7 @@
           <app-icon name="file-text" [size]="16" /> Assessment report
         </a>
         <a class="button" [routerLink]="['/app/projects', projectId(), 'modules']">
-          <app-icon name="blocks" [size]="16" /> Modules
+          <app-icon name="blocks" [size]="16" /> View modules
         </a>
       </div>
     </div>
@@ -215,7 +215,7 @@
     <section class="panel" aria-labelledby="activity-title">
       <div class="panel__head">
         <h2 id="activity-title">Recent activity</h2>
-        <a class="subtle" routerLink="/app/admin/audit">Audit log</a>
+        <a class="subtle" routerLink="/app/admin/audit">Full audit log</a>
       </div>
       @if (data.activity.length) {
         <ol class="activity">

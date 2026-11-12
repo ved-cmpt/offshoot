@@ -1,6 +1,6 @@
 import { ConsoleMessage, Page, expect, test } from '@playwright/test';
 
-import { apiToken, billriteId, expectAccessible, moduleId, openBillRite, password, Role, signIn, username } from '../helpers';
+import { apiToken, billriteId, expectAccessible, moduleId, openBillRite, password, Role, signIn, signOut, username } from '../helpers';
 
 // Blueprint Section 15, smoke checklist: sign-in per role, inventory, a verified module, the
 // rounding-defect story, approval in the demo project, the audit log, headers and cookies. It
@@ -112,8 +112,7 @@ for (const role of ROLES) {
     await signIn(page, role);
     await expect(page.locator('.role-badge')).toContainText(role.toUpperCase());
     await expect(page.locator('.demo-banner')).toContainText('No code is compiled or run here');
-    await page.getByRole('button', { name: 'Sign out' }).click();
-    await expect(page).toHaveURL(/\/login$/);
+    await signOut(page);
     expect(violations).toEqual([]);
   });
 }
