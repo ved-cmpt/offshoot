@@ -7,11 +7,12 @@ import {
   signal,
 } from '@angular/core';
 import { FormControl, FormGroup, ReactiveFormsModule, Validators } from '@angular/forms';
-import { ActivatedRoute, Router } from '@angular/router';
+import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 
 import { describeError } from '../../core/api/api-error';
 import { AuthService, Role } from '../../core/auth/auth.service';
 import { ConfigService, DemoAccount, PublicConfig } from '../../core/config/config.service';
+import { Icon } from '../../shared/icon/icon';
 
 export const ROLE_SUMMARIES: Record<Role, string> = {
   VIEWER: 'Browse projects, rules, plans and reports. Read-only.',
@@ -27,7 +28,7 @@ type ConfigState =
 
 @Component({
   selector: 'app-login',
-  imports: [ReactiveFormsModule],
+  imports: [Icon, ReactiveFormsModule, RouterLink],
   templateUrl: './login.html',
   styleUrl: './login.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,

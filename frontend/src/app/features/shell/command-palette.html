@@ -1,0 +1,66 @@
+<dialog
+  #dialog
+  class="palette"
+  aria-label="Command palette"
+  tabindex="-1"
+  (close)="closed()"
+  (click)="backdrop($event)"
+  (keydown.escape)="closed()"
+>
+  <div class="palette__search">
+    <app-icon name="search" [size]="18" />
+    <input
+      #search
+      type="text"
+      role="combobox"
+      aria-label="Search screens, modules, rules and actions"
+      aria-expanded="true"
+      aria-controls="palette-list"
+      aria-autocomplete="list"
+      [attr.aria-activedescendant]="results().length ? 'palette-option-' + active() : null"
+      placeholder="Search screens, modules, rules, actions…"
+      autocomplete="off"
+      spellcheck="false"
+      [value]="query()"
+      (input)="type($any($event.target).value)"
+      (keydown)="onKey($event)"
+    />
+    <kbd>Esc</kbd>
+  </div>
+
+  <div class="palette__list" id="palette-list" role="listbox" aria-label="Results">
+    @for (group of groups(); track group.name) {
+      <div role="group" [attr.aria-labelledby]="'palette-group-' + group.name" class="palette__group">
+        <p class="palette__heading" [id]="'palette-group-' + group.name" aria-hidden="true">{{ group.name }}</p>
+        @for (item of group.items; track item.command.id) {
+          <div
+            role="option"
+            class="option"
+            [id]="'palette-option-' + item.index"
+            [attr.aria-selected]="active() === item.index"
+            [class.option--active]="active() === item.index"
+            tabindex="-1"
+            (click)="choose(item.command)"
+            (keydown.enter)="choose(item.command)"
+            (mousemove)="active.set(item.index)"
+          >
+            <app-icon [name]="item.command.icon" [size]="16" />
+            <span class="option__title">{{ item.command.title }}</span>
+            @if (item.command.hint) {
+              <span class="option__hint">{{ item.command.hint }}</span>
+            }
+            <app-icon class="option__enter" name="arrow-right" [size]="14" />
+          </div>
+        }
+      </div>
+    } @empty {
+      <p class="palette__empty">Nothing matches “{{ query() }}”.</p>
+    }
+  </div>
+
+  <div class="palette__foot" aria-hidden="true">
+    <span><kbd>↑</kbd><kbd>↓</kbd> move</span>
+    <span><kbd>⏎</kbd> open</span>
+    <span><kbd>Esc</kbd> close</span>
+  </div>
+</dialog>

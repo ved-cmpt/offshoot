@@ -891,6 +891,15 @@ label {
   }
 }
 
+// The guided tour outlines the part of the page it is talking about (features/shell/tour.ts).
+.tour-target {
+  outline: 2px solid var(--accent);
+  outline-offset: 4px;
+  border-radius: var(--radius-lg);
+  scroll-margin-top: 5rem;
+  box-shadow: 0 0 0 8px var(--accent-soft);
+}
+
 // Everything that moves stops for a visitor who asks for less motion.
 @media (prefers-reduced-motion: reduce) {
   *,

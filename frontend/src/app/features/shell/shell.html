@@ -1,63 +1,214 @@
 <a class="skip-link" href="#main">Skip to main content</a>
 
-<header class="shell-header">
-  @if (demoMode()) {
-    <p class="demo-banner" role="note">
-      Public demo — synthetic COBOL app, simulated AI responses.
-      @if (executionOff()) {
-        No code is compiled or run here: results come from stored runs.
-      }
-      @if (resetHours() > 0) {
-        It resets every {{ resetHours() === 24 ? 'day' : resetHours() + ' hours' }}.
-      }
-    </p>
-  }
-  <div class="shell-header__inner">
-    <a class="brand" routerLink="/app/projects">Offshoot</a>
 
-    <nav aria-label="Main">
-      <a
-        class="nav-link"
-        routerLink="/app/projects"
-        routerLinkActive="nav-link--active"
-        ariaCurrentWhenActive="page"
-        >Projects</a
+<div class="layout" [class.layout--collapsed]="collapsed()" [class.layout--drawer]="drawerOpen()">
+  <aside class="shell-sidebar" aria-label="Sidebar">
+    <div class="sidebar__top">
+      <a class="brand" routerLink="/app/projects" aria-label="Offshoot, projects">
+        <img src="brand/offshoot-mark.svg" alt="" width="26" height="26" />
+        <span class="brand__name">Offshoot</span>
+      </a>
+      <button
+        type="button"
+        class="icon-btn sidebar__collapse"
+        (click)="toggleCollapsed()"
+        [attr.aria-label]="collapsed() ? 'Expand the sidebar' : 'Collapse the sidebar'"
+        [attr.aria-pressed]="collapsed()"
       >
+        <app-icon [name]="collapsed() ? 'panel-left-open' : 'panel-left-close'" [size]="16" />
+      </button>
+    </div>
+
+    @if (context.projectId()) {
+      <div class="switcher">
+        <button
+          type="button"
+          class="switcher__button"
+          (click)="switcherOpen.set(!switcherOpen())"
+          [attr.aria-expanded]="switcherOpen()"
+          aria-controls="project-switcher"
+        >
+          <span class="switcher__avatar" aria-hidden="true">{{ (context.project()?.name ?? 'P').slice(0, 1) }}</span>
+          <span class="switcher__text">
+            <span class="switcher__label">Project</span>
+            <span class="switcher__name">{{ context.project()?.name ?? 'Project' }}</span>
+          </span>
+          <app-icon name="chevron-down" [size]="14" />
+        </button>
+        @if (switcherOpen()) {
+          <div class="popover switcher__list" id="project-switcher">
+            <p class="popover__heading">Switch project</p>
+            @for (project of context.projects() ?? []; track project.id) {
+              <a
+                class="popover__item"
+                [routerLink]="['/app/projects', project.id, 'overview']"
+                [attr.aria-current]="project.id === context.projectId() ? 'true' : null"
+              >
+                <app-icon name="folder-kanban" [size]="15" />
+                <span>{{ project.name }}</span>
+                @if (project.id === context.projectId()) {
+                  <app-icon class="popover__check" name="check" [size]="14" />
+                }
+              </a>
+            }
+            <a class="popover__item popover__item--muted" routerLink="/app/projects">
+              <app-icon name="layers" [size]="15" /><span>All projects</span>
+            </a>
+          </div>
+        }
+      </div>
+    }
+
+    <nav class="nav" aria-label="Main">
+      <p class="nav__heading">Workspace</p>
+      <a
+        class="nav__link"
+        routerLink="/app/projects"
+        routerLinkActive="nav__link--active"
+        [routerLinkActiveOptions]="{ exact: true }"
+        ariaCurrentWhenActive="page"
+        [attr.title]="collapsed() ? 'Projects' : null"
+      >
+        <app-icon name="folder-kanban" [size]="17" /><span class="nav__label">Projects</span>
+      </a>
       @if (canReadAudit()) {
         <a
-          class="nav-link"
+          class="nav__link"
           routerLink="/app/admin/audit"
-          routerLinkActive="nav-link--active"
+          routerLinkActive="nav__link--active"
           ariaCurrentWhenActive="page"
-          >Audit log</a
+          [attr.title]="collapsed() ? 'Audit log' : null"
         >
+          <app-icon name="history" [size]="17" /><span class="nav__label">Audit log</span>
+        </a>
+      }
+
+      @if (projectNav().length) {
+        <p class="nav__heading">{{ context.project()?.name ?? 'Project' }}</p>
+        @for (item of projectNav(); track item.label) {
+          <a
+            class="nav__link"
+            [routerLink]="item.link"
+            routerLinkActive="nav__link--active"
+            ariaCurrentWhenActive="page"
+            [attr.title]="collapsed() ? item.label : null"
+          >
+            <app-icon [name]="item.icon" [size]="17" /><span class="nav__label">{{ item.label }}</span>
+          </a>
+        }
       }
     </nav>
 
-    <div class="shell-header__actions">
-      @if (user(); as signedIn) {
-        <p class="identity">
-          <span class="identity__name">{{ signedIn.display_name }}</span>
-          <span class="role-badge"
-            ><span class="visually-hidden">Role: </span>{{ signedIn.role }}</span
-          >
-        </p>
-      }
-      <button class="button button--quiet" type="button" (click)="toggleTheme()">
-        {{ themeToggleLabel() }}
+    <div class="sidebar__bottom">
+      <button type="button" class="nav__link nav__search" (click)="openPalette()" [attr.title]="collapsed() ? 'Search' : null">
+        <app-icon name="search" [size]="17" /><span class="nav__label">Search</span>
+        <span class="nav__kbd" aria-hidden="true"><kbd>{{ isMac ? '⌘' : 'Ctrl' }}</kbd><kbd>K</kbd></span>
       </button>
-      <button
-        class="button button--quiet"
-        type="button"
-        [disabled]="isSigningOut()"
-        (click)="signOut()"
-      >
-        {{ isSigningOut() ? 'Signing out…' : 'Sign out' }}
-      </button>
-    </div>
-  </div>
-</header>
 
-<main id="main" class="shell-main" tabindex="-1">
-  <router-outlet />
-</main>
+      @if (user(); as signedIn) {
+        <div class="user">
+          <button
+            type="button"
+            class="user__button"
+            (click)="userMenuOpen.set(!userMenuOpen())"
+            [attr.aria-expanded]="userMenuOpen()"
+            aria-controls="user-menu"
+          >
+            <span class="avatar" aria-hidden="true">{{ userInitials() }}</span>
+            <span class="user__text">
+              <span class="identity__name">{{ signedIn.display_name }}</span>
+              <span class="role-badge"><span class="visually-hidden">Role: </span>{{ signedIn.role }}</span>
+            </span>
+            <app-icon class="user__chevron" name="chevron-down" [size]="14" />
+          </button>
+          @if (userMenuOpen()) {
+            <div class="popover user__menu" id="user-menu">
+              <p class="popover__heading">{{ signedIn.username ?? signedIn.email }}</p>
+              <button type="button" class="popover__item" (click)="toggleTheme()">
+                <app-icon [name]="theme() === 'dark' ? 'sun' : 'moon'" [size]="15" />{{ themeToggleLabel() }}
+              </button>
+              <button type="button" class="popover__item" (click)="showShortcuts()">
+                <app-icon name="keyboard" [size]="15" />Keyboard shortcuts<kbd class="popover__kbd">?</kbd>
+              </button>
+              <button type="button" class="popover__item" (click)="startTour()">
+                <app-icon name="compass" [size]="15" />Take the tour
+              </button>
+              <a class="popover__item" routerLink="/">
+                <app-icon name="sprout" [size]="15" />Offshoot website
+              </a>
+              <hr />
+              <button type="button" class="popover__item" [disabled]="isSigningOut()" (click)="signOut()">
+                <app-icon name="log-out" [size]="15" />{{ isSigningOut() ? 'Signing out…' : 'Sign out' }}
+              </button>
+            </div>
+          }
+        </div>
+      }
+    </div>
+  </aside>
+
+  <button type="button" class="scrim" tabindex="-1" aria-hidden="true" (click)="drawerOpen.set(false)"></button>
+
+  <div class="workarea">
+    @if (demoMode()) {
+      <p class="demo-banner" role="note">
+        Public demo — synthetic COBOL app, simulated AI responses.
+        @if (executionOff()) {
+          No code is compiled or run here: results come from stored runs.
+        }
+        @if (resetHours() > 0) {
+          It resets every {{ resetHours() === 24 ? 'day' : resetHours() + ' hours' }}.
+        }
+      </p>
+    }
+    <header class="shell-topbar">
+      <button
+        type="button"
+        class="icon-btn topbar__menu"
+        (click)="drawerOpen.set(!drawerOpen())"
+        [attr.aria-expanded]="drawerOpen()"
+        aria-label="Menu"
+      >
+        <app-icon name="menu" [size]="18" />
+      </button>
+      <nav class="crumbs" aria-label="Breadcrumb">
+        <ol>
+          @for (crumb of crumbs(); track $index; let last = $last) {
+            <li>
+              @if (crumb.link) {
+                <a [routerLink]="crumb.link">{{ crumb.label }}</a>
+              } @else {
+                <span [attr.aria-current]="last ? 'page' : null">{{ crumb.label }}</span>
+              }
+              @if (!last) {
+                <app-icon name="chevron-right" [size]="13" />
+              }
+            </li>
+          }
+        </ol>
+      </nav>
+      <div class="topbar__actions">
+        <button type="button" class="search-pill" (click)="openPalette()" aria-label="Search or jump to (Ctrl+K)">
+          <app-icon name="search" [size]="15" />
+          <span class="search-pill__text">Search or jump to…</span>
+          <span class="search-pill__kbd" aria-hidden="true"><kbd>{{ isMac ? '⌘' : 'Ctrl' }}</kbd><kbd>K</kbd></span>
+        </button>
+        <button type="button" class="icon-btn" (click)="toggleTheme()" [attr.aria-label]="themeToggleLabel()" [attr.title]="themeToggleLabel()">
+          <app-icon [name]="theme() === 'dark' ? 'sun' : 'moon'" [size]="17" />
+        </button>
+        <button type="button" class="icon-btn" (click)="shortcutsOpen.set(true)" aria-label="Keyboard shortcuts" title="Keyboard shortcuts (?)">
+          <app-icon name="keyboard" [size]="17" />
+        </button>
+      </div>
+    </header>
+
+    <main id="main" class="shell-main" tabindex="-1">
+      <router-outlet />
+    </main>
+  </div>
+</div>
+
+<app-command-palette [(open)]="paletteOpen" [canReadAudit]="canReadAudit()" (action)="onPaletteAction($event)" />
+<app-shortcuts-dialog [(open)]="shortcutsOpen" />
+<app-tour />
+<app-toasts />

@@ -2,7 +2,7 @@
 @switch (current.kind) {
   @case ('loading') {
     <h1 class="page-title">Overview</h1>
-    <p class="state" role="status">Loading the overview…</p>
+    <app-skeleton label="Loading the overview…" variant="cards" [count]="4" />
   }
   @case ('error') {
     <h1 class="page-title">Overview</h1>
@@ -13,52 +13,67 @@
   }
   @case ('ready') {
     @let data = current.data;
-    <h1 class="page-title">{{ data.project.name }}</h1>
-    <p class="muted">Every number on this page is read from stored runs, rules and decisions.</p>
+    <div class="page-head">
+      <div>
+        <p class="eyebrow">Project overview</p>
+        <h1 class="page-title">{{ data.project.name }}</h1>
+      </div>
+      <div class="cluster">
+        <a class="button button--quiet" [routerLink]="['/app/projects', projectId(), 'report']">
+          <app-icon name="file-text" [size]="16" /> Assessment report
+        </a>
+        <a class="button" [routerLink]="['/app/projects', projectId(), 'modules']">
+          <app-icon name="blocks" [size]="16" /> Modules
+        </a>
+      </div>
+    </div>
+    <p class="page-lede">Every number on this page is read from stored runs, rules and decisions.</p>
 
-    <ul class="tiles">
+    <ul class="tiles" data-tour="kpis">
       <li class="tile">
-        <h2>Modules</h2>
+        <p class="tile__label"><app-icon name="blocks" [size]="15" />Modules</p>
         @if (data.modules.length) {
           <p class="tile__value">{{ data.modules.length }}</p>
           <ul class="tile__list">
             @for (entry of states(); track entry.name) {
-              <li>{{ stateText[entry.name] }}: {{ entry.count }}</li>
+              <li><span class="dot" [class]="'dot dot--' + tone[entry.name]"></span>{{ stateText[entry.name] }}: {{ entry.count }}</li>
             }
           </ul>
         } @else {
-          <p>No modules yet. They are created when an architect approves the plan.</p>
+          <p class="tile__empty">No modules yet. They are created when an architect approves the plan.</p>
         }
       </li>
       <li class="tile">
-        <h2>Rules verified</h2>
+        <p class="tile__label"><app-icon name="scroll-text" [size]="15" />Rules verified</p>
         @if (data.rules.total) {
           <p class="tile__value">{{ data.rules.verified_pct | number: '1.0-1' }}%</p>
+          <div class="bar" aria-hidden="true"><span [style.width.%]="data.rules.verified_pct ?? 0"></span></div>
           <p>{{ data.rules.verified }} of {{ data.rules.total }} rules.</p>
-          <p class="muted">
+          <p class="tile__note">
             {{ data.rules.human_decisions }} decisions by people;
             {{ data.rules.seeded_decisions }} labelled demo seed decisions.
           </p>
         } @else {
-          <p>No rules extracted yet.</p>
+          <p class="tile__empty">No rules extracted yet.</p>
         }
       </li>
       <li class="tile">
-        <h2>Equivalence</h2>
+        <p class="tile__label"><app-icon name="flask-conical" [size]="15" />Equivalence</p>
         @if (data.equivalence.cases) {
-          <p class="tile__value">
-            {{ data.equivalence.identical }} of {{ data.equivalence.cases }}
-          </p>
+          <p class="tile__value">{{ data.equivalence.identical }} of {{ data.equivalence.cases }}</p>
+          <div class="bar" [class.bar--bad]="data.equivalence.identical < data.equivalence.cases" aria-hidden="true">
+            <span [style.width.%]="(data.equivalence.identical / data.equivalence.cases) * 100"></span>
+          </div>
           <p>
             cases identical to the legacy program, over the latest run of
             {{ data.equivalence.modules_verified }} modules.
           </p>
         } @else {
-          <p>No verification has run yet.</p>
+          <p class="tile__empty">No verification has run yet.</p>
         }
       </li>
       <li class="tile">
-        <h2>AI usage</h2>
+        <p class="tile__label"><app-icon name="sparkles" [size]="15" />AI usage</p>
         <p class="tile__value">{{ data.ai.calls }} calls</p>
         <p>
           {{ data.ai.input_tokens | number }} input and {{ data.ai.output_tokens | number }} output
@@ -67,12 +82,82 @@
             {{ data.ai.failed }} failed.
           }
         </p>
-        <p class="muted">{{ data.ai.note }}</p>
+        <p class="tile__note">{{ data.ai.note }}</p>
       </li>
     </ul>
 
+    @if (data.modules.length) {
+      <div class="charts">
+        <section class="panel chart" aria-labelledby="pipeline-title">
+          <div class="panel__head">
+            <h2 id="pipeline-title">Where each module is</h2>
+            <span class="subtle">{{ data.modules.length }} modules</span>
+          </div>
+          <div class="stack-bar" role="img" [attr.aria-label]="stateSummary()">
+            @for (entry of states(); track entry.name) {
+              <span
+                [class]="'stack-bar__seg seg--' + tone[entry.name]"
+                [style.flex-grow]="entry.count"
+                [attr.title]="stateText[entry.name] + ': ' + entry.count"
+              ></span>
+            }
+          </div>
+          <ul class="legend">
+            @for (entry of states(); track entry.name) {
+              <li>
+                <app-icon [name]="toneIcon[tone[entry.name]]" [size]="15" [class]="'tone--' + tone[entry.name]" />
+                <span>{{ stateText[entry.name] }}</span>
+                <strong>{{ entry.count }}</strong>
+              </li>
+            }
+          </ul>
+          <h3 class="chart__sub">Routing through the facade</h3>
+          <ol class="modes">
+            @for (mode of modeOrder; track mode) {
+              <li [class.modes__on]="(data.facade_modes[mode] ?? 0) > 0">
+                <span class="modes__name">{{ modeText[mode] }}</span>
+                <span class="modes__count">{{ data.facade_modes[mode] ?? 0 }}</span>
+              </li>
+            }
+          </ol>
+        </section>
+
+        <section class="panel chart" aria-labelledby="quality-title">
+          <div class="panel__head">
+            <h2 id="quality-title">Coverage and mutation score</h2>
+            <ul class="series" aria-label="Series">
+              <li><span class="swatch swatch--1"></span>Paragraph coverage</li>
+              <li><span class="swatch swatch--2"></span>Mutation score</li>
+            </ul>
+          </div>
+          <div class="bars" role="img" [attr.aria-label]="qualitySummary()">
+            @for (row of measured(); track row.id) {
+              <div class="bars__row">
+                <span class="bars__name">{{ row.program }}</span>
+                <div class="bars__track">
+                  <span class="bars__bar bars__bar--1" [style.width.%]="row.coverage_pct ?? 0">
+                    <span class="tip">{{ row.program }} coverage {{ row.coverage_pct | number: '1.2-2' }}%</span>
+                  </span>
+                  <span class="bars__bar bars__bar--2" [style.width.%]="row.mutation_score ?? 0">
+                    <span class="tip">{{ row.program }} mutation {{ row.mutation_score | number: '1.2-2' }}%</span>
+                  </span>
+                </div>
+                <span class="bars__value">
+                  {{ row.coverage_pct | number: '1.0-0' }}% · {{ row.mutation_score !== null ? (row.mutation_score | number: '1.0-0') + '%' : 'not run' }}
+                </span>
+              </div>
+            }
+            <div class="bars__axis" aria-hidden="true"><span>0%</span><span>50%</span><span>100%</span></div>
+          </div>
+          <p class="chart__note">Exact values are in the table below. Mutation testing runs only once every case matches.</p>
+        </section>
+      </div>
+    }
+
     <section class="panel" aria-labelledby="modules-title">
-      <h2 id="modules-title">Modules, coverage and mutation score</h2>
+      <div class="panel__head">
+        <h2 id="modules-title">Modules, coverage and mutation score</h2>
+      </div>
       @if (data.modules.length) {
         <div class="table-scroll" tabindex="0" role="region" aria-label="Module verification">
           <table class="data-table">
@@ -91,11 +176,9 @@
               @for (row of data.modules; track row.id) {
                 <tr>
                   <th scope="row">
-                    <a [routerLink]="['/app/projects', projectId(), 'modules', row.id]">{{
-                      row.program
-                    }}</a>
+                    <a [routerLink]="['/app/projects', projectId(), 'modules', row.id]">{{ row.program }}</a>
                   </th>
-                  <td>{{ stateText[row.state] }}</td>
+                  <td><span [class]="'badge badge--dot badge--' + badgeTone[tone[row.state]]">{{ stateText[row.state] }}</span></td>
                   <td>{{ modeText[row.facade_mode] }}</td>
                   <td class="num">
                     @if (row.cases) {
@@ -123,28 +206,39 @@
           </table>
         </div>
       } @else {
-        <p class="muted">
-          Nothing to show yet. Start with the
-          <a [routerLink]="['/app/projects', projectId(), 'plan']">plan</a>.
-        </p>
+        <app-empty-state title="Nothing to show yet" icon="map">
+          Start with the <a [routerLink]="['/app/projects', projectId(), 'plan']">plan</a>: modules are created when an architect approves it.
+        </app-empty-state>
       }
     </section>
 
     <section class="panel" aria-labelledby="activity-title">
-      <h2 id="activity-title">Recent activity</h2>
+      <div class="panel__head">
+        <h2 id="activity-title">Recent activity</h2>
+        <a class="subtle" routerLink="/app/admin/audit">Audit log</a>
+      </div>
       @if (data.activity.length) {
-        <ul class="activity">
+        <ol class="activity">
           @for (event of data.activity; track event.at + event.what) {
-            <li>
-              <span class="muted">{{ event.at | date: 'short' }}</span>
-              <span>{{ event.kind === 'job' ? 'Job' : 'Decision' }}: {{ event.what }}</span>
-              <span class="badge">{{ event.outcome.toLowerCase() }}</span>
-              @if (event.by) {
-                <span class="muted">by {{ event.by }}{{ event.seeded ? ' (demo seed)' : '' }}</span>
-              }
+            <li [class]="'activity__item activity__item--' + outcomeTone(event.outcome)">
+              <span class="activity__icon" aria-hidden="true">
+                <app-icon [name]="event.kind === 'job' ? 'cpu' : 'gavel'" [size]="14" />
+              </span>
+              <div class="activity__body">
+                <p>
+                  <span>{{ event.kind === 'job' ? 'Job' : 'Decision' }}: {{ event.what }}</span>
+                  <span [class]="'badge badge--' + badgeTone[outcomeTone(event.outcome)]">{{ event.outcome.toLowerCase() }}</span>
+                </p>
+                <p class="subtle">
+                  <time [attr.datetime]="event.at">{{ event.at | date: 'short' }}</time>
+                  @if (event.by) {
+                    · by {{ event.by }}{{ event.seeded ? ' (demo seed)' : '' }}
+                  }
+                </p>
+              </div>
             </li>
           }
-        </ul>
+        </ol>
       } @else {
         <p class="muted">No activity yet.</p>
       }

@@ -6,7 +6,28 @@ import { firstValueFrom } from 'rxjs';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { AuthService, Role } from '../../core/auth/auth.service';
-import { Shell } from './shell';
+import { parseLocation } from '../../core/project/project-context';
+import { TOUR_KEY } from './tour';
+import { Shell, initials } from './shell';
+import { score } from './command-palette';
+
+const PROJECTS = {
+  items: [
+    {
+      id: 'p1',
+      name: 'BillRite',
+      description: null,
+      source_kind: 'BUNDLED',
+      status: 'ANALYZED',
+      created_at: '2026-11-08T00:00:00Z',
+      source_file_count: 12,
+      source_line_count: 1464,
+    },
+  ],
+  total: 1,
+  limit: 50,
+  offset: 0,
+};
 
 describe('Shell', () => {
   let fixture: ComponentFixture<Shell>;
@@ -39,16 +60,26 @@ describe('Shell', () => {
     http
       .expectOne('/api/v1/config')
       .flush({ demo_mode: demoMode, ai_mode: 'mock', demo_accounts: [], ...extra });
+    http.match('/api/v1/projects').forEach((request) => request.flush(PROJECTS));
     await settle();
   }
 
   function buttonNamed(name: string): HTMLButtonElement {
-    return Array.from(page.querySelectorAll('button')).find((b) => b.textContent?.includes(name))!;
+    return Array.from(page.querySelectorAll('button')).find(
+      (b) => b.textContent?.includes(name) || b.getAttribute('aria-label') === name,
+    )!;
+  }
+
+  function openUserMenu(): void {
+    page.querySelector<HTMLButtonElement>('.user__button')!.click();
+    fixture.detectChanges();
   }
 
   beforeEach(() => {
     vi.stubGlobal('matchMedia', (query: string) => ({ matches: false, media: query }));
     localStorage.clear();
+    // The tour offers itself on a first visit to the demo; these tests are not about it.
+    localStorage.setItem(TOUR_KEY, '1');
     TestBed.configureTestingModule({
       imports: [Shell],
       providers: [provideRouter([]), provideHttpClient(), provideHttpClientTesting()],
@@ -58,6 +89,7 @@ describe('Shell', () => {
   });
 
   afterEach(() => {
+    http.match('/api/v1/projects').forEach((request) => request.flush(PROJECTS));
     http.verify();
     vi.unstubAllGlobals();
   });
@@ -68,8 +100,18 @@ describe('Shell', () => {
       await render(role);
       expect(page.querySelector('.identity__name')?.textContent).toBe('Ari Architect');
       expect(page.querySelector('.role-badge')?.textContent).toContain(role);
+      expect(page.querySelector('.avatar')?.textContent).toBe('AA');
     },
   );
+
+  it.each<[Role, string[]]>([
+    ['VIEWER', ['Projects']],
+    ['ADMIN', ['Projects', 'Audit log']],
+  ])('shows the audit log only to architects and admins (%s)', async (role, expected) => {
+    await render(role);
+    const links = Array.from(page.querySelectorAll('.nav a')).map((a) => a.textContent?.trim());
+    expect(links).toEqual(expected);
+  });
 
   it('shows the demo banner in demo mode only', async () => {
     await render('VIEWER', true);
@@ -99,19 +141,21 @@ describe('Shell', () => {
     expect(page.querySelector('.demo-banner')).toBeNull();
   });
 
-  it('has landmarks and a skip link for keyboard users', async () => {
+  it('has landmarks, breadcrumbs and a skip link for keyboard users', async () => {
     await render();
     expect(page.querySelector('a.skip-link')?.getAttribute('href')).toBe('#main');
     expect(page.querySelector('main#main')).not.toBeNull();
-    expect(page.querySelector('nav')?.getAttribute('aria-label')).toBe('Main');
+    expect(page.querySelector('nav[aria-label="Main"]')).not.toBeNull();
+    expect(page.querySelector('nav[aria-label="Breadcrumb"] [aria-current="page"]')?.textContent).toBe('Projects');
     expect(page.querySelector('header')).not.toBeNull();
   });
 
-  it('signs out through the API and returns to login', async () => {
+  it('signs out from the user menu and returns to login', async () => {
     await render();
+    openUserMenu();
+    expect(page.querySelector('.user__button')?.getAttribute('aria-expanded')).toBe('true');
     buttonNamed('Sign out').click();
     await settle();
-    expect(buttonNamed('Signing out').disabled).toBe(true);
     http.expectOne('/api/v1/auth/logout').flush(null, { status: 204, statusText: 'No Content' });
     await settle();
     expect(navigate).toHaveBeenCalledWith(['/app/login']);
@@ -120,6 +164,7 @@ describe('Shell', () => {
 
   it('still returns to login when the sign-out request fails', async () => {
     await render();
+    openUserMenu();
     buttonNamed('Sign out').click();
     await settle();
     http.expectOne('/api/v1/auth/logout').flush(null, { status: 500, statusText: 'Error' });
@@ -136,5 +181,74 @@ describe('Shell', () => {
     buttonNamed('Use dark theme').click();
     await settle();
     expect(document.documentElement.dataset['theme']).toBe('dark');
+  });
+
+  it('collapses the sidebar to a rail and remembers it', async () => {
+    await render();
+    buttonNamed('Collapse the sidebar').click();
+    await settle();
+    expect(page.querySelector('.layout')?.classList).toContain('layout--collapsed');
+    expect(localStorage.getItem('offshoot-sidebar')).toBe('1');
+    expect(buttonNamed('Expand the sidebar').getAttribute('aria-pressed')).toBe('true');
+  });
+
+  it('opens the command palette with Ctrl+K and the shortcuts with ?', async () => {
+    await render();
+    document.dispatchEvent(new KeyboardEvent('keydown', { key: 'k', ctrlKey: true }));
+    await settle();
+    await new Promise((resolve) => setTimeout(resolve));
+    http.match(() => true).forEach((request) => {
+      const url = request.request.url;
+      const empty = { items: [], total: 0, limit: 50, offset: 0, counts: {}, programs: [] };
+      request.flush(url.endsWith('/projects') ? PROJECTS : url.endsWith('/modules') ? [] : empty);
+    });
+    await settle();
+    expect(page.querySelector('app-command-palette input[role="combobox"]')).not.toBeNull();
+    const palette = page.querySelector('app-command-palette') as HTMLElement;
+    expect(palette.textContent).toContain('Projects');
+    expect(palette.textContent).toContain('Sign out');
+    document.dispatchEvent(new KeyboardEvent('keydown', { key: '?' }));
+    await settle();
+    expect(page.querySelector('app-shortcuts-dialog')?.textContent).toContain('Open the command palette');
+  });
+
+  it('goes to a screen with G then a letter, but not while typing', async () => {
+    await render();
+    document.dispatchEvent(new KeyboardEvent('keydown', { key: 'g' }));
+    document.dispatchEvent(new KeyboardEvent('keydown', { key: 'p' }));
+    expect(navigate).toHaveBeenCalledWith(['/app/projects']);
+    navigate.mockClear();
+    const input = document.createElement('input');
+    document.body.appendChild(input);
+    input.dispatchEvent(new KeyboardEvent('keydown', { key: 'g', bubbles: true }));
+    input.dispatchEvent(new KeyboardEvent('keydown', { key: 'p', bubbles: true }));
+    expect(navigate).not.toHaveBeenCalled();
+    input.remove();
+  });
+});
+
+describe('shell helpers', () => {
+  it('reads the location from the address', () => {
+    expect(parseLocation('/app/projects')).toEqual({ projectId: null, screen: 'projects', itemId: null });
+    expect(parseLocation('/app/projects/p1/modules/m2?x=1')).toEqual({
+      projectId: 'p1',
+      screen: 'modules',
+      itemId: 'm2',
+    });
+    expect(parseLocation('/app/projects/p1')).toEqual({ projectId: 'p1', screen: 'overview', itemId: null });
+    expect(parseLocation('/app/admin/audit').screen).toBe('audit');
+    expect(parseLocation('/').screen).toBeNull();
+  });
+
+  it('makes initials from a display name', () => {
+    expect(initials('Ari Architect')).toBe('AA');
+    expect(initials('vera')).toBe('V');
+  });
+
+  it('scores palette matches: contiguous first, then in order, else none', () => {
+    expect(score('rate', 'RATECALC')).toBeGreaterThan(score('rclc', 'RATECALC'));
+    expect(score('rclc', 'RATECALC')).toBeGreaterThan(0);
+    expect(score('xyz', 'RATECALC')).toBe(0);
+    expect(score('', 'anything')).toBe(1);
   });
 });

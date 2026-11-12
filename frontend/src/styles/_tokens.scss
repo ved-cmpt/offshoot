@@ -173,6 +173,10 @@ $bp-xl: 80rem; // 1280px
   --shadow-popover: 0 0 0 1px rgb(255 255 255 / 8%), 0 16px 48px -8px rgb(0 0 0 / 75%);
   --glow-accent: 0 0 0 1px rgb(52 211 153 / 30%), 0 10px 40px -10px rgb(52 211 153 / 45%);
 
+  // Chart series, validated for colour-blind separation (dataviz validator, dark surface).
+  --chart-1: #0d9e6e;
+  --chart-2: #8b5cf6;
+
   // Syntax colours.
   --syn-keyword: #c4a5ff;
   --syn-string: #a5e88a;
@@ -253,6 +257,9 @@ $bp-xl: 80rem; // 1280px
   --shadow-lg: 0 2px 4px rgb(16 24 40 / 5%), 0 24px 56px -16px rgb(16 24 40 / 22%);
   --shadow-popover: 0 0 0 1px rgb(16 24 40 / 8%), 0 16px 40px -8px rgb(16 24 40 / 22%);
   --glow-accent: 0 0 0 1px rgb(5 150 105 / 25%), 0 10px 32px -12px rgb(5 150 105 / 40%);
+
+  --chart-1: #047857;
+  --chart-2: #6d28d9;
 
   --syn-keyword: #6d28d9;
   --syn-string: #2f6f12;

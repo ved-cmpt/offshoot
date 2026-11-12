@@ -14,6 +14,8 @@ import { catchError, of } from 'rxjs';
 import { describeError } from '../../core/api/api-error';
 import { AuthService } from '../../core/auth/auth.service';
 import { ConfigService } from '../../core/config/config.service';
+import { Icon } from '../../shared/icon/icon';
+import { EmptyState, Skeleton } from '../../shared/ui/ui';
 import { Project, ProjectsService } from './projects.service';
 
 type ListState =
@@ -26,6 +28,13 @@ const STATUS_LABELS: Record<Project['status'], string> = {
   FAILED: 'Analysis failed',
 };
 
+const STATUS_TONE: Record<Project['status'], string> = {
+  IMPORTED: '',
+  ANALYZING: 'badge--warn',
+  ANALYZED: 'badge--ok',
+  FAILED: 'badge--danger',
+};
+
 const SOURCE_LABELS: Record<Project['source_kind'], string> = {
   BUNDLED: 'Bundled sample',
   UPLOAD: 'Uploaded',
@@ -33,7 +42,7 @@ const SOURCE_LABELS: Record<Project['source_kind'], string> = {
 
 @Component({
   selector: 'app-projects',
-  imports: [DatePipe, DecimalPipe, RouterLink],
+  imports: [DatePipe, DecimalPipe, EmptyState, Icon, RouterLink, Skeleton],
   templateUrl: './projects.html',
   styleUrl: './projects.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -59,6 +68,8 @@ export class Projects implements OnInit {
   protected readonly uploadError = signal<string | null>(null);
   protected readonly created = signal<Project | null>(null);
   protected readonly statusLabels = STATUS_LABELS;
+  protected readonly statusTone = STATUS_TONE;
+  protected readonly showUpload = signal(false);
   protected readonly sourceLabels = SOURCE_LABELS;
 
   ngOnInit(): void {

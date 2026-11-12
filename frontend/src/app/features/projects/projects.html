@@ -1,14 +1,28 @@
-<h1 class="page-title">Projects</h1>
+<div class="page-head">
+  <div>
+    <p class="eyebrow">Workspace</p>
+    <h1 class="page-title">Projects</h1>
+  </div>
+  @if (canCreate() && !demoMode()) {
+    <button class="button" type="button" (click)="showUpload.set(!showUpload())" [attr.aria-expanded]="showUpload()" aria-controls="upload-panel">
+      <app-icon name="plus" [size]="16" /> New project
+    </button>
+  }
+</div>
+<p class="page-lede">Each project is a COBOL application, analyzed and moved to C# one module at a time.</p>
 
 @if (canCreate()) {
-  <section class="panel" aria-labelledby="upload-title">
-    <h2 id="upload-title">New project from COBOL sources</h2>
-    @if (demoMode()) {
-      <p class="muted">
+  @if (demoMode()) {
+    <div class="callout" role="note">
+      <app-icon name="info" [size]="16" />
+      <p>
         Uploads are turned off in the public demo. Locally, set DEMO_MODE=false to upload a .zip of
         .cbl, .cob, .cpy and .txt files.
       </p>
-    } @else {
+    </div>
+  } @else if (showUpload()) {
+    <section class="panel" id="upload-panel" aria-labelledby="upload-title">
+      <h2 id="upload-title">New project from COBOL sources</h2>
       <p class="muted">
         A .zip of .cbl, .cob, .cpy and .txt files. It is checked and stored, then it can be analyzed
         and its rules extracted. Uploaded code is never compiled or run.
@@ -28,7 +42,7 @@
           <input type="file" accept=".zip,application/zip" (change)="pick($event)" />
         </label>
         <button class="button" type="button" [disabled]="uploading()" (click)="upload()">
-          {{ uploading() ? 'Uploadingâ€¦' : 'Create project' }}
+          {{ uploading() ? 'Uploading…' : 'Create project' }}
         </button>
       </div>
       @if (uploadError(); as message) {
@@ -40,14 +54,14 @@
           <a [routerLink]="['/app/projects', project.id, 'inventory']">Analyze it</a>.
         </p>
       }
-    }
-  </section>
+    </section>
+  }
 }
 
 @let current = state();
 @switch (current.kind) {
   @case ('loading') {
-    <p class="state" role="status">Loading projects…</p>
+    <app-skeleton label="Loading projects…" variant="cards" [count]="2" />
   }
   @case ('error') {
     <div class="state state--error" role="alert">
@@ -57,14 +71,22 @@
   }
   @case ('ready') {
     @if (current.projects.length === 0) {
-      <p class="state">There are no projects yet. Run the demo seed to add the BillRite sample.</p>
+      <app-empty-state title="No projects yet" icon="folder-kanban">
+        There are no projects yet. Run the demo seed to add the BillRite sample.
+      </app-empty-state>
     } @else {
       <ul class="project-list">
         @for (project of current.projects; track project.id) {
           <li class="project">
-            <h2 class="project__name">
-              <a [routerLink]="['/app/projects', project.id, 'overview']">{{ project.name }}</a>
-            </h2>
+            <div class="project__top">
+              <span class="project__avatar" aria-hidden="true">{{ project.name.slice(0, 1) }}</span>
+              <div class="project__title">
+                <h2 class="project__name">
+                  <a [routerLink]="['/app/projects', project.id, 'overview']">{{ project.name }}</a>
+                </h2>
+                <span [class]="'badge badge--dot ' + statusTone[project.status]">{{ statusLabels[project.status] }}</span>
+              </div>
+            </div>
             @if (project.description) {
               <p class="project__description">{{ project.description }}</p>
             }
@@ -91,10 +113,10 @@
               </div>
             </dl>
             <p class="project__links">
-              <a [routerLink]="['/app/projects', project.id, 'overview']">Overview</a>
-              <a [routerLink]="['/app/projects', project.id, 'inventory']">Inventory</a>
-              <a [routerLink]="['/app/projects', project.id, 'rules']">Rules</a>
-              <a [routerLink]="['/app/projects', project.id, 'modules']">Modules</a>
+              <a [routerLink]="['/app/projects', project.id, 'overview']"><app-icon name="layout-dashboard" [size]="14" />Overview</a>
+              <a [routerLink]="['/app/projects', project.id, 'inventory']"><app-icon name="boxes" [size]="14" />Inventory</a>
+              <a [routerLink]="['/app/projects', project.id, 'rules']"><app-icon name="scroll-text" [size]="14" />Rules</a>
+              <a [routerLink]="['/app/projects', project.id, 'modules']"><app-icon name="blocks" [size]="14" />Modules</a>
             </p>
           </li>
         }

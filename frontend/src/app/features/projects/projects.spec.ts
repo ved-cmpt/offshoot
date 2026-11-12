@@ -65,6 +65,14 @@ describe('Projects', () => {
 
   afterEach(() => http.verify());
 
+  /** The upload form opens from the "New project" button. */
+  function openUpload(): void {
+    Array.from(page.querySelectorAll('button'))
+      .find((b) => b.textContent?.includes('New project'))!
+      .click();
+    fixture.detectChanges();
+  }
+
   it('announces a loading state first', () => {
     expect(page.querySelector('[role="status"]')?.textContent).toContain('Loading');
     http.expectOne('/api/v1/projects').flush(PAGE);
@@ -131,6 +139,7 @@ describe('Projects', () => {
     create('ENGINEER', false);
     http.expectOne('/api/v1/projects').flush(PAGE);
     await settle();
+    openUpload();
     const name = page.querySelector<HTMLInputElement>('input[type="text"]')!;
     name.value = 'Payroll';
     name.dispatchEvent(new Event('input'));
@@ -163,6 +172,7 @@ describe('Projects', () => {
     create('ARCHITECT', false);
     http.expectOne('/api/v1/projects').flush(PAGE);
     await settle();
+    openUpload();
     const name = page.querySelector<HTMLInputElement>('input[type="text"]')!;
     name.value = 'Bad';
     name.dispatchEvent(new Event('input'));

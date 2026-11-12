@@ -7,13 +7,25 @@
 }
 
 <main class="login">
-  <header class="login__header">
-    <h1>Offshoot</h1>
-    <p>Legacy modernization with proof. Sign in to continue.</p>
-  </header>
+  <section class="login__brand" aria-labelledby="login-title">
+    <a class="brand" routerLink="/" aria-label="Offshoot website">
+      <img src="brand/offshoot-mark.svg" alt="" width="32" height="32" />
+      <span>Offshoot</span>
+    </a>
+    <div class="login__pitch">
+      <h1 id="login-title">Sign in to Offshoot</h1>
+      <p>Legacy modernization with proof. Sign in to continue.</p>
+      <ul class="points">
+        <li><app-icon name="flask-conical" [size]="16" />Every module checked case by case against the real COBOL</li>
+        <li><app-icon name="octagon-x" [size]="16" />Gates on the server; the model can never approve</li>
+        <li><app-icon name="history" [size]="16" />Every AI call and decision in an append-only log</li>
+      </ul>
+    </div>
+    <a class="login__back" routerLink="/"><app-icon name="arrow-left" [size]="14" /> Back to the website</a>
+  </section>
 
   <div class="login__panels">
-    <section class="panel" aria-labelledby="sign-in-heading">
+    <section class="card login__form" aria-labelledby="sign-in-heading">
       <h2 id="sign-in-heading">Sign in</h2>
 
       @if (errorMessage(); as message) {
@@ -62,18 +74,18 @@
           }
         </div>
 
-        <button class="button" type="submit" [disabled]="isSubmitting()">
+        <button class="button login__submit" type="submit" [disabled]="isSubmitting()">
           {{ isSubmitting() ? 'Signing in…' : 'Sign in' }}
         </button>
       </form>
     </section>
 
-    <section class="panel" aria-labelledby="demo-heading">
+    <section class="card" aria-labelledby="demo-heading">
       <h2 id="demo-heading">Demo accounts</h2>
 
       @switch (configState().kind) {
         @case ('loading') {
-          <p role="status">Loading demo accounts…</p>
+          <p role="status" class="muted">Loading demo accounts…</p>
         }
         @case ('error') {
           <div role="alert">
@@ -90,20 +102,27 @@
         @if (state.config.demo_accounts.length === 0) {
           <p>No demo accounts are available on this server.</p>
         } @else {
-          <p class="panel__hint">Each account shows a different level of access.</p>
+          <p class="panel__hint">Each account shows a different level of access. One click signs you in.</p>
           <ul class="accounts">
             @for (account of state.config.demo_accounts; track account.username) {
               <li class="account">
-                <h3 class="account__role">{{ account.role }}</h3>
-                <p>{{ roleSummaries[account.role] }}</p>
+                <div class="account__head">
+                  <span class="account__avatar" aria-hidden="true">{{ account.role.slice(0, 1) }}</span>
+                  <h3 class="account__role">{{ account.role }}</h3>
+                </div>
+                <p class="account__summary">{{ roleSummaries[account.role] }}</p>
                 <dl class="account__credentials">
-                  <dt>Username</dt>
-                  <dd>{{ account.username }}</dd>
-                  <dt>Password</dt>
-                  <dd>{{ account.password }}</dd>
+                  <div>
+                    <dt>Username</dt>
+                    <dd>{{ account.username }}</dd>
+                  </div>
+                  <div>
+                    <dt>Password</dt>
+                    <dd>{{ account.password }}</dd>
+                  </div>
                 </dl>
                 <button
-                  class="button button--quiet"
+                  class="button button--quiet button--sm"
                   type="button"
                   [disabled]="isSubmitting()"
                   (click)="useAccount(account)"
