@@ -119,8 +119,17 @@ def _rule(rule: dict[str, Any]) -> dict[str, Any]:
     }
 
 
+def _all_projects(get: Get) -> list[dict[str, Any]]:
+    projects: list[dict[str, Any]] = []
+    while True:
+        page = get(f"/api/v1/projects?offset={len(projects)}")
+        projects.extend(page["items"])
+        if not page["items"] or len(projects) >= page["total"]:
+            return projects
+
+
 def build_api_part(get: Get) -> dict[str, Any]:
-    project = _demo_project(get("/api/v1/projects")["items"])
+    project = _demo_project(_all_projects(get))
     pid = project["id"]
     modules = sorted(get(f"/api/v1/projects/{pid}/modules"), key=lambda item: item["order_index"])
     by_program = {module["program"]: module for module in modules}

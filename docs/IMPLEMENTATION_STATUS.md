@@ -1,5 +1,22 @@
 # Implementation status
 
+## Run 07 checklist: the landing site and the redesign (v1.1.0)
+
+`[x]` means done and verified by a command that exited 0; `[~]` in progress; `[ ]` not started.
+
+- [x] Brand: original mark, wordmark, lockups, app and maskable icons, favicon set, Open Graph image (SVG, PNG, ICO), rebuild scripts, `docs/BRAND.md`, ADR-051
+- [x] Design system: dark-first SCSS tokens and a light theme, self-hosted subset Inter and JetBrains Mono (OFL), spacing, radii, shadows, motion; reduced motion stops every animation
+- [x] Routes: `/` is the landing page, the app is under `/app` with redirects from the old paths, session restore in the guards, name-based links into the demo (`/app/open/...`), lazy routes, robots.txt, sitemap.xml, SEO and social tags (ADR-052)
+- [x] Landing data: `scripts/landing_snapshot.py` from the public demo's stored runs with provenance, `--check` in CI, a seed test (ADR-054)
+- [x] Landing site: navbar, animated hero from the stored run, problem, comparison, scroll-lit pipeline, four interactive demos with deep links, reference deployment diagram, features, security, evaluation, open source, FAQ, CTA, footer
+- [x] App shell: collapsible sidebar, breadcrumbs, project switcher, command palette, shortcuts help, user menu, theme toggle, toasts, skeletons, empty states, first-visit tour
+- [x] Every screen redesigned, including a pan/zoom call graph with two layouts, syntax colouring, the repair's line diff, coverage map, mutation gauge, gate checklist, facade mode track, report contents, audit timeline (ADR-053)
+- [x] Accessibility: axe zero serious or critical on every page, both themes, at 375, 768, 1280 and 1440 px; keyboard throughout
+- [x] Performance: origin gzip for static text, no layout shift; Lighthouse on the production image recorded (ADR-055)
+- [x] Tests: unit tests for the new pieces, landing and shell journeys, smoke for the landing page; screenshots recaptured
+- [x] Self-review of every page in both themes and at phone width, and a polish pass
+- [ ] Push, green CI, Render redeploy, live smoke, README screenshots from the live demo, `RUN_07.md`, CHANGELOG 1.1.0, tag and release
+
 ## Combined Run 05 + Run 06 checklist
 
 Updated at every checkpoint. `[x]` means done and verified by a command that exited 0; `[~]` means in progress; `[ ]` means not started.
@@ -70,7 +87,8 @@ Code and tests are the ground truth. Evidence is in [`RUN_REPORTS/RUN_02.md`](RU
 | Demo safeguards | Banner, daily snapshot reset by the service itself, daily job cap, per-address write limit (ADR-048) |
 | Neon | Project "offshoot" (PostgreSQL 18.6): app role `offshoot_app`, migrations to `0006`, seeded through the local sandbox, snapshot stored, verified read-only |
 | CI | `ci.yml` per push, `slow.yml` weekly, Dependabot monthly (ADR-049) |
-| Angular | `/login`, protected shell, `/projects`, and `/projects/:id/` `inventory`, `sources/:file` `rules`, `plan`, `modules` and `modules/:mid`: self-hosted SVG call graph, layouts, dead code, line-numbered source with rule spans and copybook links, rule cards with verify, edit and reject by role, live job progress. Loading, empty, error and retry states; both themes; keyboard accessible; usable at 375 px |
+| Website | `/`: the public landing page, built from a static snapshot of stored runs (ADR-054), with four interactive demos and deep links into the app; robots.txt, sitemap.xml, social tags |
+| Angular | Since Run 07 under `/app` (ADR-052): `/app/login`, the shell with sidebar, breadcrumbs, command palette, shortcuts and tour, `/app/projects`, and `/app/projects/:id/` `inventory`, `sources/:file` `rules`, `plan`, `modules` and `modules/:mid`: self-hosted SVG call graph, layouts, dead code, line-numbered source with rule spans and copybook links, rule cards with verify, edit and reject by role, live job progress. Loading, empty, error and retry states; both themes; keyboard accessible; usable at 375 px |
 
 ## Not built yet
 
