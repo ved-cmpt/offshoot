@@ -389,3 +389,17 @@ The dashboard and report read stored rows only. Rule decisions are counted as se
 **Locking the shared accounts.** Blueprint Section 1.3 gives admins user management, which did not exist yet. It now does, as an API for admins only: `GET /admin/users`, `POST /admin/users`, `PATCH /admin/users/{id}` (display name, role, active) and `POST /admin/users/{id}/password`. Every change is audited without the password, deactivating or resetting a user revokes their sessions, and an admin cannot deactivate or demote themselves. Users are never deleted (ADR-014); there is no delete route. With one shared password, a visitor signed in as admin could otherwise lock everyone out, so **in demo mode** creating users, setting any password and changing or disabling a demo account all answer 403 `DEMO_ACCOUNTS_LOCKED`; listing still works. `tests/test_users.py` covers each case in both modes. There is no screen for user management; the API is enough for the owner.
 
 **Consequences.** Anyone can sign in to the public demo as admin, which was already true with the published per-role passwords; what an admin can do there is now bounded. Running outside demo mode with these accounts would be unsafe, so production outside a demo must create its own users, and the seed is for demo databases.
+
+## ADR-051 Brand and design system
+
+**Date:** 2026-11-11 (Run 07, the redesign the owner asked for). Replaces the system font stacks and the single-file tokens of Run 02.
+
+**Brand.** An original mark (a block of legacy code with a new shoot branching from it), a wordmark set from Inter's outlines, an app icon, a maskable icon, a favicon set and a 1200 x 630 Open Graph image, all as SVG, with PNG and ICO renderings. They were drawn for this project; none copies another company's logo, wordmark, illustration or layout. `scripts/brand/build_brand.py` and `scripts/brand/rasterize.mjs` rebuild them. `docs/BRAND.md` holds the rules.
+
+**Fonts are self-hosted, not system stacks.** Inter and JetBrains Mono, both SIL Open Font License 1.1, are served from `frontend/public/fonts/` with their licences: the Fontsource 5.3.0 Latin variable files, subset again with `fontTools` to the characters the interface uses (Inter 35 kB, JetBrains Mono 19 kB). Nothing loads from another origin, so `font-src 'self'` holds. Run 02's tokens said "nothing is loaded from outside this origin"; that still holds.
+
+**Tokens.** `frontend/src/styles/_tokens.scss` emits semantic custom properties (surfaces, borders, text, accent, status, syntax, shadows, radii, spacing, type, motion) for a dark theme and a light theme. Dark is the default: `ThemeService` picks dark unless a stored choice or the system asks for light. The old `--color-*` names stay as aliases, so nothing breaks while screens move to the new names. Status colours carry meaning only and always come with a word or an icon.
+
+**Budgets.** The initial-bundle budget is tightened to a 350 kB warning and 500 kB error (it was 500 kB and 1 MB), because the landing page now ships first. The per-component style budget rises from 4/8 kB to 10/20 kB: the landing's and the module workspace's styles are larger than Run 02's screens, and splitting them further would only move bytes between chunks.
+
+**Motion.** Every transition and animation is behind `prefers-reduced-motion: no-preference`, and a global rule stops them all under `reduce`. Animated pictures on the landing page show their final state instead.

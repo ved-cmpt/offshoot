@@ -130,11 +130,11 @@ describe('Shell', () => {
 
   it('switches between the two themes, labelled in words', async () => {
     await render();
-    buttonNamed('Use dark theme').click();
-    await settle();
-    expect(document.documentElement.dataset['theme']).toBe('dark');
     buttonNamed('Use light theme').click();
     await settle();
     expect(document.documentElement.dataset['theme']).toBe('light');
+    buttonNamed('Use dark theme').click();
+    await settle();
+    expect(document.documentElement.dataset['theme']).toBe('dark');
   });
 });

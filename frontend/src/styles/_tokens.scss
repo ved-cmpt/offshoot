@@ -1,0 +1,283 @@
+// Offshoot design tokens (docs/BRAND.md, ADR-051). Dark-first: the dark theme is the reference
+// design and the light theme is tuned to match it. Components read only the semantic custom
+// properties emitted below, never the raw palette, so both themes follow automatically.
+@use 'sass:map';
+
+// --- Raw palette. Neutrals carry a slight cool tint.
+$neutral: (
+  0: #08090c,
+  50: #0d0f14,
+  100: #111318,
+  150: #171a21,
+  200: #1d2029,
+  250: #242833,
+  300: #2e3340,
+  400: #3e4454,
+  500: #5a6173,
+  600: #7d8597,
+  700: #a6adbb,
+  800: #cdd2db,
+  900: #e9ecf1,
+  950: #f4f5f7,
+);
+
+$lime: #a3e635;
+$emerald: #34d399;
+$cyan: #22d3ee;
+
+// The signature gradient: a shoot growing, lime to emerald to cyan.
+$gradient: linear-gradient(118deg, $lime 0%, $emerald 48%, $cyan 100%);
+
+// --- Breakpoints (min-width).
+$bp-sm: 36rem; // 576px
+$bp-md: 48rem; // 768px
+$bp-lg: 64rem; // 1024px
+$bp-xl: 80rem; // 1280px
+
+@mixin up($bp) {
+  @media (min-width: $bp) {
+    @content;
+  }
+}
+
+@mixin down($bp) {
+  @media (max-width: calc(#{$bp} - 0.02px)) {
+    @content;
+  }
+}
+
+@mixin motion {
+  @media (prefers-reduced-motion: no-preference) {
+    @content;
+  }
+}
+
+// --- Theme-independent tokens.
+@mixin base-tokens {
+  --font-sans: 'Inter Variable', 'Inter', system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+  --font-mono: 'JetBrains Mono Variable', 'JetBrains Mono', ui-monospace, 'Cascadia Code', Menlo,
+    Consolas, monospace;
+
+  // Type scale. The app's body is 14px, the landing's is 16-18px.
+  --text-2xs: 0.6875rem;
+  --text-xs: 0.75rem;
+  --text-sm: 0.8125rem;
+  --text-base: 0.875rem;
+  --text-md: 1rem;
+  --text-lg: 1.125rem;
+  --text-xl: 1.25rem;
+  --text-2xl: 1.5rem;
+  --text-3xl: 1.875rem;
+  --text-4xl: 2.25rem;
+  --text-5xl: 3rem;
+  --text-6xl: 3.75rem;
+  --leading-tight: 1.15;
+  --leading-snug: 1.35;
+  --leading-normal: 1.55;
+  --tracking-tight: -0.02em;
+  --tracking-display: -0.035em;
+  --tracking-caps: 0.06em;
+
+  // Spacing: a 4px grid.
+  --space-0: 0.125rem;
+  --space-1: 0.25rem;
+  --space-2: 0.5rem;
+  --space-3: 0.75rem;
+  --space-4: 1rem;
+  --space-5: 1.5rem;
+  --space-6: 2rem;
+  --space-7: 3rem;
+  --space-8: 4rem;
+  --space-9: 6rem;
+  --space-10: 8rem;
+
+  // Radii.
+  --radius-xs: 0.25rem;
+  --radius-sm: 0.375rem;
+  --radius: 0.5rem;
+  --radius-lg: 0.75rem;
+  --radius-xl: 1rem;
+  --radius-2xl: 1.5rem;
+  --radius-pill: 999px;
+
+  // Motion. Every transition and animation sits behind prefers-reduced-motion.
+  --ease-out: cubic-bezier(0.16, 1, 0.3, 1);
+  --ease-in-out: cubic-bezier(0.65, 0, 0.35, 1);
+  --ease-spring: cubic-bezier(0.34, 1.56, 0.64, 1);
+  --dur-fast: 120ms;
+  --dur: 200ms;
+  --dur-slow: 360ms;
+  --dur-slower: 700ms;
+
+  // Layout.
+  --content-width: 72rem;
+  --page-width: 75rem;
+  --sidebar-width: 15rem;
+  --sidebar-rail: 3.75rem;
+  --topbar-height: 3.25rem;
+
+  --gradient-accent: #{$gradient};
+  --lime: #{$lime};
+  --emerald: #{$emerald};
+  --cyan: #{$cyan};
+}
+
+@mixin dark-tokens {
+  color-scheme: dark;
+
+  --bg: #{map.get($neutral, 0)};
+  --bg-elevated: #{map.get($neutral, 50)};
+  --surface-1: #{map.get($neutral, 100)};
+  --surface-2: #{map.get($neutral, 150)};
+  --surface-3: #{map.get($neutral, 200)};
+  --surface-inset: #{map.get($neutral, 50)};
+  --overlay: rgb(4 5 8 / 72%);
+  --glass: rgb(13 15 20 / 72%);
+
+  --border: rgb(255 255 255 / 8%);
+  --border-strong: rgb(255 255 255 / 14%);
+  --border-accent: rgb(52 211 153 / 45%);
+
+  --text: #{map.get($neutral, 950)};
+  --text-2: #{map.get($neutral, 700)};
+  --text-3: #{map.get($neutral, 600)};
+  --text-inverse: #{map.get($neutral, 0)};
+
+  --accent: #{$emerald};
+  --accent-fg: #4be3a7;
+  --accent-soft: rgb(52 211 153 / 12%);
+  --on-accent: #04130c;
+  --focus: #{$cyan};
+
+  --ok: #4ade80;
+  --ok-bg: rgb(74 222 128 / 10%);
+  --ok-border: rgb(74 222 128 / 32%);
+  --danger: #f87171;
+  --danger-bg: rgb(248 113 113 / 10%);
+  --danger-border: rgb(248 113 113 / 35%);
+  --warn: #fbbf24;
+  --warn-bg: rgb(251 191 36 / 10%);
+  --warn-border: rgb(251 191 36 / 32%);
+  --info: #60a5fa;
+  --info-bg: rgb(96 165 250 / 10%);
+  --info-border: rgb(96 165 250 / 32%);
+  --violet: #a78bfa;
+  --violet-bg: rgb(167 139 250 / 12%);
+
+  --highlight: rgb(251 191 36 / 14%);
+  --highlight-strong: rgb(251 191 36 / 26%);
+
+  --shadow-sm: 0 1px 2px rgb(0 0 0 / 40%);
+  --shadow-md: 0 1px 0 rgb(255 255 255 / 4%) inset, 0 8px 24px -8px rgb(0 0 0 / 60%);
+  --shadow-lg: 0 1px 0 rgb(255 255 255 / 5%) inset, 0 24px 64px -16px rgb(0 0 0 / 70%);
+  --shadow-popover: 0 0 0 1px rgb(255 255 255 / 8%), 0 16px 48px -8px rgb(0 0 0 / 75%);
+  --glow-accent: 0 0 0 1px rgb(52 211 153 / 30%), 0 10px 40px -10px rgb(52 211 153 / 45%);
+
+  // Syntax colours.
+  --syn-keyword: #c4a5ff;
+  --syn-string: #a5e88a;
+  --syn-number: #fbbf72;
+  --syn-comment: #6b7385;
+  --syn-type: #67e8f9;
+  --syn-name: #e9ecf1;
+  --syn-punct: #8b93a5;
+  --syn-level: #f9a8d4;
+
+  // Aliases kept for the screens' older styles.
+  --color-bg: var(--bg);
+  --color-surface: var(--surface-1);
+  --color-surface-raised: var(--surface-2);
+  --color-text: var(--text);
+  --color-text-muted: var(--text-2);
+  --color-border: var(--border-strong);
+  --color-accent: var(--accent-fg);
+  --color-accent-hover: #7cf0c1;
+  --color-on-accent: var(--on-accent);
+  --color-focus: var(--focus);
+  --color-danger: var(--danger);
+  --color-danger-bg: var(--danger-bg);
+  --color-ok: var(--ok);
+  --color-ok-bg: var(--ok-bg);
+  --color-highlight: var(--highlight-strong);
+  --color-banner: #11161a;
+  --color-on-banner: var(--text-2);
+}
+
+@mixin light-tokens {
+  color-scheme: light;
+
+  --bg: #fafafb;
+  --bg-elevated: #ffffff;
+  --surface-1: #ffffff;
+  --surface-2: #f4f5f7;
+  --surface-3: #eceef2;
+  --surface-inset: #f7f8fa;
+  --overlay: rgb(11 13 18 / 40%);
+  --glass: rgb(255 255 255 / 76%);
+
+  --border: #e6e8ed;
+  --border-strong: #d3d8e0;
+  --border-accent: rgb(4 120 87 / 45%);
+
+  --text: #0b0d12;
+  --text-2: #4a5160;
+  --text-3: #636b7c;
+  --text-inverse: #ffffff;
+
+  --accent: #059669;
+  --accent-fg: #047857;
+  --accent-soft: rgb(5 150 105 / 9%);
+  --on-accent: #04130c;
+  --focus: #0e7490;
+
+  --ok: #067647;
+  --ok-bg: #ecfdf3;
+  --ok-border: #a6e9c5;
+  --danger: #b42318;
+  --danger-bg: #fef3f2;
+  --danger-border: #fdb4ad;
+  --warn: #93370d;
+  --warn-bg: #fffaeb;
+  --warn-border: #fedf89;
+  --info: #175cd3;
+  --info-bg: #eff8ff;
+  --info-border: #b2ddff;
+  --violet: #5b21b6;
+  --violet-bg: #f4f0ff;
+
+  --highlight: #fff6d6;
+  --highlight-strong: #ffe9a3;
+
+  --shadow-sm: 0 1px 2px rgb(16 24 40 / 6%);
+  --shadow-md: 0 1px 2px rgb(16 24 40 / 5%), 0 8px 24px -10px rgb(16 24 40 / 14%);
+  --shadow-lg: 0 2px 4px rgb(16 24 40 / 5%), 0 24px 56px -16px rgb(16 24 40 / 22%);
+  --shadow-popover: 0 0 0 1px rgb(16 24 40 / 8%), 0 16px 40px -8px rgb(16 24 40 / 22%);
+  --glow-accent: 0 0 0 1px rgb(5 150 105 / 25%), 0 10px 32px -12px rgb(5 150 105 / 40%);
+
+  --syn-keyword: #6d28d9;
+  --syn-string: #2f6f12;
+  --syn-number: #a14d05;
+  --syn-comment: #6b7385;
+  --syn-type: #0e6f86;
+  --syn-name: #0b0d12;
+  --syn-punct: #5a6173;
+  --syn-level: #a3155f;
+
+  --color-bg: var(--bg);
+  --color-surface: var(--surface-1);
+  --color-surface-raised: var(--surface-2);
+  --color-text: var(--text);
+  --color-text-muted: var(--text-2);
+  --color-border: var(--border-strong);
+  --color-accent: var(--accent-fg);
+  --color-accent-hover: #065f46;
+  --color-on-accent: var(--on-accent);
+  --color-focus: var(--focus);
+  --color-danger: var(--danger);
+  --color-danger-bg: var(--danger-bg);
+  --color-ok: var(--ok);
+  --color-ok-bg: var(--ok-bg);
+  --color-highlight: var(--highlight-strong);
+  --color-banner: #f1f5f3;
+  --color-on-banner: var(--text-2);
+}
