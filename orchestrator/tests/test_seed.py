@@ -333,3 +333,33 @@ def test_the_demo_reset_restores_the_seeded_state_and_keeps_the_audit_log(db: Se
     settings = get_settings().model_copy(update={"demo_mode": False})
     with pytest.raises(ResetRefused):
         reset_demo(db, settings)
+
+
+def test_the_landing_snapshot_matches_the_seed(client: TestClient, seeded: None) -> None:
+    """The landing page's numbers (ADR-054) are the ones a fresh seed produces, ids and times aside.
+
+    The committed snapshot was read from the public demo; this rebuilds its API part from the seed
+    in the test database with the same code, and requires the two to be equal.
+    """
+    import importlib.util
+    import json
+
+    spec = importlib.util.spec_from_file_location("landing_snapshot", "/repo-scripts/landing_snapshot.py")
+    assert spec is not None
+    assert spec.loader is not None
+    landing = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(landing)
+
+    session = client.post("/api/v1/auth/login", json={"username": "viewer", "password": "demo1234"})
+    assert session.status_code == 200
+    headers = bearer(session.json())
+
+    def get(path: str) -> object:
+        response = client.get(path, headers=headers)
+        assert response.status_code == 200, path
+        return response.json()
+
+    built = landing.build_api_part(get)
+    committed = json.loads(Path("/repo-landing/landing-snapshot.json").read_text(encoding="utf-8"))
+    assert landing.differences(landing.deterministic(built), landing.deterministic(committed["api"])) == []
+    assert built["rounding"]["failed"] == len(built["rounding"]["mismatches"]) > 0

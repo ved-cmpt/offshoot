@@ -33,6 +33,9 @@ jobs:
       - name: Tracked text is UTF-8 with LF and no replacement characters
         working-directory: .
         run: python scripts/check_text.py
+      - name: The landing page's snapshot agrees with the sources and docs/EVALUATION.md
+        working-directory: .
+        run: python scripts/landing_snapshot.py --check
       - run: uv sync --frozen
       - run: uv run ruff check .
       - run: uv run ruff format --check .
@@ -152,6 +155,7 @@ jobs:
           curl -fsS http://localhost:8300/api/v1/config | grep -q '"execution_enabled":false'
           test "$(curl -s -o /dev/null -w '%{http_code}' http://localhost:8300/api/v1/nothing)" = "404"
           curl -fsS http://localhost:8300/robots.txt | grep -q 'Sitemap:'
+          curl -fsS http://localhost:8300/data/landing-snapshot.json | grep -q '"schema": 1'
           docker stats --no-stream --format '{{.Name}} {{.MemUsage}}'
       - name: Logs on failure
         if: failure()

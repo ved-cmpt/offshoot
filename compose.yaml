@@ -73,6 +73,8 @@ services:
       - ./orchestrator:/app
       - ./legacy/billrite:/legacy/billrite:ro
       - ./scripts:/repo-scripts:ro
+      # The landing page's snapshot, which a seed test compares with a fresh seed (ADR-054).
+      - ./frontend/public/data:/repo-landing:ro
       # The builder has no network at all; its API is a Unix socket in this volume (ADR-030).
       - builder-socket:/run/builder:ro
     depends_on:
