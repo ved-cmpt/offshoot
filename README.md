@@ -1,10 +1,19 @@
-# Offshoot
+<p align="center">
+  <picture>
+    <source media="(prefers-color-scheme: dark)" srcset="assets/brand/offshoot-logo-on-dark.svg">
+    <img src="assets/brand/offshoot-logo-on-light.svg" alt="Offshoot" height="56">
+  </picture>
+</p>
 
-**Offshoot: AI-assisted COBOL → C# modernization, with proof.**
+<p align="center"><strong>AI-assisted COBOL → C# modernization, with proof.</strong></p>
 
-[![CI](https://github.com/ved-cmpt/offshoot/actions/workflows/ci.yml/badge.svg)](https://github.com/ved-cmpt/offshoot/actions/workflows/ci.yml)
+<p align="center">
+  <a href="https://github.com/ved-cmpt/offshoot/actions/workflows/ci.yml"><img src="https://github.com/ved-cmpt/offshoot/actions/workflows/ci.yml/badge.svg" alt="CI"></a>
+</p>
 
-**Live demo: https://offshoot-go2y.onrender.com** (a free instance: after 15 idle minutes it sleeps, and the first visit takes about 45 seconds to wake it)
+**Website and live demo: https://offshoot-go2y.onrender.com** — the pitch site is at `/`, the app at [`/app`](https://offshoot-go2y.onrender.com/app). It runs on a free instance: after 15 idle minutes it sleeps, and the first visit takes about 45 seconds to wake it.
+
+![The landing page: the stored RATECALC run replayed, 484 of 500 cases and blocked, then 500 of 500 after one repair](assets/screenshots/readme/landing-hero.png)
 
 | Username | Password | Can |
 |---|---|---|
@@ -13,7 +22,7 @@
 | `architect` | `demo1234` | Also verify rules and approve modules and plans |
 | `admin` | `demo1234` | Read the audit log and the user list |
 
-All data is synthetic. The demo runs mock AI responses, never compiles or runs code (its results come from stored runs of the real sandbox), and resets itself every 24 hours.
+All data is synthetic. The demo runs mock AI responses, never compiles or runs code (its results come from stored runs of the real sandbox), and resets itself every 24 hours. A first visit offers a short guided tour of the rounding story; press **Ctrl+K** (⌘K) anywhere in the app to jump to a screen, module, rule or action, and **?** for the keyboard shortcuts.
 
 ## What it does
 
@@ -35,20 +44,23 @@ This is the demo's centrepiece; every number comes from stored runs.
 
 BillRite's rate calculator (`RATECALC`) rounds money with COBOL's `ROUNDED`, which rounds a half cent up. The first C# translation used `Math.Round`, which by default rounds a half cent to the even cent. Its own 8 unit tests passed, because none of their examples landed on a half cent.
 
-The harness did not pass it. **484 of 500 cases were identical; 16 differed, each by exactly one cent.** In 8 of them the energy charge's tier sum ended in a half cent; in 8 more only the 2.5% levy did. For a residential customer in October using 610 kWh, the tiers add up to 54.72 + 1.185 = 55.905. COBOL bills 55.91 and the first translation billed 55.90. The module was **blocked** before anyone could approve it.
+The harness did not pass it. **484 of 500 cases were identical; 16 differed, each by exactly one cent.** In 8 of them the energy charge's tier sum ended in a half cent; in 8 more only the 2.5% levy did. In stored case 82 (BillRite data record 14: a residential customer in December using 610 kWh; any month outside the summer tiers prices the same), the tiers add up to 600 × 0.0912 + 10 × 0.1185 = 54.72 + 1.185 = 55.905. COBOL bills 55.91 and the first translation billed 55.90. The module was **blocked** before anyone could approve it.
 
 One repair later, all **500 of 500** cases matched, with 93.33% paragraph coverage (the one paragraph never reached is dead code) and a 79.49% mutation score. The architect then approved it and sent it through shadow mode: 20 recorded requests compared, 0 mismatched. It was promoted to modern, and the facade now answers that same request with 55.91, from C#.
 
-![The RATECALC verification report: 484 of 500 identical, with the one-cent differences field by field](assets/screenshots/readme/rounding-defect.png)
+![The RATECALC module: 484 of 500 identical, blocked, with the one-cent differences field by field](assets/screenshots/readme/rounding-defect.png)
 
 ## Screenshots
 
+Dark first, with a light theme; every screen works from 375 px up.
+
 | | |
 |---|---|
-| ![Sign-in with the demo accounts](assets/screenshots/readme/sign-in.png) | ![Project overview](assets/screenshots/readme/overview.png) |
-| ![Inventory and call graph](assets/screenshots/readme/inventory.png) | ![Business rules with source links](assets/screenshots/readme/rules.png) |
+| ![Four interactive demos on the landing page, from real BillRite code and stored runs](assets/screenshots/readme/landing-demos.png) | ![The project overview: KPI cards, module states, coverage and mutation, activity](assets/screenshots/readme/overview.png) |
+| ![The call graph: pan, zoom and two layouts](assets/screenshots/readme/call-graph.png) | ![The command palette (Ctrl+K)](assets/screenshots/readme/command-palette.png) |
+| ![A verified module: 500 of 500 identical, every gate passed](assets/screenshots/readme/verified-module.png) | ![Business rules, each citing its source lines](assets/screenshots/readme/rules.png) |
 
-![A verified module: 500 of 500 identical, every gate passed](assets/screenshots/readme/verified-module.png)
+![The verification report in the light theme](assets/screenshots/readme/rounding-defect-light.png)
 
 ## Architecture
 
@@ -74,7 +86,7 @@ Locally, Docker Compose runs all six services. The public demo is a single 512 M
 
 | Layer | Technology |
 |---|---|
-| Frontend | Angular 22, TypeScript, plain SCSS, no UI kit |
+| Frontend | Angular 22, TypeScript, SCSS design tokens (dark and light), self-hosted Inter and JetBrains Mono, Lucide icons; no UI kit and no chart, graph or highlighting library (ADR-053) |
 | API | Python 3.12, FastAPI, SQLAlchemy 2, Alembic, PostgreSQL 17 (18 on Neon) |
 | Legacy | GnuCOBOL 3.2; BillRite, an original synthetic 1990s utility-billing batch system |
 | Target | C# on .NET 10, xUnit, Stryker.NET, YARP |
@@ -109,7 +121,7 @@ docker compose exec orchestrator alembic upgrade head
 docker compose exec orchestrator python -m app.scripts.seed_demo
 ```
 
-Open http://localhost:4200 and sign in as `engineer` / `demo1234`. The seed runs the real pipeline through the sandbox, so it takes about two minutes. Locally everything runs: as the engineer, open **BillRite**, then **Modules**, then **RATECALC**, and press **Repair** to watch the fix verified against all 500 cases. Then, as the architect, approve it, start shadow mode, replay recorded traffic and promote it to modern. The facade's business API is at http://localhost:8200:
+Open http://localhost:4200 for the website, or http://localhost:4200/app to sign in as `engineer` / `demo1234`. The seed runs the real pipeline through the sandbox, so it takes about two minutes. Locally everything runs: as the engineer, open **BillRite**, then **Modules**, then **RATECALC**, and press **Repair** to watch the fix verified against all 500 cases. Then, as the architect, approve it, start shadow mode, replay recorded traffic and promote it to modern. The facade's business API is at http://localhost:8200:
 
 ```powershell
 Invoke-RestMethod -Method Post -Uri http://localhost:8200/billing/rate -ContentType application/json -Body '{"customer_class":"R","month":10,"kwh":610}'
@@ -123,11 +135,13 @@ To run the legacy batch on its own: `docker compose run --rm cobol-runner make b
 
 | Suite | Count | Command |
 |---|---|---|
-| API, agent, parser, sandbox, harness, COBOL (pytest) | 787 | `docker compose exec orchestrator pytest` |
-| Angular unit tests (Vitest) | 163 | `docker compose exec frontend npm test` |
+| API, agent, parser, sandbox, harness, COBOL (pytest) | 788 | `docker compose exec orchestrator pytest` |
+| Angular unit tests (Vitest) | 209 | `docker compose exec frontend npm test` |
 | .NET (facade and template) | 26 | `docker compose run --rm dotnet-builder build-and-test` |
-| Browser journeys and axe accessibility, both themes, 1280 and 375 px | 18 | `cd e2e; npx playwright test` |
-| Production smoke checklist, also run against the live demo | 14 | `cd e2e; npx playwright test -c playwright.smoke.config.ts` |
+| Browser journeys (website, shell, workflow) and axe accessibility on every page, both themes, at 375, 768, 1280 and 1440 px | 32 | `cd e2e; npx playwright test` |
+| Production smoke checklist, also run against the live demo | 16 | `cd e2e; npx playwright test -c playwright.smoke.config.ts` |
+
+Lighthouse on the live website: performance 91 (mobile) and 100 (desktop); accessibility, best practices and SEO 100 on both (Run 07 report).
 
 CI runs on every push: lint and strict types, dependency audits for Python, npm and NuGet, a fresh-checkout Compose stack with the real sandbox, the production image, a secret scan of the full history and a text-encoding check. The slow suites run weekly. See [`docs/SECURITY.md`](docs/SECURITY.md) for the controls and their tests.
 
@@ -142,10 +156,11 @@ CI runs on every push: lint and strict types, dependency audits for Python, npm 
 ## Documents
 
 - [`docs/IMPLEMENTATION_BLUEPRINT.md`](docs/IMPLEMENTATION_BLUEPRINT.md): the specification
-- [`docs/ARCHITECTURE_DECISIONS.md`](docs/ARCHITECTURE_DECISIONS.md): 50 decisions and deviations
+- [`docs/ARCHITECTURE_DECISIONS.md`](docs/ARCHITECTURE_DECISIONS.md): 55 decisions and deviations
+- [`docs/BRAND.md`](docs/BRAND.md): the logo, colours, type and the rules the interface follows
 - [`docs/EVALUATION.md`](docs/EVALUATION.md), [`docs/SECURITY.md`](docs/SECURITY.md), [`docs/API.md`](docs/API.md)
 - [`docs/DEPLOYMENT.md`](docs/DEPLOYMENT.md), [`docs/RUNBOOK.md`](docs/RUNBOOK.md)
-- [`docs/RUN_REPORTS/`](docs/RUN_REPORTS/): what each of the six implementation runs did and proved
+- [`docs/RUN_REPORTS/`](docs/RUN_REPORTS/): what each of the seven implementation runs did and proved
 - [`AGENTS.md`](AGENTS.md): rules for coding agents working on this repository
 
 The project was developed under the working names LegacyLens and ParityForge before it became Offshoot.

@@ -15,7 +15,9 @@
 - [x] Performance: origin gzip for static text, no layout shift; Lighthouse on the production image recorded (ADR-055)
 - [x] Tests: unit tests for the new pieces, landing and shell journeys, smoke for the landing page; screenshots recaptured
 - [x] Self-review of every page in both themes and at phone width, and a polish pass
-- [ ] Push, green CI, Render redeploy, live smoke, README screenshots from the live demo, `RUN_07.md`, CHANGELOG 1.1.0, tag and release
+- [x] Push, green CI (run 43151208952), Render redeploy, live smoke 16 of 16, live Lighthouse, README screenshots from the live demo, `RUN_07.md`, CHANGELOG 1.1.0, tag and release v1.1.0
+
+**Current state:** seven runs are complete and v1.1.0 is released. The website and the demo are live at https://offshoot-go2y.onrender.com (the app under `/app`). Evidence is in [`RUN_REPORTS/RUN_07.md`](RUN_REPORTS/RUN_07.md).
 
 ## Combined Run 05 + Run 06 checklist
 
@@ -98,7 +100,7 @@ Nothing in the v1 scope. A demo video (Blueprint Section 18) was not recorded; t
 
 - **Live Gemini beyond the sample.** Only MTRVAL and RATECALC extraction and one RATECALC migration have run live, once each. The live plan and a live repair never ran. Which schema keyword Gemini refused is unknown (ADR-046).
 - **The daily reset on Render.** It is tested and runs locally, but at the time of the release no 24 hours had passed on the live service. Its next run shows in the audit log as `demo.reset` with `mode: snapshot`.
-- **The weekly slow suites on GitHub** (`slow.yml`) have not run yet; they run on Mondays or with `gh workflow run slow.yml`.
+- **The weekly slow suites on GitHub** (`slow.yml`) ran on 2026-11-09 and passed (seen in Run 07).
 
 ## Known limits
 

@@ -53,8 +53,10 @@ test('README screenshots', async ({ page }) => {
   await page.screenshot({ path: `${OUT}/rules.png` });
 
   await page.goto('/app/open/overview');
+  await expect(page.locator('.tile').first()).toBeVisible();
   await page.keyboard.press('Control+k');
-  await page.getByRole('combobox').fill('rate');
+  await page.getByRole('combobox', { name: /Search screens/ }).fill('rate');
+  await expect(page.getByRole('option', { name: /RATECALC/ }).first()).toBeVisible();
   await settle(page);
   await page.screenshot({ path: `${OUT}/command-palette.png` });
 

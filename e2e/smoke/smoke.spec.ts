@@ -240,7 +240,8 @@ test('a link from the landing page signs in and opens the same stored run', asyn
   await page.addInitScript(() => window.localStorage.setItem('offshoot-tour-done', '1'));
   await page.goto('/#demo');
   await page.getByRole('tabpanel').getByRole('link', { name: 'See it in the app' }).click();
-  await page.getByLabel('Username').fill(username('viewer'));
+  // The engineer, not the viewer: the live login limit counts sign-ins per name.
+  await page.getByLabel('Username').fill(username('engineer'));
   await page.getByLabel('Password').fill(password());
   await page.getByRole('button', { name: 'Sign in', exact: true }).click();
   await expect(page.getByRole('heading', { name: 'RATECALC', level: 1 })).toBeVisible();

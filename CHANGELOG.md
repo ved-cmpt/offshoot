@@ -4,6 +4,23 @@ All notable changes are recorded here. Dates are UTC.
 
 ## [Unreleased]
 
+## [1.1.0] - 2026-11-12
+
+A website and a redesigned app. Behaviour, the API and the data are unchanged.
+
+### Run 07 (2026-11-11 to 2026-11-12)
+
+- **Brand.** An original mark (a block of legacy code with a new shoot growing from it), an outlined wordmark, lockups, app and maskable icons, a favicon set and an Open Graph image, as SVG with PNG and ICO renderings and the scripts that rebuild them (`docs/BRAND.md`, ADR-051).
+- **Design system.** Dark-first SCSS tokens with a light theme; self-hosted, subset Inter and JetBrains Mono (SIL OFL 1.1); spacing, radii, shadows and motion tokens; every animation stops under `prefers-reduced-motion`.
+- **Website at `/`.** A sticky navbar; a hero that replays the stored RATECALC run (484 of 500 cases, blocked, then 500 of 500 after one repair); the problem and an honest comparison; the seven steps lit up on scroll; four interactive demos built from real BillRite code and stored results (the rounding defect, the two-digit year window, the meter rollover and the blocked prompt injection), each with a link into the same run in the app; the reference deployment model, labelled as a model with what v1 builds; features, security, the evaluation (mock and live columns), open source, an FAQ and a footer. Its numbers come from `frontend/public/data/landing-snapshot.json`, written from stored runs by `scripts/landing_snapshot.py` with run ids and the seed, checked in CI and against a fresh seed (ADR-054). SEO and social tags, `robots.txt`, `sitemap.xml` and a web manifest.
+- **The app moved to `/app`.** Old paths redirect; the session is restored by the route guards, so the website never waits for it; links into the demo by name, such as `/app/open/module/RATECALC` (ADR-052).
+- **New app shell.** A collapsible icon sidebar with a project switcher and a user menu, breadcrumbs, a command palette (Ctrl or Cmd+K) over screens, modules, rules, sources and actions, G-letter shortcuts with a help sheet (?), toasts, skeleton loaders, empty states and a dismissible first-visit tour of the rounding story.
+- **Every screen redesigned.** Sign-in with one-click demo accounts; project cards; an overview with KPI cards, a module-state chart, a coverage and mutation chart and an activity timeline; an inventory with a call graph that pans, zooms, fits and switches layout; syntax-coloured COBOL and C#; rules with state pills, a table view and links to one rule; a plan with a service map and a timeline; module list bars; a module workspace with a result hero, COBOL beside C# with what the repair changed, field-level diffs, a coverage map, a mutation gauge, a gate checklist and a facade mode track; a report with a contents rail; an audit log with category chips and a timeline view. Still no highlighting, graph or chart library (ADR-053).
+- **Accessibility.** axe finds no serious or critical issue on any page, in either theme, at 375, 768, 1280 or 1440 px.
+- **Performance.** The origin gzips static text (never API responses), and the landing page no longer shifts as it loads (ADR-055). Lighthouse on the live website: performance 91 on mobile and 100 on desktop, with accessibility, best practices and SEO at 100 on both.
+- **Fixed:** the upload button's mis-encoded ellipsis; the README's rounding example now names the stored case (December, case 82).
+- **Tests:** pytest 788, Angular 209 (from 163), .NET 26, browser journeys and accessibility 32 (from 18), smoke 16 (from 14), all passing; the smoke checklist passes against the live service.
+
 ## [1.0.0] - 2026-11-08
 
 The first release: the full workflow locally, and a live public demo at https://offshoot-go2y.onrender.com.
