@@ -12,7 +12,8 @@
   margin-block: var(--space-4);
 }
 
-label {
+.filters label,
+.extract label {
   display: inline-grid;
   gap: var(--space-1);
   font-size: var(--text-sm);
@@ -20,7 +21,8 @@ label {
 
 .counts {
   margin-bottom: var(--space-3);
-  color: var(--color-text-muted);
+  color: var(--text-3);
+  font-size: var(--text-sm);
 }
 
 .list {
@@ -35,4 +37,108 @@ label {
   justify-content: space-between;
   gap: var(--space-3);
   margin-top: var(--space-4);
+}
+
+.toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-3);
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: var(--space-2);
+}
+
+.pills {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.pill {
+  display: inline-flex;
+  gap: var(--space-2);
+  align-items: center;
+  min-height: 2rem;
+  padding: 0 var(--space-3);
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius-pill);
+  background: var(--surface-1);
+  color: var(--text-2);
+  font: inherit;
+  font-size: var(--text-sm);
+  text-transform: capitalize;
+  cursor: pointer;
+
+  strong {
+    color: var(--text);
+    font-variant-numeric: tabular-nums;
+  }
+
+  &::before {
+    width: 0.45rem;
+    height: 0.45rem;
+    border-radius: 50%;
+    background: var(--text-3);
+    content: '';
+  }
+
+  &[aria-pressed='true'] {
+    border-color: var(--border-accent);
+    background: var(--accent-soft);
+    color: var(--text);
+  }
+}
+
+.pill--verified::before {
+  background: var(--ok);
+}
+
+.pill--rejected::before {
+  background: var(--danger);
+}
+
+.pill--edited::before {
+  background: var(--info);
+}
+
+.segmented {
+  display: inline-flex;
+  padding: 2px;
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius);
+  background: var(--surface-2);
+
+  button {
+    display: inline-flex;
+    gap: var(--space-1);
+    align-items: center;
+    min-height: 1.875rem;
+    padding: 0 var(--space-3);
+    border: 0;
+    border-radius: var(--radius-sm);
+    background: none;
+    color: var(--text-2);
+    font: inherit;
+    font-size: var(--text-sm);
+    cursor: pointer;
+
+    &[aria-pressed='true'] {
+      background: var(--surface-1);
+      color: var(--text);
+      box-shadow: var(--shadow-sm);
+    }
+  }
+}
+
+.invalid {
+  border-color: var(--danger-border) !important;
+  color: var(--danger);
+  text-decoration: line-through;
+}
+
+td code + code {
+  margin-left: var(--space-1);
 }

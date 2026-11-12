@@ -110,6 +110,7 @@
 
 .charts {
   display: grid;
+  grid-template-columns: minmax(0, 1fr);
   gap: var(--space-4);
 
   @include t.up(t.$bp-lg) {
@@ -323,8 +324,8 @@
 
 .tip {
   position: absolute;
+  right: 0;
   bottom: calc(100% + 6px);
-  left: 100%;
   z-index: 2;
   padding: var(--space-1) var(--space-2);
   border: 1px solid var(--border-strong);
@@ -336,7 +337,6 @@
   white-space: nowrap;
   opacity: 0;
   pointer-events: none;
-  transform: translateX(-50%);
 }
 
 .bars__value {

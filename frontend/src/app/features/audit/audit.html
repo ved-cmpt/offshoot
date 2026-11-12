@@ -1,5 +1,10 @@
-<h1 class="page-title">Audit log</h1>
-<p class="muted">
+<div class="page-head">
+  <div>
+    <p class="eyebrow">Append-only</p>
+    <h1 class="page-title">Audit log</h1>
+  </div>
+</div>
+<p class="page-lede">
   Append-only: every AI proposal, job and human decision, as stored. The database refuses changes to
   it.
 </p>
@@ -11,6 +16,14 @@
 } @else {
   @let current = state();
   <section class="filters" aria-label="Filter the audit log">
+    <div class="segmented" role="group" aria-label="View">
+      <button type="button" [attr.aria-pressed]="view() === 'table'" (click)="view.set('table')">
+        <app-icon name="rows-3" [size]="14" />Table
+      </button>
+      <button type="button" [attr.aria-pressed]="view() === 'timeline'" (click)="view.set('timeline')">
+        <app-icon name="history" [size]="14" />Timeline
+      </button>
+    </div>
     <label>
       Action
       <select (change)="filter('prefix', $any($event.target).value)">
@@ -35,7 +48,7 @@
 
   @switch (current.kind) {
     @case ('loading') {
-      <p class="state" role="status">Loading the audit log…</p>
+      <app-skeleton label="Loading the audit log…" variant="table" [count]="8" />
     }
     @case ('error') {
       <div class="state state--error" role="alert">
@@ -46,6 +59,31 @@
     @case ('ready') {
       @if (current.page.items.length) {
         <p class="muted">{{ current.page.total }} entries.</p>
+        @if (view() === 'timeline') {
+          <ol class="timeline" aria-label="Audit timeline">
+            @for (entry of current.page.items; track entry.id) {
+              <li>
+                <span [class]="'timeline__icon chip--' + kind(entry.action).tone" aria-hidden="true">
+                  <app-icon [name]="kind(entry.action).icon" [size]="14" />
+                </span>
+                <div class="timeline__body">
+                  <p>
+                    <span [class]="'chip chip--' + kind(entry.action).tone">{{ entry.action }}</span>
+                    <strong>{{ entry.actor_name ?? 'system' }}</strong>
+                    @if (entry.entity_type) {
+                      <span class="subtle">{{ entry.entity_type }} <code>{{ entry.entity_id?.slice(0, 8) }}</code></span>
+                    }
+                  </p>
+                  <p class="subtle"><time [attr.datetime]="entry.occurred_at">{{ entry.occurred_at | date: 'medium' : 'UTC' }} UTC</time></p>
+                  <details>
+                    <summary>Details</summary>
+                    <pre>{{ entry.safe_metadata | json }}</pre>
+                  </details>
+                </div>
+              </li>
+            }
+          </ol>
+        } @else {
         <div class="table-scroll" tabindex="0" role="region" aria-label="Audit entries">
           <table class="data-table">
             <thead>
@@ -62,7 +100,7 @@
                 <tr>
                   <td>{{ entry.occurred_at | date: 'medium' : 'UTC' }}</td>
                   <th scope="row">
-                    <code>{{ entry.action }}</code>
+                    <span [class]="'chip chip--' + kind(entry.action).tone">{{ entry.action }}</span>
                   </th>
                   <td>{{ entry.actor_name ?? 'system' }}</td>
                   <td>
@@ -78,6 +116,7 @@
             </tbody>
           </table>
         </div>
+        }
         <nav class="pager" aria-label="Audit pages">
           <button
             class="button button--quiet"
@@ -101,7 +140,7 @@
           </button>
         </nav>
       } @else {
-        <p class="state">No entries match these filters.</p>
+        <app-empty-state title="No entries" icon="filter">No entries match these filters.</app-empty-state>
       }
     }
   }

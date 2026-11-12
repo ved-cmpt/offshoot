@@ -18,6 +18,14 @@
       Show -EXIT labels
     </label>
   }
+  <div class="segmented" role="group" aria-label="Layout">
+    <button type="button" [attr.aria-pressed]="direction() === 'LR'" (click)="setDirection('LR')">
+      <app-icon name="arrow-right" [size]="14" />Left to right
+    </button>
+    <button type="button" [attr.aria-pressed]="direction() === 'TB'" (click)="setDirection('TB')">
+      <app-icon name="list-tree" [size]="14" />Top to bottom
+    </button>
+  </div>
 </div>
 
 @let current = state();
@@ -36,63 +44,99 @@
       <p class="state">The graph is empty. Run the analysis first.</p>
     } @else {
       <p class="hint">
-        Select a node to list its links. Solid lines perform or call, dashed lines are a GO TO, and
-        a thin line is reached only through a THRU range.
+        Drag to pan, Ctrl or ⌘ with the wheel to zoom, and select a node to list its links. Solid
+        lines perform or call, dashed lines are a GO TO, and a thin line is reached only through a
+        THRU range.
       </p>
-      <div class="scroll" tabindex="0" role="region" aria-label="Call graph, scrolls sideways">
-        <svg
-          class="graph"
-          role="group"
-          aria-label="Call graph"
-          [attr.width]="layout().width"
-          [attr.height]="layout().height"
-          [attr.viewBox]="'0 0 ' + layout().width + ' ' + layout().height"
+      <div class="canvas">
+        <div class="zoombar" role="group" aria-label="Zoom">
+          <button type="button" class="zoombar__btn" (click)="zoomBy(1.2)" aria-label="Zoom in">
+            <app-icon name="zoom-in" [size]="16" />
+          </button>
+          <span class="zoombar__value" aria-live="polite">{{ zoomText() }}</span>
+          <button type="button" class="zoombar__btn" (click)="zoomBy(1 / 1.2)" aria-label="Zoom out">
+            <app-icon name="zoom-out" [size]="16" />
+          </button>
+          <button type="button" class="zoombar__btn" (click)="fit()" aria-label="Fit to view">
+            <app-icon name="maximize" [size]="16" />
+          </button>
+        </div>
+        <div
+          #viewport
+          class="scroll"
+          tabindex="0"
+          role="region"
+          aria-label="Call graph: arrow keys pan, plus and minus zoom, 0 fits"
+          (wheel)="onWheel($event)"
+          (pointerdown)="onPointerDown($event)"
+          (pointermove)="onPointerMove($event)"
+          (pointerup)="onPointerUp()"
+          (pointercancel)="onPointerUp()"
+          (keydown)="onKey($event)"
         >
-          <defs>
-            <marker
-              id="graph-arrow"
-              viewBox="0 0 8 8"
-              refX="7"
-              refY="4"
-              markerWidth="7"
-              markerHeight="7"
-              orient="auto"
-            >
-              <path class="graph__arrow" d="M0,0 L8,4 L0,8 z" />
-            </marker>
-          </defs>
-          @for (item of layout().edges; track $index) {
-            <path
-              class="edge"
-              [class.edge--goto]="item.edge.kind === 'GOES_TO'"
-              [class.edge--range]="item.edge.thru && !item.edge.by_name"
-              [class.edge--active]="isConnected(item.edge)"
-              [attr.d]="item.path"
-              marker-end="url(#graph-arrow)"
-            />
-          }
-          @for (item of layout().nodes; track item.node.id) {
-            <g
-              class="node"
-              role="button"
-              tabindex="0"
-              [class.node--dead]="item.node.dead"
-              [class.node--selected]="selectedId() === item.node.id"
-              [class.node--other]="item.node.kind !== 'PARAGRAPH' && item.node.kind !== 'PROGRAM'"
-              [attr.transform]="'translate(' + item.x + ',' + item.y + ')'"
-              [attr.aria-label]="nodeLabel(item.node)"
-              [attr.aria-pressed]="selectedId() === item.node.id"
-              (click)="select(item.node)"
-              (keydown.enter)="select(item.node)"
-              (keydown.space)="$event.preventDefault(); select(item.node)"
-            >
-              <rect [attr.width]="nodeWidth" [attr.height]="nodeHeight" rx="6" />
-              <text x="10" y="22">
-                {{ displayName(item.node) }}{{ item.node.dead ? ' (dead)' : '' }}
-              </text>
+          <svg class="graph" role="group" aria-label="Call graph" width="100%" height="100%">
+            <defs>
+              <marker
+                id="graph-arrow"
+                viewBox="0 0 8 8"
+                refX="7"
+                refY="4"
+                markerWidth="7"
+                markerHeight="7"
+                orient="auto"
+              >
+                <path class="graph__arrow" d="M0,0 L8,4 L0,8 z" />
+              </marker>
+              <pattern id="graph-dots" width="20" height="20" patternUnits="userSpaceOnUse">
+                <circle cx="1" cy="1" r="1" class="graph__dot" />
+              </pattern>
+            </defs>
+            <rect class="graph__bg" width="100%" height="100%" fill="url(#graph-dots)" />
+            <g [attr.transform]="transform()">
+              @for (item of layout().edges; track $index) {
+                <path
+                  class="edge"
+                  [class.edge--goto]="item.edge.kind === 'GOES_TO'"
+                  [class.edge--range]="item.edge.thru && !item.edge.by_name"
+                  [class.edge--active]="isConnected(item.edge)"
+                  [attr.d]="item.path"
+                  marker-end="url(#graph-arrow)"
+                />
+              }
+              @for (item of layout().nodes; track item.node.id) {
+                <g
+                  class="node"
+                  role="button"
+                  tabindex="0"
+                  [class.node--dead]="item.node.dead"
+                  [class.node--selected]="selectedId() === item.node.id"
+                  [class.node--program]="item.node.kind === 'PROGRAM'"
+                  [class.node--other]="item.node.kind !== 'PARAGRAPH' && item.node.kind !== 'PROGRAM'"
+                  [attr.transform]="'translate(' + item.x + ',' + item.y + ')'"
+                  [attr.aria-label]="nodeLabel(item.node)"
+                  [attr.aria-pressed]="selectedId() === item.node.id"
+                  (click)="select(item.node)"
+                  (keydown.enter)="select(item.node)"
+                  (keydown.space)="$event.preventDefault(); select(item.node)"
+                >
+                  <rect [attr.width]="nodeWidth" [attr.height]="nodeHeight" rx="8" />
+                  <rect class="node__kind" x="0" y="0" width="4" [attr.height]="nodeHeight" rx="2" />
+                  <text x="14" y="22">
+                    {{ displayName(item.node) }}{{ item.node.dead ? ' (dead)' : '' }}
+                  </text>
+                </g>
+              }
             </g>
-          }
-        </svg>
+          </svg>
+        </div>
+        <ul class="legend" aria-label="Legend">
+          <li><span class="key key--program"></span>Program</li>
+          <li><span class="key key--paragraph"></span>Paragraph</li>
+          <li><span class="key key--other"></span>File or copybook</li>
+          <li><span class="key key--dead"></span>Dead code</li>
+          <li><span class="line"></span>Performs or calls</li>
+          <li><span class="line line--goto"></span>GO TO</li>
+        </ul>
       </div>
 
       @if (selected(); as node) {

@@ -14,6 +14,9 @@ import { ActivatedRoute, RouterLink } from '@angular/router';
 import { Subscription, combineLatest } from 'rxjs';
 
 import { describeError } from '../../core/api/api-error';
+import { Token, highlightLines, languageOf } from '../../shared/code/highlight';
+import { Icon } from '../../shared/icon/icon';
+import { Skeleton } from '../../shared/ui/ui';
 import {
   RuleSpanHit,
   SourceDetail,
@@ -29,6 +32,7 @@ type ViewState =
 interface Row {
   number: number;
   text: string;
+  tokens: Token[];
   cited: number;
   selected: boolean;
   copyName: string | null;
@@ -38,7 +42,7 @@ interface Row {
 /** Source with line numbers, rule spans and links to copybooks. Plain text only, never parsed as HTML. */
 @Component({
   selector: 'app-source-viewer',
-  imports: [RouterLink],
+  imports: [Icon, RouterLink, Skeleton],
   templateUrl: './source-viewer.html',
   styleUrl: './source-viewer.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -63,12 +67,14 @@ export class SourceViewer implements OnInit {
     }
     const range = this.range();
     const links = new Map(state.source.copy_links.map((link) => [link.line, link]));
+    const tokens = highlightLines(state.source.lines, languageOf(state.source.name));
     return state.source.lines.map((text, index) => {
       const number = index + 1;
       const link = links.get(number);
       return {
         number,
         text,
+        tokens: tokens[index],
         cited: state.source.rule_spans.filter(
           (span) => span.start_line <= number && number <= span.end_line,
         ).length,

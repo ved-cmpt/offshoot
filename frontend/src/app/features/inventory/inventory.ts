@@ -21,6 +21,7 @@ import {
   LayoutRecord,
   WorkbenchService,
 } from '../workbench/workbench.service';
+import { Skeleton } from '../../shared/ui/ui';
 import { CallGraph } from './call-graph';
 
 type LoadState =
@@ -51,7 +52,7 @@ const SUMMARY_LABELS: [string, string][] = [
 
 @Component({
   selector: 'app-inventory',
-  imports: [CallGraph, DecimalPipe, JobProgress, RouterLink],
+  imports: [CallGraph, DecimalPipe, JobProgress, RouterLink, Skeleton],
   templateUrl: './inventory.html',
   styleUrl: './inventory.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,

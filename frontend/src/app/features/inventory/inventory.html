@@ -1,12 +1,15 @@
 <div class="page-head">
-  <h1 class="page-title">Inventory</h1>
+  <div>
+    <p class="eyebrow">Static analysis</p>
+    <h1 class="page-title">Inventory</h1>
+  </div>
   @if (canRun()) {
     <button class="button" type="button" [disabled]="starting()" (click)="analyze()">
       {{ starting() ? 'Starting…' : 'Run analysis' }}
     </button>
   }
 </div>
-<p class="muted">Computed by static analysis of the COBOL. No AI is involved in this page.</p>
+<p class="page-lede">Computed by static analysis of the COBOL. No AI is involved in this page.</p>
 
 @if (startError(); as message) {
   <div class="state state--error" role="alert">
@@ -20,7 +23,7 @@
 @let current = state();
 @switch (current.kind) {
   @case ('loading') {
-    <p class="state" role="status">Loading the inventory…</p>
+    <app-skeleton label="Loading the inventory…" variant="cards" [count]="3" />
   }
   @case ('error') {
     <div class="state state--error" role="alert">

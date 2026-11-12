@@ -1,7 +1,10 @@
 <div class="page-head">
-  <h1 class="page-title">Modernization plan</h1>
+  <div>
+    <p class="eyebrow">Proposed by the agent, ordered by the call graph</p>
+    <h1 class="page-title">Modernization plan</h1>
+  </div>
 </div>
-<p class="muted">
+<p class="page-lede">
   The agent proposes services and risks. The migration order comes from the call graph and the
   estimate from measured metrics, never from the agent. Only an architect approves.
 </p>
@@ -28,7 +31,7 @@
 @let current = state();
 @switch (current.kind) {
   @case ('loading') {
-    <p class="state" role="status">Loading the plan…</p>
+    <app-skeleton label="Loading the plan…" variant="cards" [count]="3" />
   }
   @case ('error') {
     <div class="state state--error" role="alert">
@@ -121,10 +124,20 @@
         <ol class="timeline">
           @for (step of plan.order; track step.program) {
             <li>
-              <span class="timeline__step">Step {{ step.position }}</span>
-              <strong>{{ step.program }}</strong>
-              <span class="badge">{{ step.service }}</span>
-              <span class="muted">{{ step.reason }}</span>
+              <span class="timeline__step" aria-hidden="true">{{ step.position }}</span>
+              <div class="timeline__body">
+                <p class="timeline__title">
+                  <span class="visually-hidden">Step {{ step.position }}: </span><strong>{{ step.program }}</strong>
+                  <span class="badge">{{ step.service }}</span>
+                  @if (modulesByProgram().get(step.program); as module) {
+                    <a [routerLink]="['/app/projects', projectId(), 'modules', module.id]" class="timeline__state">{{ moduleStateText[module.state] }}</a>
+                  }
+                </p>
+                @if (step.depends_on.length) {
+                  <p class="timeline__deps">after {{ step.depends_on.join(', ') }}</p>
+                }
+                <p class="muted">{{ step.reason }}</p>
+              </div>
             </li>
           }
         </ol>
@@ -136,7 +149,7 @@
           <ul class="risks">
             @for (risk of plan.risks; track risk.title) {
               <li>
-                <span class="badge" [class.badge--danger]="risk.severity === 'HIGH'"
+                <span class="badge badge--dot" [class.badge--danger]="risk.severity === 'HIGH'" [class.badge--warn]="risk.severity === 'MEDIUM'"
                   >{{ severityText[risk.severity] }} risk</span
                 >
                 <strong>{{ risk.title }}</strong>

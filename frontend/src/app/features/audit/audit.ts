@@ -13,6 +13,9 @@ import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { Subscription } from 'rxjs';
 
 import { describeError } from '../../core/api/api-error';
+import { Icon } from '../../shared/icon/icon';
+import { IconName } from '../../shared/icon/icons';
+import { EmptyState, Skeleton } from '../../shared/ui/ui';
 import { AuthService } from '../../core/auth/auth.service';
 
 export interface AuditEntry {
@@ -40,10 +43,27 @@ type ViewState =
 
 const PAGE_SIZE = 50;
 
+/** The category of an action, by its prefix: for the chip colour and the timeline icon. */
+export function actionKind(action: string): { tone: string; icon: IconName } {
+  const prefix = action.split('.')[0];
+  const kinds: Record<string, { tone: string; icon: IconName }> = {
+    auth: { tone: 'info', icon: 'user' },
+    ai: { tone: 'violet', icon: 'sparkles' },
+    job: { tone: 'neutral', icon: 'cpu' },
+    rule: { tone: 'warn', icon: 'scroll-text' },
+    plan: { tone: 'warn', icon: 'map' },
+    module: { tone: 'ok', icon: 'blocks' },
+    facade: { tone: 'ok', icon: 'route' },
+    demo: { tone: 'neutral', icon: 'rotate-ccw' },
+    user: { tone: 'info', icon: 'user' },
+  };
+  return kinds[prefix] ?? { tone: 'neutral', icon: 'circle-dot' };
+}
+
 /** The append-only audit log: every AI proposal, job and human decision. Architects and admins. */
 @Component({
   selector: 'app-audit',
-  imports: [DatePipe, JsonPipe],
+  imports: [DatePipe, EmptyState, Icon, JsonPipe, Skeleton],
   templateUrl: './audit.html',
   styles: `
     .filters {
@@ -64,6 +84,127 @@ const PAGE_SIZE = 50;
       align-items: center;
       gap: var(--space-3);
       margin-top: var(--space-3);
+    }
+
+    .segmented {
+      display: inline-flex;
+      align-self: end;
+      padding: 2px;
+      border: 1px solid var(--border-strong);
+      border-radius: var(--radius);
+      background: var(--surface-2);
+
+      button {
+        display: inline-flex;
+        gap: var(--space-1);
+        align-items: center;
+        min-height: 2rem;
+        padding: 0 var(--space-3);
+        border: 0;
+        border-radius: var(--radius-sm);
+        background: none;
+        color: var(--text-2);
+        font: inherit;
+        font-size: var(--text-sm);
+        cursor: pointer;
+
+        &[aria-pressed='true'] {
+          background: var(--surface-1);
+          color: var(--text);
+          box-shadow: var(--shadow-sm);
+        }
+      }
+    }
+
+    .chip {
+      display: inline-block;
+      padding: 0.05rem 0.45rem;
+      border-radius: var(--radius-sm);
+      font-family: var(--font-mono);
+      font-size: var(--text-xs);
+      font-weight: 600;
+      white-space: nowrap;
+    }
+
+    .chip--ok {
+      background: var(--ok-bg);
+      color: var(--ok);
+    }
+
+    .chip--warn {
+      background: var(--warn-bg);
+      color: var(--warn);
+    }
+
+    .chip--info {
+      background: var(--info-bg);
+      color: var(--info);
+    }
+
+    .chip--violet {
+      background: var(--violet-bg);
+      color: var(--violet);
+    }
+
+    .chip--neutral {
+      background: var(--surface-3);
+      color: var(--text-2);
+    }
+
+    .timeline {
+      position: relative;
+      display: grid;
+      gap: var(--space-3);
+      margin: 0;
+      padding: 0;
+      list-style: none;
+
+      &::before {
+        position: absolute;
+        top: 0.5rem;
+        bottom: 0.5rem;
+        left: 0.875rem;
+        width: 1px;
+        background: var(--border-strong);
+        content: '';
+      }
+
+      li {
+        position: relative;
+        display: grid;
+        grid-template-columns: 1.75rem minmax(0, 1fr);
+        gap: var(--space-3);
+      }
+    }
+
+    .timeline__icon {
+      display: grid;
+      place-items: center;
+      width: 1.75rem;
+      height: 1.75rem;
+      border-radius: 50%;
+      box-shadow: 0 0 0 3px var(--bg);
+    }
+
+    .timeline__body {
+      padding: var(--space-3) var(--space-4);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-lg);
+      background: var(--surface-1);
+      font-size: var(--text-sm);
+
+      p:first-child {
+        display: flex;
+        flex-wrap: wrap;
+        gap: var(--space-2);
+        align-items: center;
+      }
+
+      summary {
+        margin-top: var(--space-1);
+        color: var(--text-3);
+        cursor: pointer;
+      }
     }
 
     pre {
@@ -87,6 +228,8 @@ export class AuditLog implements OnInit {
   protected readonly entityType = signal('');
   protected readonly offset = signal(0);
   protected readonly pageSize = PAGE_SIZE;
+  protected readonly view = signal<'table' | 'timeline'>('table');
+  protected readonly kind = actionKind;
   protected readonly allowed = computed(() => {
     const role = this.auth.user()?.role;
     return role === 'ARCHITECT' || role === 'ADMIN';

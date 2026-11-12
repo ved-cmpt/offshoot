@@ -483,21 +483,14 @@
     .nav__heading,
     .nav__kbd,
     .user__text,
-    .user__chevron {
-      position: absolute;
-      width: 1px;
-      height: 1px;
-      overflow: hidden;
-      clip-path: inset(50%);
-      white-space: nowrap;
-    }
-
+    .user__chevron,
     .nav__label {
       position: absolute;
       width: 1px;
       height: 1px;
       overflow: hidden;
       clip-path: inset(50%);
+      white-space: nowrap;
     }
 
     .sidebar__top {
@@ -639,12 +632,23 @@
   }
 }
 
-.search-pill__text,
 .search-pill__kbd {
   display: none;
 
   @include t.up(t.$bp-md) {
     display: inline-flex;
+  }
+}
+
+// On a phone the words stay for assistive technology; only the icon shows.
+.search-pill__text {
+  @include t.down(t.$bp-md) {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip-path: inset(50%);
+    white-space: nowrap;
   }
 }
 

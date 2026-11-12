@@ -1,19 +1,37 @@
 .card {
   display: grid;
   gap: var(--space-3);
-  padding: var(--space-4);
-  border: 1px solid var(--color-border);
-  border-radius: var(--radius);
-  background: var(--color-surface);
+  padding: var(--space-5);
+  border: 1px solid var(--border);
+  border-left: 3px solid var(--border-strong);
+  border-radius: var(--radius-lg);
+  background: var(--surface-1);
+  box-shadow: var(--shadow-md);
   overflow-wrap: anywhere;
+  scroll-margin-top: 5rem;
+}
+
+.card--verified {
+  border-left-color: var(--ok);
+}
+
+.card--rejected {
+  border-left-color: var(--text-3);
+  opacity: 0.85;
 }
 
 .card--flagged {
-  border-color: var(--color-danger);
+  border-color: var(--danger-border);
+  border-left-color: var(--danger);
+}
+
+.card--focus {
+  outline: 2px solid var(--accent);
+  outline-offset: 3px;
 }
 
 .card__head h3 {
-  font-size: var(--text-md);
+  font-size: var(--text-lg);
 }
 
 .card__meta {

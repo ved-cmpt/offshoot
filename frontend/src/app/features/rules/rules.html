@@ -1,7 +1,10 @@
 <div class="page-head">
-  <h1 class="page-title">Business rules</h1>
+  <div>
+    <p class="eyebrow">Proposed by the agent, decided by people</p>
+    <h1 class="page-title">Business rules</h1>
+  </div>
 </div>
-<p class="muted">
+<p class="page-lede">
   The agent proposes rules. The server checks every citation, and only an architect can verify or
   reject.
   @if (canExtract() && !isArchitect()) {
@@ -94,7 +97,7 @@
 @let current = state();
 @switch (current.kind) {
   @case ('loading') {
-    <p class="state" role="status">Loading rules…</p>
+    <app-skeleton label="Loading rules…" variant="cards" [count]="3" />
   }
   @case ('error') {
     <div class="state state--error" role="alert">
@@ -115,14 +118,88 @@
         }
       </div>
     } @else {
+      <div class="toolbar">
+        <ul class="pills" aria-label="Counts by state, for the chosen program">
+          @for (name of stateOrder; track name) {
+            <li>
+              <button
+                type="button"
+                [class]="'pill pill--' + name.toLowerCase()"
+                [attr.aria-pressed]="ruleState() === name"
+                (click)="setFilter('ruleState', ruleState() === name ? '' : name)"
+              >
+                {{ name.toLowerCase() }}
+                <strong>{{ current.page.counts[name] ?? 0 }}</strong>
+              </button>
+            </li>
+          }
+        </ul>
+        <div class="segmented" role="group" aria-label="View">
+          <button type="button" [attr.aria-pressed]="view() === 'cards'" (click)="view.set('cards')">
+            <app-icon name="layers" [size]="14" />Cards
+          </button>
+          <button type="button" [attr.aria-pressed]="view() === 'table'" (click)="view.set('table')">
+            <app-icon name="rows-3" [size]="14" />Table
+          </button>
+        </div>
+      </div>
       <p class="counts" role="status">
         {{ current.page.total }} in this selection. For the chosen program: {{ countsText() }}.
       </p>
-      <div class="list">
-        @for (rule of current.page.items; track rule.id) {
-          <app-rule-card [rule]="rule" (changed)="updateRule($event)" />
-        }
-      </div>
+      @if (view() === 'cards') {
+        <div class="list">
+          @for (rule of current.page.items; track rule.id) {
+            <app-rule-card [rule]="rule" (changed)="updateRule($event)" />
+          }
+        </div>
+      } @else {
+        <div class="table-scroll" tabindex="0" role="region" aria-label="Rules table">
+          <table class="data-table data-table--tight">
+            <thead>
+              <tr>
+                <th scope="col">Rule</th>
+                <th scope="col">Program</th>
+                <th scope="col">State</th>
+                <th scope="col">Flags</th>
+                <th scope="col">Source</th>
+                <th scope="col" class="num">Confidence</th>
+              </tr>
+            </thead>
+            <tbody>
+              @for (rule of current.page.items; track rule.id) {
+                <tr>
+                  <th scope="row">
+                    <button type="button" class="link" (click)="openCard(rule.id)">{{ rule.title }}</button>
+                  </th>
+                  <td><code>{{ rule.program }}</code></td>
+                  <td>
+                    <span
+                      class="badge badge--dot"
+                      [class.badge--ok]="rule.state === 'VERIFIED'"
+                      [class.badge--danger]="rule.state === 'REJECTED'"
+                      [class.badge--info]="rule.state === 'EDITED'"
+                      >{{ rule.state.toLowerCase() }}</span
+                    >
+                  </td>
+                  <td>
+                    @for (flag of rule.flags; track flag) {
+                      <span class="badge badge--danger">{{ flag }}</span>
+                    } @empty {
+                      <span class="subtle">none</span>
+                    }
+                  </td>
+                  <td>
+                    @for (span of rule.spans; track $index) {
+                      <code [class.invalid]="!span.valid">{{ span.file }}:{{ span.start_line }}{{ span.end_line !== span.start_line ? '-' + span.end_line : '' }}</code>
+                    }
+                  </td>
+                  <td class="num">{{ rule.confidence === null ? '' : (rule.confidence * 100).toFixed(0) + '%' }}</td>
+                </tr>
+              }
+            </tbody>
+          </table>
+        </div>
+      }
       @if (current.page.total > pageSize) {
         <nav class="pager" aria-label="Rule pages">
           <button

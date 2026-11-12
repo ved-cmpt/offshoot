@@ -2,6 +2,8 @@
 <article
   class="card"
   [class.card--flagged]="item.flags.length > 0"
+  [class.card--verified]="item.state === 'VERIFIED'"
+  [class.card--rejected]="item.state === 'REJECTED'"
   [attr.aria-labelledby]="'rule-' + item.id"
 >
   <header class="card__head">

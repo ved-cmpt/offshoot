@@ -11,6 +11,8 @@ import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { ActivatedRoute, RouterLink } from '@angular/router';
 
 import { describeError } from '../../core/api/api-error';
+import { EmptyState, Skeleton } from '../../shared/ui/ui';
+import { STATE_TONE } from '../overview/overview';
 import {
   MODULE_STATE_TEXT,
   ModernizationService,
@@ -25,19 +27,22 @@ type ViewState =
 /** Every module of the approved plan, in migration order, with its latest verification. */
 @Component({
   selector: 'app-module-list',
-  imports: [DecimalPipe, RouterLink],
+  imports: [DecimalPipe, EmptyState, RouterLink, Skeleton],
   template: `
     <div class="page-head">
-      <h1 class="page-title">Modules</h1>
+      <div>
+        <p class="eyebrow">Migration, in plan order</p>
+        <h1 class="page-title">Modules</h1>
+      </div>
     </div>
-    <p class="muted">
+    <p class="page-lede">
       One module per program, created when an architect approves the plan. Every number here comes
       from a stored verification run.
     </p>
     @let current = state();
     @switch (current.kind) {
       @case ('loading') {
-        <p class="state" role="status">Loading modules…</p>
+        <app-skeleton label="Loading modules…" variant="table" [count]="5" />
       }
       @case ('error') {
         <div class="state state--error" role="alert">
@@ -64,17 +69,29 @@ type ViewState =
               <tbody>
                 @for (module of current.modules; track module.id) {
                   <tr>
-                    <td>{{ module.order_index }}</td>
+                    <td><span class="step">{{ module.order_index }}</span></td>
                     <th scope="row">
                       <a [routerLink]="['/app/projects', projectId(), 'modules', module.id]">{{
                         module.program
                       }}</a>
                     </th>
                     <td>{{ module.target_service }}</td>
-                    <td>{{ stateText[module.state] }}</td>
+                    <td>
+                      <span [class]="'badge badge--dot badge--' + badgeTone[tone[module.state]]">{{
+                        stateText[module.state]
+                      }}</span>
+                    </td>
                     <td class="num">
                       @if (module.latest_run; as run) {
-                        {{ run.passed }} of {{ run.cases }}
+                        <span class="result">
+                          <span class="result__bar" aria-hidden="true"
+                            ><span
+                              [class.bad]="run.failed > 0"
+                              [style.width.%]="(run.passed / run.cases) * 100"
+                            ></span
+                          ></span>
+                          {{ run.passed }} of {{ run.cases }}
+                        </span>
                       }
                     </td>
                     <td class="num">
@@ -87,22 +104,73 @@ type ViewState =
                         {{ value | number: '1.2-2' }}%
                       }
                     </td>
-                    <td>{{ module.facade_mode.toLowerCase() }}</td>
+                    <td><span class="mode" [class]="'mode mode--' + module.facade_mode.toLowerCase()">{{ module.facade_mode.toLowerCase() }}</span></td>
                   </tr>
                 }
               </tbody>
             </table>
           </div>
         } @else {
-          <div class="state">
-            <p>There are no modules yet.</p>
-            <p class="muted">
-              They are created when an architect approves the
-              <a [routerLink]="['/app/projects', projectId(), 'plan']">plan</a>.
-            </p>
-          </div>
+          <app-empty-state title="There are no modules yet." icon="blocks">
+            They are created when an architect approves the
+            <a [routerLink]="['/app/projects', projectId(), 'plan']">plan</a>.
+          </app-empty-state>
         }
       }
+    }
+  `,
+  styles: `
+    .step {
+      display: inline-grid;
+      place-items: center;
+      width: 1.75rem;
+      height: 1.75rem;
+      border: 1px solid var(--border-strong);
+      border-radius: 50%;
+      color: var(--text-2);
+      font-family: var(--font-mono);
+      font-size: var(--text-xs);
+    }
+
+    .result {
+      display: inline-flex;
+      gap: var(--space-3);
+      align-items: center;
+      justify-content: flex-end;
+      white-space: nowrap;
+    }
+
+    .result__bar {
+      width: 4rem;
+      height: 0.375rem;
+      overflow: hidden;
+      border-radius: var(--radius-pill);
+      background: var(--danger);
+
+      span {
+        display: block;
+        height: 100%;
+        background: var(--ok);
+      }
+    }
+
+    .mode {
+      padding: 0.1rem 0.5rem;
+      border-radius: var(--radius-sm);
+      background: var(--surface-3);
+      color: var(--text-2);
+      font-family: var(--font-mono);
+      font-size: var(--text-xs);
+    }
+
+    .mode--modern {
+      background: var(--ok-bg);
+      color: var(--ok);
+    }
+
+    .mode--shadow {
+      background: var(--violet-bg);
+      color: var(--violet);
     }
   `,
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -115,6 +183,8 @@ export class ModuleList implements OnInit {
   protected readonly projectId = signal('');
   protected readonly state = signal<ViewState>({ kind: 'loading' });
   protected readonly stateText = MODULE_STATE_TEXT;
+  protected readonly tone = STATE_TONE;
+  protected readonly badgeTone: Record<string, string> = { good: 'ok', warn: 'warn', bad: 'danger', neutral: 'neutral' };
 
   ngOnInit(): void {
     this.route.paramMap.pipe(takeUntilDestroyed(this.destroyRef)).subscribe((params) => {

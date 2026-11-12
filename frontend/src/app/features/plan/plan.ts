@@ -14,6 +14,7 @@ import { ActivatedRoute, RouterLink } from '@angular/router';
 import { Subscription, forkJoin } from 'rxjs';
 
 import { describeError } from '../../core/api/api-error';
+import { Skeleton } from '../../shared/ui/ui';
 import { AuthService } from '../../core/auth/auth.service';
 import {
   MODULE_STATE_TEXT,
@@ -40,7 +41,7 @@ const PLAN_STATE_TEXT = {
 /** The modernization plan: service map, ordered timeline, risks, estimate and the decision. */
 @Component({
   selector: 'app-plan',
-  imports: [DatePipe, JobProgress, RouterLink],
+  imports: [DatePipe, JobProgress, RouterLink, Skeleton],
   templateUrl: './plan.html',
   styleUrl: './plan.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,

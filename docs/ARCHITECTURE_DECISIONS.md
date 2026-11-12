@@ -431,3 +431,19 @@ The dashboard and report read stored rows only. Rule decisions are counted as se
 **A finding: the draw number in a random case's label is not reproducible.** The first run of that test found one difference. Case 492 had the same input, the same case number and the same outputs in both databases, but its label read "seeded draw 297" on the public demo and "seeded draw 296" in a fresh seed. Hypothesis can discard a repeated draw in one run and not in another, which shifts the numbering of later draws without changing which inputs are kept. ADR-033's claim that a seed reproduces a run holds for inputs, case numbers and results; it does not hold for that label's number. The comparison ignores the number, and the landing page does not show it.
 
 **Regenerating.** Run the script against the public demo after its daily reset (so no visitor's decisions are in it), then `--check`, then the seed test.
+
+## ADR-053 ADR-028 revisited: still no highlighting, graph or chart library
+
+**Date:** 2026-11-11 (Run 07). Revisits ADR-028, as the owner asked.
+
+**The question.** The redesign needed syntax colouring for COBOL and C#, a call graph that pans and zooms with a second layout, and charts on the overview. Libraries were allowed if they work under the strict policy (nonce styles, no `unsafe-inline`, no `eval`), stay self-hosted and keep the bundle reasonable.
+
+**The decision: no library, again, for three measured reasons.**
+
+1. **Highlighting.** Prism, highlight.js and Shiki all return HTML, which would reach the page through `innerHTML` and Angular's sanitizer; source files are untrusted (AGENTS.md), so a highlighter that emits markup widens the one place an injected comment could matter. Of the three, only Prism ships a COBOL grammar, and Shiki's grammars and WebAssembly engine run to hundreds of kilobytes. `shared/code/highlight.ts` instead splits COBOL (fixed format, column-7 comments, levels, pictures, paragraph names) and C# (keywords, types, strings, numbers, block comments across lines) into tokens of about 200 lines, and templates render each token as text. Its tests check that every character survives in order and that markup in a comment stays text.
+2. **The graph.** The layered layout of ADR-028 already places BillRite's graph. Pan (drag, arrow keys), zoom (Ctrl or Cmd with the wheel, buttons, `+` and `-`), fit (`0`) and a top-to-bottom layout are a transform on one SVG group and a second placement in `graph-layout.ts`. ELK or Cytoscape would add 300 kB or more for a graph of a few dozen nodes.
+3. **Charts.** The overview's charts are a stacked status bar and a two-series bar chart; the landing page's is a 500-cell grid. They are plain HTML and SVG with CSS custom properties, so both themes follow without code. Their two series colours were checked for colour-blind separation with a palette validator in both themes; every chart has a text equivalent and the exact numbers are in the table beside it.
+
+**Also self-written, for the same reasons:** the command palette (a native `<dialog>` with the combobox and listbox pattern), the line diff that shows what a repair changed (a longest common subsequence over lines), and the icons, which are Lucide's path data (ISC) copied into `shared/icon/icons.ts` for the 101 icons used.
+
+**Consequences.** Nothing new to audit in `npm audit`, nothing executes from a string, and the landing chunk is 133 kB raw (31 kB compressed) with the icons, highlighter and every section in it. The cost is code this project owns; the highlighter is deliberately approximate (it colours, it does not parse), and a language other than COBOL and C# shows as plain text.

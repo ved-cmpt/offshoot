@@ -28,7 +28,13 @@ import {
   RunSummary,
   describeReason,
 } from '../modernization/modernization.service';
+import { Token, highlightLines } from '../../shared/code/highlight';
+import { Icon } from '../../shared/icon/icon';
+import { ToastService } from '../../shared/toast/toast';
+import { Skeleton } from '../../shared/ui/ui';
+import { ProjectContext } from '../../core/project/project-context';
 import { JobProgress } from '../workbench/job-progress';
+import { changedLines, removedCount } from './line-diff';
 import { Graph, Job, Rule, SourceDetail, WorkbenchService } from '../workbench/workbench.service';
 
 interface Loaded {
@@ -50,7 +56,23 @@ export interface CobolLine {
   text: string;
   paragraph: string | null;
   coverage: Coverage;
+  tokens?: Token[];
 }
+
+export interface CodeLine {
+  number: number;
+  tokens: Token[];
+  changed: boolean;
+}
+
+const SOURCE_TONE: Record<string, string> = {
+  boundary: 'var(--chart-1)',
+  date: 'var(--info)',
+  constant: 'var(--chart-2)',
+  rule: 'var(--warn)',
+  recorded: 'var(--ok)',
+  random: 'var(--text-3)',
+};
 
 const ACTION_TEXT: Record<ModuleAction, string> = {
   migrate: 'Migrate',
@@ -102,7 +124,7 @@ export function coverageLines(
 /** One module: COBOL beside C#, build and tests, verification reports, history and actions. */
 @Component({
   selector: 'app-module-workspace',
-  imports: [DatePipe, DecimalPipe, JobProgress, RouterLink],
+  imports: [DatePipe, DecimalPipe, Icon, JobProgress, RouterLink, Skeleton],
   templateUrl: './module-workspace.html',
   styleUrl: './module-workspace.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -114,7 +136,10 @@ export class ModuleWorkspace implements OnInit {
   private readonly route = inject(ActivatedRoute);
   private readonly auth = inject(AuthService);
   private readonly destroyRef = inject(DestroyRef);
+  private readonly toasts = inject(ToastService);
+  private readonly context = inject(ProjectContext);
   private loading: Subscription | null = null;
+  private previousLoading: Subscription | null = null;
   private runLoading: Subscription | null = null;
   private artifactLoading: Subscription | null = null;
   private readonly handledJobs = new Set<string>();
@@ -136,6 +161,10 @@ export class ModuleWorkspace implements OnInit {
   protected readonly rejecting = signal(false);
   protected readonly decisionReason = signal('');
   protected readonly shadowView = signal<ShadowView | null>(null);
+  /** The version before the selected one, to show what changed. */
+  protected readonly previous = signal<ArtifactDetail | null>(null);
+  protected readonly showChanges = signal(true);
+  protected readonly sourceTone = SOURCE_TONE;
 
   protected readonly stateText = MODULE_STATE_TEXT;
   protected readonly actionText = ACTION_TEXT;
@@ -195,6 +224,63 @@ export class ModuleWorkspace implements OnInit {
   protected readonly currentFile = computed(
     () => this.artifact()?.file_contents[this.selectedFile()] ?? null,
   );
+  protected readonly cobolTokens = computed(() => highlightLines(this.cobol().map((line) => line.text), 'cobol'));
+  /** The selected C# file, coloured, with the lines that differ from the previous version. */
+  protected readonly csharpLines = computed<CodeLine[]>(() => {
+    const file = this.currentFile();
+    if (!file) {
+      return [];
+    }
+    const lines = file.content.split('\n');
+    const before = this.previous()?.file_contents.find((item) => item.path === file.path);
+    const changed =
+      before && this.showChanges() ? changedLines(before.content.split('\n'), lines) : lines.map(() => false);
+    return highlightLines(lines, 'csharp').map((tokens, index) => ({
+      number: index + 1,
+      tokens,
+      changed: changed[index],
+    }));
+  });
+  protected readonly diffStats = computed(() => {
+    const file = this.currentFile();
+    const before = this.previous()?.file_contents.find((item) => item.path === file?.path);
+    if (!file || !before) {
+      return null;
+    }
+    const after = file.content.split('\n');
+    const old = before.content.split('\n');
+    return {
+      added: changedLines(old, after).filter(Boolean).length,
+      removed: removedCount(old, after),
+      version: this.previous()!.version,
+    };
+  });
+  /** The share of each case source, for the stacked bar. */
+  protected readonly sourceShares = computed(() => {
+    const entries = this.sources();
+    const total = entries.reduce((sum, [, count]) => sum + count, 0) || 1;
+    return entries.map(([name, count]) => ({ name, count, share: (count / total) * 100 }));
+  });
+  /** Paragraphs the latest full run reached and missed, for the coverage map. */
+  protected readonly coverageMap = computed(() => {
+    const coverage = this.run()?.report?.coverage;
+    if (!coverage) {
+      return [];
+    }
+    return [
+      ...coverage.hit.map((name) => ({ name, hit: true })),
+      ...coverage.missed.map((name) => ({ name, hit: false })),
+    ].sort((a, b) => a.name.localeCompare(b.name));
+  });
+  protected readonly cells = computed(() => {
+    const run = this.run();
+    if (!run || run.kind !== 'FULL' || !run.cases) {
+      return [];
+    }
+    const failing = new Set((run.report?.mismatches ?? []).map((item) => item.case - 1));
+    const extra = Math.max(0, run.failed - failing.size);
+    return Array.from({ length: run.cases }, (_, index) => failing.has(index) || index >= run.cases - extra);
+  });
   protected readonly coveredRuleIds = computed(() => new Set(this.artifact()?.rule_ids ?? []));
   protected readonly exercisedRuleIds = computed(
     () =>
@@ -327,10 +413,12 @@ export class ModuleWorkspace implements OnInit {
     this.busy.set(true);
     this.actionError.set(null);
     request.pipe(takeUntilDestroyed(this.destroyRef)).subscribe({
-      next: () => {
+      next: (module) => {
         this.busy.set(false);
         this.rejecting.set(false);
         this.decisionReason.set('');
+        this.context.invalidate();
+        this.toasts.ok(`${module.program}: ${MODULE_STATE_TEXT[module.state].toLowerCase()}`, `Routing ${module.facade_mode.toLowerCase()}.`);
         this.load(true);
       },
       error: (error: unknown) => {
@@ -365,8 +453,34 @@ export class ModuleWorkspace implements OnInit {
         next: (artifact) => {
           this.artifact.set(artifact);
           this.selectedFile.set(0);
+          this.loadPrevious(artifact);
         },
         error: (error: unknown) => this.artifactError.set(describeError(error)),
+      });
+  }
+
+  /** The version before this one, so the code view can mark what changed. */
+  private loadPrevious(artifact: ArtifactDetail): void {
+    this.previousLoading?.unsubscribe();
+    this.previous.set(null);
+    if (artifact.version <= 1) {
+      return;
+    }
+    this.previousLoading = this.api
+      .artifact(this.moduleId(), artifact.version - 1)
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe({
+        next: (before) => {
+          this.previous.set(before);
+          // Open the first file the new version changed: that is what a reviewer wants to see.
+          const changed = artifact.file_contents.findIndex(
+            (file) => before.file_contents.find((old) => old.path === file.path)?.content !== file.content,
+          );
+          if (changed >= 0 && this.artifact()?.id === artifact.id) {
+            this.selectedFile.set(changed);
+          }
+        },
+        error: () => this.previous.set(null),
       });
   }
 

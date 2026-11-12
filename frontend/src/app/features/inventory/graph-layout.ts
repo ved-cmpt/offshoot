@@ -5,6 +5,7 @@ export const NODE_HEIGHT = 34;
 const COLUMN_GAP = 70;
 const ROW_GAP = 14;
 const PADDING = 12;
+const LAYER_GAP = 56;
 
 export interface PlacedNode {
   node: GraphNode;
@@ -17,6 +18,8 @@ export interface PlacedEdge {
   edge: GraphEdge;
   path: string;
 }
+
+export type Direction = 'LR' | 'TB';
 
 export interface GraphLayout {
   nodes: PlacedNode[];
@@ -66,7 +69,12 @@ function assignRanks(nodes: GraphNode[], edges: GraphEdge[]): Map<string, number
   return ranks;
 }
 
-export function layoutGraph(nodes: GraphNode[], edges: GraphEdge[]): GraphLayout {
+/** Left to right (callers left of callees), or top to bottom (callers above). */
+export function layoutGraph(
+  nodes: GraphNode[],
+  edges: GraphEdge[],
+  direction: Direction = 'LR',
+): GraphLayout {
   const ranks = assignRanks(nodes, edges);
   const columns = new Map<number, GraphNode[]>();
   for (const node of nodes) {
@@ -94,11 +102,20 @@ export function layoutGraph(nodes: GraphNode[], edges: GraphEdge[]): GraphLayout
   }
 
   const placed = new Map<string, PlacedNode>();
+  let width = 0;
   let height = 0;
   sortedRanks.forEach((rank, column) => {
     columns.get(rank)!.forEach((node, row) => {
-      const y = PADDING + row * (NODE_HEIGHT + ROW_GAP);
-      placed.set(node.id, { node, x: PADDING + column * (NODE_WIDTH + COLUMN_GAP), y, rank });
+      const x =
+        direction === 'LR'
+          ? PADDING + column * (NODE_WIDTH + COLUMN_GAP)
+          : PADDING + row * (NODE_WIDTH + ROW_GAP);
+      const y =
+        direction === 'LR'
+          ? PADDING + row * (NODE_HEIGHT + ROW_GAP)
+          : PADDING + column * (NODE_HEIGHT + LAYER_GAP);
+      placed.set(node.id, { node, x, y, rank });
+      width = Math.max(width, x + NODE_WIDTH + PADDING);
       height = Math.max(height, y + NODE_HEIGHT + PADDING);
     });
   });
@@ -108,15 +125,33 @@ export function layoutGraph(nodes: GraphNode[], edges: GraphEdge[]): GraphLayout
     const source = placed.get(edge.from);
     const target = placed.get(edge.to);
     if (source && target) {
-      placedEdges.push({ edge, path: edgePath(source, target) });
+      placedEdges.push({
+        edge,
+        path: direction === 'LR' ? edgePath(source, target) : edgePathDown(source, target),
+      });
     }
   }
   return {
     nodes: [...placed.values()],
     edges: placedEdges,
-    width: PADDING * 2 + Math.max(sortedRanks.length, 1) * (NODE_WIDTH + COLUMN_GAP) - COLUMN_GAP,
+    width: Math.max(width, NODE_WIDTH + PADDING * 2),
     height: Math.max(height, NODE_HEIGHT + PADDING * 2),
   };
+}
+
+function edgePathDown(source: PlacedNode, target: PlacedNode): string {
+  const fromX = source.x + NODE_WIDTH / 2;
+  const toX = target.x + NODE_WIDTH / 2;
+  if (target.y > source.y) {
+    const fromY = source.y + NODE_HEIGHT;
+    const bend = (target.y - fromY) / 2;
+    return `M${fromX},${fromY} C${fromX},${fromY + bend} ${toX},${target.y - bend} ${toX},${target.y}`;
+  }
+  // A back edge or one within a layer: loop out below both nodes.
+  const fromY = source.y + NODE_HEIGHT;
+  const toY = target.y + NODE_HEIGHT;
+  const out = Math.max(fromY, toY) + LAYER_GAP / 2;
+  return `M${fromX},${fromY} C${fromX},${out} ${toX},${out} ${toX},${toY}`;
 }
 
 function edgePath(source: PlacedNode, target: PlacedNode): string {
