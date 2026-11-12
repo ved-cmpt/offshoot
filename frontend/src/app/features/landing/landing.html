@@ -89,8 +89,8 @@
       </div>
     </div>
 
-    @if (stats().length) {
-      <div class="l-container">
+    <div class="l-container">
+      @if (stats().length) {
         <dl class="stats">
           @for (stat of stats(); track stat.label) {
             <div class="stat">
@@ -100,8 +100,10 @@
             </div>
           }
         </dl>
-      </div>
-    }
+      } @else {
+        <div class="stats stats--placeholder" aria-hidden="true"></div>
+      }
+    </div>
   </section>
 
   @if (data(); as snapshot) {
@@ -118,6 +120,7 @@
   }
 </main>
 
+@if (data() || failed()) {
 <footer class="footer">
   <div class="footer__inner l-container">
     <div class="footer__brand">
@@ -167,3 +170,4 @@
     <span>No analytics and no tracking.</span>
   </div>
 </footer>
+}

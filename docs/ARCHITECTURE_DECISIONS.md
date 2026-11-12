@@ -447,3 +447,13 @@ The dashboard and report read stored rows only. Rule decisions are counted as se
 **Also self-written, for the same reasons:** the command palette (a native `<dialog>` with the combobox and listbox pattern), the line diff that shows what a repair changed (a longest common subsequence over lines), and the icons, which are Lucide's path data (ISC) copied into `shared/icon/icons.ts` for the 101 icons used.
 
 **Consequences.** Nothing new to audit in `npm audit`, nothing executes from a string, and the landing chunk is 133 kB raw (31 kB compressed) with the icons, highlighter and every section in it. The cost is code this project owns; the highlighter is deliberately approximate (it colours, it does not parse), and a language other than COBOL and C# shows as plain text.
+
+## ADR-055 The origin compresses static text, and the landing page reserves its space
+
+**Date:** 2026-11-11 (Run 07).
+
+**Compression.** Lighthouse against the production image found every script, stylesheet and JSON file sent uncompressed: the origin relied on Render's edge to compress. The SPA handler now gzips static files of the build (`.js`, `.css`, `.json`, `.svg`, `.webmanifest`, `.txt`, `.xml`, `.map`) of 1 kB or more when the client accepts gzip, with `Vary: Accept-Encoding`, once per file and build (cached by path and modification time). API responses are never compressed here: they can reflect input and carry tokens, which is what a BREACH attack needs; the static files hold neither. The landing page's transfer fell from 539 KiB to 207 KiB locally. On Render the edge may compress again or pass the origin's encoding through; either way the bytes are smaller.
+
+**Layout shift.** The landing page rendered its sections and footer only after the snapshot arrived, so the footer jumped down (CLS 0.93 on desktop). The footer now waits for the data, the stats strip and the hero picture reserve their height, the hero's decorative glow is placed in fixed units, and a fallback face (Arial scaled to Inter's metrics) keeps text from moving when Inter arrives. Measured afterwards: CLS 0 on mobile and 0.007 on desktop.
+
+**Not done.** The landing route stays lazy-loaded. Prerendering it would paint the headline before any script runs, but the prerendered page's inline styles would need the per-request nonce that only the server knows (ADR-047), so it would mean changing how the page is served. Mobile performance is 91 to 92 without it (Run 07 report).

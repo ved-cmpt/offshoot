@@ -12,6 +12,16 @@
     url('/fonts/inter-var.woff2') format('woff2');
 }
 
+// Arial, scaled to Inter's metrics (values from the Inter metrics used by common font tools).
+@font-face {
+  font-family: 'Inter Fallback';
+  src: local('Arial');
+  size-adjust: 107.12%;
+  ascent-override: 90.44%;
+  descent-override: 22.52%;
+  line-gap-override: 0%;
+}
+
 @font-face {
   font-family: 'JetBrains Mono Variable';
   font-style: normal;

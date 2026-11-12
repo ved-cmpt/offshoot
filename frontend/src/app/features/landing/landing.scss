@@ -159,7 +159,9 @@ main:focus {
 
 .hero__glow {
   position: absolute;
-  inset: -20% -10% auto;
+  top: -12rem;
+  right: -10%;
+  left: -10%;
   height: 60rem;
   background:
     radial-gradient(40rem 26rem at 75% 18%, rgb(52 211 153 / 16%), transparent 70%),
@@ -259,12 +261,13 @@ main:focus {
 
 .hero__visual {
   min-width: 0;
+  min-height: 27rem;
 }
 
 .hero__placeholder {
   display: grid;
   gap: var(--space-3);
-  height: 26rem;
+  height: 27rem;
   padding: var(--space-5);
   border: 1px solid var(--border);
   border-radius: var(--radius-xl);
@@ -292,6 +295,15 @@ main:focus {
 
   @include t.up(t.$bp-lg) {
     grid-template-columns: repeat(4, minmax(0, 1fr));
+  }
+}
+
+.stats--placeholder {
+  min-height: 9.5rem;
+  background: var(--surface-1);
+
+  @include t.up(t.$bp-lg) {
+    min-height: 8.75rem;
   }
 }
 

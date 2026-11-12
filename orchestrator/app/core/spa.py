@@ -6,9 +6,11 @@ index.html, with a fresh nonce in its Content-Security-Policy: Angular reads the
 'unsafe-inline' anywhere. API paths never fall through to the app.
 """
 
+import gzip
 import mimetypes
 import re
 import secrets
+from functools import lru_cache
 from pathlib import Path
 
 from fastapi import FastAPI, Request
@@ -16,6 +18,16 @@ from fastapi.responses import FileResponse, HTMLResponse, JSONResponse, Response
 
 HASHED = re.compile(r".+-[A-Z0-9]{8,}\.(?:js|css|woff2?|svg|png|jpg|ico|map)$")
 NOT_FOUND_PREFIXES = ("api/", "healthz", "readyz")
+# Static text the build produces. They hold no secret and reflect no input, so compressing them
+# cannot leak anything (BREACH needs both); API responses are never compressed here.
+COMPRESSIBLE = {".js", ".css", ".json", ".svg", ".webmanifest", ".txt", ".xml", ".map"}
+MIN_COMPRESS_BYTES = 1024
+
+
+@lru_cache(maxsize=256)
+def _gzipped(path: str, mtime_ns: int) -> bytes:
+    """The file, gzipped once per build (mtime_ns is part of the cache key)."""
+    return gzip.compress(Path(path).read_bytes(), compresslevel=9, mtime=0)
 
 
 def spa_policy(nonce: str, https: bool) -> str:
@@ -72,6 +84,17 @@ def mount_spa(app: FastAPI, static_dir: str, https: bool) -> None:
                 )
                 # Static files carry no script, but a strict policy costs nothing.
                 headers = {"Cache-Control": cache, "Content-Security-Policy": "default-src 'none'"}
+                if candidate.suffix in COMPRESSIBLE:
+                    headers["Vary"] = "Accept-Encoding"
+                    stat = candidate.stat()
+                    accepts = "gzip" in request.headers.get("accept-encoding", "").lower()
+                    if accepts and stat.st_size >= MIN_COMPRESS_BYTES:
+                        kind = mimetypes.guess_type(candidate.name)[0] or "application/octet-stream"
+                        if kind.startswith("text/") or kind in ("application/json", "image/svg+xml"):
+                            kind += "; charset=utf-8"
+                        body = _gzipped(str(candidate), stat.st_mtime_ns)
+                        headers["Content-Encoding"] = "gzip"
+                        return Response(body, media_type=kind, headers=headers)
                 return FileResponse(candidate, headers=headers)
         if "." in path.rsplit("/", 1)[-1]:
             # A missing file, not a route of the app.

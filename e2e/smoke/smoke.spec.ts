@@ -213,3 +213,37 @@ test('the demo admin cannot add users, change passwords or disable a demo accoun
   }[];
   expect(after.find((user) => user.username === 'viewer')?.active).toBe(true);
 });
+
+test('the landing page works under the strict policy, without signing in or calling the API', async ({ page }) => {
+  const violations = watchPolicy(page);
+  const api: string[] = [];
+  page.on('request', (request) => {
+    if (new URL(request.url()).pathname.startsWith('/api/')) {
+      api.push(request.url());
+    }
+  });
+  await page.goto('/');
+  await expect(page.getByRole('heading', { level: 1 })).toContainText('Prove every module.');
+  await expect(page.locator('.stat').first()).toContainText('500');
+  for (const name of [/Two-digit years/, /Meter rollover/, /Prompt injection/, /Rounding defect/]) {
+    await page.getByRole('tab', { name }).click();
+    await expect(page.getByRole('tab', { name })).toHaveAttribute('aria-selected', 'true');
+  }
+  await page.evaluate(() => window.scrollTo(0, document.body.scrollHeight));
+  await expectAccessible(page, 'landing (production)');
+  expect(api).toEqual([]);
+  expect(violations).toEqual([]);
+});
+
+test('a link from the landing page signs in and opens the same stored run', async ({ page }) => {
+  const violations = watchPolicy(page);
+  await page.addInitScript(() => window.localStorage.setItem('offshoot-tour-done', '1'));
+  await page.goto('/#demo');
+  await page.getByRole('tabpanel').getByRole('link', { name: 'See it in the app' }).click();
+  await page.getByLabel('Username').fill(username('viewer'));
+  await page.getByLabel('Password').fill(password());
+  await page.getByRole('button', { name: 'Sign in', exact: true }).click();
+  await expect(page.getByRole('heading', { name: 'RATECALC', level: 1 })).toBeVisible();
+  await expect(page.getByText('Blocked by verification').first()).toBeVisible();
+  expect(violations).toEqual([]);
+});

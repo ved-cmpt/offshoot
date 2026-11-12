@@ -255,6 +255,16 @@ def test_hashed_files_are_immutable_and_api_paths_never_fall_through(fresh_app: 
         response = app_client.get(path)
         assert response.status_code == 200, path
         assert response.headers["Content-Type"].startswith(kind), path
+    # Text files are gzipped for clients that accept it; small ones and images are not.
+    (static_dir / "big-ABCDEFGH.js").write_text("console.log('offshoot');\n" * 200)
+    zipped = app_client.get("/big-ABCDEFGH.js", headers={"Accept-Encoding": "gzip"})
+    assert zipped.headers["Content-Encoding"] == "gzip"
+    assert "Accept-Encoding" in zipped.headers["Vary"]
+    assert zipped.headers["Content-Type"] == "text/javascript; charset=utf-8"
+    assert zipped.text.count("offshoot") == 200
+    plain = app_client.get("/big-ABCDEFGH.js", headers={"Accept-Encoding": "identity"})
+    assert "Content-Encoding" not in plain.headers
+    assert "Content-Encoding" not in app_client.get("/favicon.ico", headers={"Accept-Encoding": "gzip"}).headers
     # The old app paths and the landing page are all the app's page.
     for path in ("/", "/login", "/projects/1/rules", "/app/login"):
         assert "<app-root" in app_client.get(path).text, path
