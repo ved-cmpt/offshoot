@@ -81,7 +81,7 @@
   gap: 2px;
 
   @include t.down(t.$bp-sm) {
-    grid-template-columns: repeat(25, minmax(0, 1fr));
+    gap: 1px;
   }
 
   i {

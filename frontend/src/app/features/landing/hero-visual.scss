@@ -218,11 +218,10 @@
 
 .grid {
   display: grid;
-  grid-template-columns: repeat(25, minmax(0, 1fr));
-  gap: 3px;
+  grid-template-columns: repeat(50, minmax(0, 1fr));
+  gap: 1px;
 
   @include t.up(t.$bp-sm) {
-    grid-template-columns: repeat(50, minmax(0, 1fr));
     gap: 2px;
   }
 }
