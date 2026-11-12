@@ -400,7 +400,7 @@ The dashboard and report read stored rows only. Rule decisions are counted as se
 
 **Tokens.** `frontend/src/styles/_tokens.scss` emits semantic custom properties (surfaces, borders, text, accent, status, syntax, shadows, radii, spacing, type, motion) for a dark theme and a light theme. Dark is the default: `ThemeService` picks dark unless a stored choice or the system asks for light. The old `--color-*` names stay as aliases, so nothing breaks while screens move to the new names. Status colours carry meaning only and always come with a word or an icon.
 
-**Budgets.** The initial-bundle budget is tightened to a 350 kB warning and 500 kB error (it was 500 kB and 1 MB), because the landing page now ships first. The per-component style budget rises from 4/8 kB to 10/20 kB: the landing's and the module workspace's styles are larger than Run 02's screens, and splitting them further would only move bytes between chunks.
+**Budgets.** The initial-bundle budget is tightened to a 350 kB warning and 500 kB error (it was 500 kB and 1 MB), because the landing page now ships first. The per-component style budget rises from 4/8 kB to 12/20 kB: the landing's and the module workspace's styles are larger than Run 02's screens, and splitting them further would only move bytes between chunks.
 
 **Motion.** Every transition and animation is behind `prefers-reduced-motion: no-preference`, and a global rule stops them all under `reduce`. Animated pictures on the landing page show their final state instead.
 

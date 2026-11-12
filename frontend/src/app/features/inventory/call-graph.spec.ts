@@ -51,6 +51,13 @@ describe('layoutGraph', () => {
     );
   });
 
+  it('lays a callee below its caller from top to bottom', () => {
+    const layout = layoutGraph(OVERVIEW_GRAPH.nodes, OVERVIEW_GRAPH.edges, 'TB');
+    const [caller, callee] = [layout.nodes[0], layout.nodes[1]];
+    expect(callee.y).toBeGreaterThan(caller.y);
+    expect(layout.edges[0].path).toMatch(/^M\d+(\.\d+)?,\d+/);
+  });
+
   it('handles an empty graph', () => {
     const layout = layoutGraph([], []);
     expect(layout.nodes).toEqual([]);
@@ -175,5 +182,26 @@ describe('CallGraph', () => {
     request('/api/v1/projects/p1/graph').flush({ program: null, nodes: [], edges: [] });
     await settle();
     expect(page.textContent).toContain('graph is empty');
+  });
+
+  it('zooms with buttons and keys, and lays out top to bottom', async () => {
+    request('/api/v1/projects/p1/graph').flush(OVERVIEW_GRAPH);
+    await settle();
+    const zoom = () => page.querySelector('.zoombar__value')?.textContent;
+    const before = zoom();
+    (page.querySelector('[aria-label="Zoom in"]') as HTMLButtonElement).click();
+    await settle();
+    expect(zoom()).not.toBe(before);
+    const viewport = page.querySelector('.scroll') as HTMLElement;
+    viewport.dispatchEvent(new KeyboardEvent('keydown', { key: '-', bubbles: true }));
+    viewport.dispatchEvent(new KeyboardEvent('keydown', { key: '0', bubbles: true }));
+    await settle();
+    expect(zoom()).toBe('100%');
+    const firstNode = () => page.querySelectorAll('.node')[1]?.getAttribute('transform');
+    const leftToRight = firstNode();
+    [...page.querySelectorAll('button')].find((b) => b.textContent?.includes('Top to bottom'))!.click();
+    await settle();
+    expect(firstNode()).not.toBe(leftToRight);
+    expect(page.querySelector('[aria-pressed="true"]')?.textContent).toContain('Top to bottom');
   });
 });

@@ -43,6 +43,7 @@ describe('Rules', () => {
     role: Role,
     rules: Rule[] = [makeRule()],
     overrides: Partial<RulePage> = {},
+    query = '',
   ): Promise<void> {
     TestBed.configureTestingModule({
       providers: [
@@ -54,9 +55,11 @@ describe('Rules', () => {
       ],
     });
     http = TestBed.inject(HttpTestingController);
-    harness = await RouterTestingHarness.create('/app/projects/p1/rules');
+    harness = await RouterTestingHarness.create('/app/projects/p1/rules' + query);
     page = harness.routeNativeElement!;
-    http.expectOne(RULES_URL).flush(pageOf(rules, overrides));
+    http
+      .expectOne((request) => request.urlWithParams.startsWith('/api/v1/projects/p1/rules?'))
+      .flush(pageOf(rules, overrides));
     http.expectOne(INVENTORY_URL).flush(makeInventory());
     await settle();
   }
@@ -482,5 +485,24 @@ describe('Rules', () => {
     await settle();
     expect(page.textContent).toContain('Analyze the project first');
     expect(button('Extract rules')).toBeUndefined();
+  });
+
+  it('takes its filters from the address, as the landing page and the palette link them', async () => {
+    await open('VIEWER', [makeRule()], {}, '?program=RATECALC&flag=SPAN_INVALID');
+    const selects = [...page.querySelectorAll<HTMLSelectElement>('.filters select')];
+    expect(selects[0].value).toBe('RATECALC');
+    expect(selects[2].value).toBe('SPAN_INVALID');
+  });
+
+  it('switches to a table of every rule, and back to its card', async () => {
+    await open('VIEWER');
+    [...page.querySelectorAll('button')].find((b) => b.textContent?.includes('Table'))!.click();
+    await settle();
+    const table = page.querySelector('[aria-label="Rules table"]')!;
+    expect(table.querySelectorAll('tbody tr')).toHaveLength(1);
+    (table.querySelector('tbody button') as HTMLButtonElement).click();
+    await settle();
+    expect(page.querySelector('[aria-label="Rules table"]')).toBeNull();
+    expect(page.querySelector('app-rule-card')).not.toBeNull();
   });
 });
